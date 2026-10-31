@@ -123,7 +123,7 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 		return err
 	}
 	defer log.Close()
-	fmt.Fprintf(stdout, "Building Pi %s, a few minutes (log: %s)\n", pins.Pi.Tag, filepath.Join(stage, "build.log"))
+	fmt.Fprintf(stdout, "Building Pi %s, a few minutes\nLog:        %s\n", pins.Pi.Tag, filepath.Join(stage, "build.log"))
 	bun, err := getRuntime(r, opts.Cache, pins.Bun)
 	if err != nil {
 		return err
@@ -202,12 +202,12 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err != nil {
 		return err
 	}
-	if len(extensions) > 0 {
-		names := make([]string, len(extensions))
-		for i, extension := range extensions {
-			names[i] = extension.Name
+	for i, extension := range extensions {
+		label := ""
+		if i == 0 {
+			label = "Extensions:"
 		}
-		fmt.Fprintf(stdout, "Extensions: %s\n", strings.Join(names, ", "))
+		fmt.Fprintf(stdout, "%-12s%s\n", label, extension.Name)
 	}
 	if err = os.MkdirAll(filepath.Dir(opts.Out), 0755); err != nil {
 		return err
