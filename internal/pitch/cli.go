@@ -34,7 +34,7 @@ func Main(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 
 func execute(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
-		fmt.Fprintln(stdout, "pitch — Pi with your packages, built ahead of time with Bun\n\n  pitch build [--name pi]   build Pi with the packages in your Pi settings (again after they change)\n  pitch pi [args]           run it; everything after pi goes to Pi: pitch pi -c, pitch pi install npm:x\n  pitch status              what is built and what pitch pi runs\n  pitch off | on            run the original Pi instead | the pitch build again\n  pitch uninstall           remove the builds and the --name command\n\nAlso: pitch build --out DIR (a standalone build, see pitch build --help).\nExperimental: macOS ARM64 only. Pi and Bun versions are maintained by pitch.")
+		fmt.Fprintln(stdout, "pitch — Pi with your packages, built ahead of time with Bun\n\n  pitch build [--name pi]   build Pi with the packages in your Pi settings (again after they change)\n  pitch pi [args]           run it; everything after pi goes to Pi: pitch pi -c, pitch pi install npm:x\n  pitch status              what is built and what pitch pi runs\n  pitch off | on            run the original Pi instead | the pitch build again\n  pitch uninstall           remove the builds and the --name command\n\nAlso: pitch build --out DIR (a standalone build, see pitch build --help).\nExperimental: macOS ARM64, Linux x64 and ARM64. Pi and Bun versions are maintained by pitch.")
 		return nil
 	}
 	if args[0] == "pi" {
@@ -90,11 +90,12 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer) error
 		f.SetOutput(stderr)
 		f.StringVar(&pins.Pi.Repository, "repo", pins.Pi.Repository, "Pi repository (a URL or a local path)")
 		f.StringVar(&pins.Pi.Commit, "commit", pins.Pi.Commit, "full commit to build")
+		target := f.String("platform", platform, "GOOS/GOARCH the Pi is for")
 		if err := f.Parse(args[1:]); err != nil {
 			return err
 		}
 		if f.NArg() != 1 {
-			return fmt.Errorf("usage: pitch prepare [--repo REPO --commit SHA] OUT.tar.gz")
+			return fmt.Errorf("usage: pitch prepare [--repo REPO --commit SHA] [--platform GOOS/GOARCH] OUT.tar.gz")
 		}
 		if !strings.Contains(pins.Pi.Repository, "://") && !filepath.IsAbs(pins.Pi.Repository) {
 			return fmt.Errorf("--repo must be a URL or an absolute path")
@@ -102,7 +103,7 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer) error
 		if pins.Pi.Commit != pinned {
 			pins.Pi.Branch = ""
 		}
-		return Prepare(ctx, cache, pins.Pi, f.Arg(0), stdout)
+		return Prepare(ctx, cache, pins.Pi, *target, f.Arg(0), stdout)
 	case "status", "off", "on", "uninstall":
 		if len(args) != 1 {
 			return fmt.Errorf("usage: pitch %s", args[0])

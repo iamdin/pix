@@ -2,15 +2,12 @@ package pitch
 
 import (
 	"context"
-	"embed"
 	"os"
 	"path/filepath"
 )
 
-// runtime-data holds bun.zip and, in releases, pi.tar.gz (see Prepare); neither is in git.
-//
-//go:embed runtime-data
-var runtimeData embed.FS
+// runtime-data/<goos>-<goarch> holds bun.zip and, in releases, pi.tar.gz (see Prepare); neither is in git.
+// runtime_<goos>_<goarch>.go embeds the one for the platform pitch is built for.
 
 // Canary assets are disposable; keep the exact validated compiler with the CLI.
 func cacheRuntimeArchive(ctx context.Context, target, expected string) error {
@@ -25,7 +22,7 @@ func cacheRuntimeArchive(ctx context.Context, target, expected string) error {
 		return err
 	}
 	defer os.Remove(f.Name())
-	bun, err := runtimeData.ReadFile("runtime-data/bun.zip")
+	bun, err := runtimeData.ReadFile(runtimeDataDir + "/bun.zip")
 	if err != nil {
 		f.Close()
 		return err

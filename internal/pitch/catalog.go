@@ -3,9 +3,11 @@ package pitch
 import (
 	"embed"
 	"encoding/json"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -22,18 +24,35 @@ type Source struct {
 	Tag        string `json:"tag,omitempty"`
 	Commit     string `json:"commit"`
 }
-type RuntimePin struct {
-	Delivery     string `json:"delivery"`
-	Repository   string `json:"repository"`
-	Commit       string `json:"commit"`
-	WebKitCommit string `json:"webkit_commit"`
-	Revision     string `json:"revision"`
-	Platform     string `json:"platform"`
+
+// RuntimeAsset is the official Bun release archive for one platform.
+type RuntimeAsset struct {
 	URL          string `json:"url"`
 	SHA256       string `json:"sha256"`
 	BinarySHA256 string `json:"binary_sha256"`
 	Member       string `json:"member"`
 }
+
+// RuntimePin is one Bun build; Platforms is keyed by GOOS/GOARCH. pitch embeds the archive for its own platform.
+type RuntimePin struct {
+	Repository   string                  `json:"repository"`
+	Commit       string                  `json:"commit"`
+	WebKitCommit string                  `json:"webkit_commit"`
+	Revision     string                  `json:"revision"`
+	Platforms    map[string]RuntimeAsset `json:"platforms"`
+}
+
+// platform is the GOOS/GOARCH pitch runs on and builds for.
+const platform = runtime.GOOS + "/" + runtime.GOARCH
+
+func (p RuntimePin) host() (RuntimeAsset, error) {
+	asset, ok := p.Platforms[platform]
+	if !ok {
+		return asset, fmt.Errorf("pitch does not support %s", platform)
+	}
+	return asset, nil
+}
+
 type Sources struct {
 	Schema       int        `json:"schema"`
 	Pi           Source     `json:"pi"`

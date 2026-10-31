@@ -1,6 +1,6 @@
 # pitch
 
-用 Go 编排固定 Pi 的官方 Bun AOT 构建。**当前 alpha.10，仅支持 macOS ARM64，仍为实验性工具链。**
+用 Go 编排固定 Pi 的官方 Bun AOT 构建。**当前 alpha.10，支持 macOS ARM64、Linux x64 和 Linux ARM64（glibc），仍为实验性工具链。**
 
 ## 安装
 
@@ -84,10 +84,10 @@ Go CLI 是编排主体；小型 JS 桥接直接使用这份 Pi 的包管理器�
 | 组件 | 固定版本 |
 |---|---|
 | Pi | v1.4.0 加 pitch 补丁：[getpie-dev/pi](https://github.com/getpie-dev/pi) `pitch-v1.4.0`，d95a12ee1b88c6d216468b4eb8a5d388d0623a3e |
-| Bun | 000ef503730334a388c47b1bd025851a76b4832e |
+| Bun | 1.4.4-canary.1，da867c60bf0bcbf9d6d36994f8ca0efa42075115 |
 | WebKit/JSC | 8c6c963e3c49fe39942d9625d1fc924128fad26e |
 
-不提供 Pi/Bun 版本选择。Pi 只跟上游发布 tag，pitch 的补丁是 fork 上的提交（见 [PATCHES.md](PATCHES.md)）；Bun AOT 只在 canary 中提供，因此 Bun 固定到某个官方 canary 构建，随维护者升级。Bun 固定归档和准备好的 Pi 嵌入 Go CLI（共约 100 MiB），校验归档/程序哈希、revision 和签名；不依赖已删除的上游下载资产，不静默升级。Git/npm/模型目录的冷获取仍需要网络。当前使用官方预编译 Bun，不是自建优化版 Bun/JSC。
+不提供 Pi/Bun 版本选择。Pi 只跟上游发布 tag，pitch 的补丁是 fork 上的提交（见 [PATCHES.md](PATCHES.md)）；Bun AOT 只在 canary 中提供，因此 Bun 固定到某个官方 canary 构建，随维护者升级。每个平台的发行包嵌入该平台的 Bun 固定归档和准备好的 Pi（共约 110 MiB），校验归档/程序哈希、revision，macOS 上还校验签名；不依赖已删除的上游下载资产，不静默升级。Git/npm/模型目录的冷获取仍需要网络。当前使用官方预编译 Bun，不是自建优化版 Bun/JSC。
 
 **Pi 带 5 个经过 AOT 性能关卡的优化补丁**（见下）。
 

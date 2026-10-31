@@ -7,16 +7,30 @@
     "commit": "d95a12ee1b88c6d216468b4eb8a5d388d0623a3e"
   },
   "bun": {
-    "delivery": "embedded",
     "repository": "https://github.com/oven-sh/bun.git",
-    "commit": "000ef503730334a388c47b1bd025851a76b4832e",
+    "commit": "da867c60bf0bcbf9d6d36994f8ca0efa42075115",
     "webkit_commit": "8c6c963e3c49fe39942d9625d1fc924128fad26e",
-    "revision": "1.4.4-canary.1+000ef5037",
-    "platform": "darwin/arm64",
-    "url": "https://api.github.com/repos/oven-sh/bun/releases/assets/687689063",
-    "sha256": "794caaa6edb15db66ab243e9f1abcd2858b350ece99deb7be9846b81faa66b25",
-    "binary_sha256": "5b16abfe797b50582c2e1d8642e6fdc025a358cbb392caf33547dd4060747e53",
-    "member": "bun-darwin-aarch64/bun"
+    "revision": "1.4.4-canary.1+da867c60b",
+    "platforms": {
+      "darwin/arm64": {
+        "url": "https://api.github.com/repos/oven-sh/bun/releases/assets/687869686",
+        "sha256": "67ede5394a7da4a8b1a1eb0788b72325f480bc956cb1155b6be962919c9aa581",
+        "binary_sha256": "256c4f08d81ae8d5c0e445c637b424ba780e0514374b5328dd3db7a953e1aac5",
+        "member": "bun-darwin-aarch64/bun"
+      },
+      "linux/amd64": {
+        "url": "https://api.github.com/repos/oven-sh/bun/releases/assets/687869747",
+        "sha256": "e8f27b24f74186e87fc0f0f603bdb6b79264dc86a1680da41e2025a3cb3efee0",
+        "binary_sha256": "fe406996b9915f388e3fad9e6e29ece9c7cb81e06257bbcb4c50f91691b46810",
+        "member": "bun-linux-x64/bun"
+      },
+      "linux/arm64": {
+        "url": "https://api.github.com/repos/oven-sh/bun/releases/assets/687869647",
+        "sha256": "a6e36924c8c6dc63459660e27a48cdd7189a7e888e590272d029de98d169d1e6",
+        "binary_sha256": "83fa5c7812696de87a743caa4a915d5a17fa5be2a00ada0a2f5e6233108d6781",
+        "member": "bun-linux-aarch64/bun"
+      }
+    }
   },
   "model_catalog": "sha256-7fe1b41feaf43a7aad4bc832e6b306c7ced56e6d41bbc724b74e91eeacff6edf"
 }

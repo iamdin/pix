@@ -17,6 +17,7 @@ import (
 type preparedInfo struct {
 	Pitch      string `json:"pitch"`
 	Pi         Source `json:"pi"`
+	Platform   string `json:"platform"`
 	Tested     bool   `json:"tested"`
 	SourceTree string `json:"source_tree"`
 	NPMLock    string `json:"npm_lock_sha256"`
@@ -27,11 +28,16 @@ type preparedInfo struct {
 const preparedFile = "pitch-prepared.json"
 
 // Prepare writes Pi, built and without dev dependencies, to a .tar.gz for `pitch build`: releases embed it as
-// runtime-data/pi.tar.gz, and `pitch build --pi` takes one. It needs git, Node 24+ and npm.
-func Prepare(ctx context.Context, cache string, pi Source, out string, stdout io.Writer) (err error) {
+// runtime-data/<goos>-<goarch>/pi.tar.gz, and `pitch build --pi` takes one. It needs git, Node 24+ and npm 11+.
+// target is the GOOS/GOARCH the Pi is for: it is built and tested here, then npm installs the runtime
+// dependencies for target, whose optional native packages differ by platform.
+func Prepare(ctx context.Context, cache string, pi Source, target, out string, stdout io.Writer) (err error) {
 	pins, err := sourcePins()
 	if err != nil {
 		return err
+	}
+	if _, ok := pins.Bun.Platforms[target]; !ok {
+		return fmt.Errorf("pitch does not support %s", target)
 	}
 	for _, tool := range []string{"git", "node", "npm"} {
 		if _, err := exec.LookPath(tool); err != nil {
@@ -66,7 +72,7 @@ func Prepare(ctx context.Context, cache string, pi Source, out string, stdout io
 	}
 	defer log.Close()
 	// The patch tests belong to the pinned commit; other commits (bench/build-variants.ts takes patches out) may lack them.
-	info := preparedInfo{Pitch: Version, Pi: pi, Tested: pi.Commit == pins.Pi.Commit}
+	info := preparedInfo{Pitch: Version, Pi: pi, Platform: target, Tested: pi.Commit == pins.Pi.Commit}
 	if info.Node, err = r.output("", "node", "--version"); err != nil {
 		return err
 	}
@@ -77,7 +83,7 @@ func Prepare(ctx context.Context, cache string, pi Source, out string, stdout io
 	if info.NPM, err = r.output("", "npm", "--version"); err != nil {
 		return err
 	}
-	fmt.Fprintf(stdout, "Preparing Pi %s from %s %s\nLog: %s\n", strings.TrimPrefix(pi.Tag, "v"), pi.Repository, pi.Commit, log.Name())
+	fmt.Fprintf(stdout, "Preparing Pi %s for %s from %s %s\nLog: %s\n", strings.TrimPrefix(pi.Tag, "v"), target, pi.Repository, pi.Commit, log.Name())
 	bun, err := getRuntime(r, cache, pins.Bun)
 	if err != nil {
 		return err
@@ -138,7 +144,9 @@ func Prepare(ctx context.Context, cache string, pi Source, out string, stdout io
 	if err = os.Rename(types, saved); err != nil {
 		return err
 	}
-	if err = r.command(source, log, "npm", "prune", "--omit=dev", "--ignore-scripts", "--no-audit", "--no-fund"); err != nil {
+	goos, goarch, _ := strings.Cut(target, "/")
+	fmt.Fprintf(stdout, "Install the runtime dependencies for %s\n", target)
+	if err = r.command(source, log, "npm", "ci", "--omit=dev", "--os="+goos, "--cpu="+nodeArch(goarch), "--libc=glibc", "--ignore-scripts", "--no-audit", "--no-fund"); err != nil {
 		return err
 	}
 	if err = os.RemoveAll(types); err != nil {
@@ -162,7 +170,7 @@ func unpackPi(r runner, pins Sources, path, source string, log io.Writer) (info 
 	var archive io.ReadCloser
 	if path != "" {
 		archive, err = os.Open(path)
-	} else if archive, err = runtimeData.Open("runtime-data/pi.tar.gz"); errors.Is(err, fs.ErrNotExist) {
+	} else if archive, err = runtimeData.Open(runtimeDataDir + "/pi.tar.gz"); errors.Is(err, fs.ErrNotExist) {
 		err = fmt.Errorf("this pitch has no Pi built in (a development build); make one with `pitch prepare OUT.tar.gz` and pass it with --pi")
 	}
 	if err != nil {
@@ -187,6 +195,9 @@ func unpackPi(r runner, pins Sources, path, source string, log io.Writer) (info 
 	}
 	if info.Pitch != Version {
 		return info, fmt.Errorf("Pi was prepared by pitch %s, not %s", info.Pitch, Version)
+	}
+	if info.Platform != platform {
+		return info, fmt.Errorf("Pi was prepared for %s, not %s", info.Platform, platform)
 	}
 	if path == "" && info.Pi.Commit != pins.Pi.Commit {
 		return info, fmt.Errorf("the built-in Pi is %s, not the pinned %s", info.Pi.Commit, pins.Pi.Commit)

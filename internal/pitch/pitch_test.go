@@ -29,7 +29,7 @@ func TestPins(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pins.Pi.Tag != "v1.4.0" || pins.Pi.Branch != "pitch-"+pins.Pi.Tag || pins.Pi.Repository != "https://github.com/getpie-dev/pi.git" || len(pins.Pi.Commit) != 40 || pins.Bun.Repository != "https://github.com/oven-sh/bun.git" || pins.Bun.Platform != "darwin/arm64" || len(pins.Bun.Commit) != 40 || len(pins.Bun.WebKitCommit) != 40 {
+	if pins.Pi.Tag != "v1.4.0" || pins.Pi.Branch != "pitch-"+pins.Pi.Tag || pins.Pi.Repository != "https://github.com/getpie-dev/pi.git" || len(pins.Pi.Commit) != 40 || pins.Bun.Repository != "https://github.com/oven-sh/bun.git" || len(pins.Bun.Platforms) != 3 || len(pins.Bun.Commit) != 40 || len(pins.Bun.WebKitCommit) != 40 {
 		t.Fatalf("unexpected pins: %+v", pins)
 	}
 }
@@ -273,10 +273,13 @@ func TestUnpackPi(t *testing.T) {
 	}
 	variant := pins.Pi
 	variant.Commit = strings.Repeat("a", 40)
-	if info, err := unpackPi(r, pins, pack(preparedInfo{Pitch: Version, Pi: variant}), filepath.Join(t.TempDir(), "pi"), io.Discard); err != nil || info.Pi.Commit != variant.Commit {
+	if info, err := unpackPi(r, pins, pack(preparedInfo{Pitch: Version, Pi: variant, Platform: platform}), filepath.Join(t.TempDir(), "pi"), io.Discard); err != nil || info.Pi.Commit != variant.Commit {
 		t.Fatalf("--pi takes any commit: %+v %v", info, err)
 	}
-	if _, err := unpackPi(r, pins, pack(preparedInfo{Pitch: "0.0.0", Pi: pins.Pi}), filepath.Join(t.TempDir(), "pi"), io.Discard); err == nil {
+	if _, err := unpackPi(r, pins, pack(preparedInfo{Pitch: "0.0.0", Pi: pins.Pi, Platform: platform}), filepath.Join(t.TempDir(), "pi"), io.Discard); err == nil {
 		t.Fatal("accepted Pi prepared by another pitch")
+	}
+	if _, err := unpackPi(r, pins, pack(preparedInfo{Pitch: Version, Pi: pins.Pi, Platform: "plan9/386"}), filepath.Join(t.TempDir(), "pi"), io.Discard); err == nil {
+		t.Fatal("accepted Pi prepared for another platform")
 	}
 }

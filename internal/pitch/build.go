@@ -38,10 +38,10 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err != nil {
 		return err
 	}
-	if runtime.GOOS+"/"+runtime.GOARCH != pins.Bun.Platform {
-		return fmt.Errorf("this alpha supports only %s", pins.Bun.Platform)
+	if _, err := pins.Bun.host(); err != nil {
+		return err
 	}
-	if _, err := exec.LookPath("codesign"); err != nil {
+	if _, err := exec.LookPath("codesign"); err != nil && runtime.GOOS == "darwin" {
 		return fmt.Errorf("build requires codesign in PATH")
 	}
 	if opts.Pi != "" {
@@ -113,7 +113,7 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err != nil {
 		return err
 	}
-	if err = r.command("", log, "codesign", "--verify", "--strict", bun); err != nil {
+	if err = verifySignature(r, log, bun); err != nil {
 		return err
 	}
 	dataDir := filepath.Join(stage, "recipe")
@@ -209,7 +209,7 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 		}
 	}
 	step("Check the build")
-	if err = r.command("", log, "codesign", "--verify", "--strict", executable); err != nil {
+	if err = verifySignature(r, log, executable); err != nil {
 		return err
 	}
 	if err = smoke(ctx, executable, stage, info.Pi.Tag); err != nil {
@@ -233,11 +233,11 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err != nil {
 		return err
 	}
-	checks := []string{"runtime archive and binary SHA-256", "runtime revision and code signature", "Pi commit and source tree, when Pi was prepared"}
+	checks := []string{"runtime archive and binary SHA-256", "runtime revision and macOS code signature", "Pi commit and source tree, when Pi was prepared"}
 	if info.Tested {
 		checks = append(checks, "patch unit tests, when Pi was prepared")
 	}
-	checks = append(checks, "artifact code signature", "version", "help", "isolated RPC get_state")
+	checks = append(checks, "artifact macOS code signature", "version", "help", "isolated RPC get_state")
 	pins.Pi = info.Pi
 	manifest := Manifest{Schema: 1, Pitch: Version, BuilderSHA256: builderHash, Sources: pins, Extensions: extensions, ExtensionsAutoLoad: true, SourceTree: info.SourceTree, NPMLock: info.NPMLock, Node: info.Node, NPM: info.NPM, BuiltAt: time.Now().UTC().Format(time.RFC3339), CompilerArgs: args, Work: stage, Checks: checks, Limitations: []string{"With streaming-tool-arguments, intermediate argument snapshots of large tool calls may lag; raw deltas and final arguments remain complete.", "Experimental Bun AOT; built-in mutation and module-loader behavior differ from stock Pi.", "Pi's built-in extensions (llama.cpp, codemode, tool-search, mcp) always load; user, project and settings extensions on disk do not; not a sandbox.", "Selected extensions auto-load, including during build smoke checks; use trusted packages only. No extension permission sandbox.", "Code loaded from disk or generated at runtime is interpreted, not AOT. In-place module identities and cross-machine portability require validation.", "No performance, full provider, TUI, image or multi-day stability claim.", "Package sources use pinned Pi resolution in isolated storage; npm install scripts are disabled. Local dependencies, dynamic imports and native/runtime assets are not made hermetic by this build."}, Files: hashes}
 	if err = writeJSON(filepath.Join(opts.Out, "pitch-build.json"), manifest); err != nil {
@@ -293,9 +293,25 @@ func packageAssets(source, out string) error {
 		}
 	}
 	// Native clipboard and modifier-key helpers, next to the executable as in Pi's own binaries.
-	native := "native/darwin/prebuilds/darwin-arm64"
+	native := "native/" + runtime.GOOS + "/prebuilds/" + runtime.GOOS + "-" + nodeArch(runtime.GOARCH)
 	if err := copyTree(filepath.Join(source, "packages/tui", native), filepath.Join(out, native)); err != nil {
 		return err
 	}
 	return copyFile(filepath.Join(source, "node_modules/@silvia-odwyer/photon-node/photon_rs_bg.wasm"), filepath.Join(out, "photon_rs_bg.wasm"), 0644)
+}
+
+// verifySignature checks a macOS code signature; Linux executables are not signed.
+func verifySignature(r runner, log io.Writer, path string) error {
+	if runtime.GOOS != "darwin" {
+		return nil
+	}
+	return r.command("", log, "codesign", "--verify", "--strict", path)
+}
+
+// nodeArch is Node's name (process.arch) for a GOARCH.
+func nodeArch(goarch string) string {
+	if goarch == "amd64" {
+		return "x64"
+	}
+	return goarch
 }

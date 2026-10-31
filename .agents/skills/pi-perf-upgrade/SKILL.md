@@ -32,6 +32,10 @@ measurably slower. Code may overlap, but each commit must revert cleanly from th
 - `BUN`: the Bun pitch pins (`internal/pitch/data/sources.lock.json`); run every build and the bench with it. Bun AOT
   exists only in canary builds, so pitch follows official Bun canaries. When only the Bun pin changes, run steps 4–6
   (combos, comparison with the previous build, default build) on the unchanged patches: a new runtime can move the numbers.
+  To pin a canary: download `bun-darwin-aarch64.zip`, `bun-linux-x64.zip` and `bun-linux-aarch64.zip` of one canary
+  (all three `bun --revision` equal) into `internal/pitch/runtime-data/<goos>-<goarch>/bun.zip`, and record each
+  zip's and binary's SHA-256 under `bun.platforms` in `sources.lock.json`; WebKit is `WEBKIT_VERSION` in Bun's
+  `scripts/build/deps/webkit.ts` at that commit.
 
 ## Steps
 

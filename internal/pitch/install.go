@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -212,7 +213,11 @@ func addToPath(in *installation, stdout io.Writer) error {
 	case "zsh":
 		rc = filepath.Join(home, ".zshrc")
 	case "bash":
+		// Terminals on macOS start login shells, which read .bash_profile; on Linux they read .bashrc.
 		rc = filepath.Join(home, ".bash_profile")
+		if runtime.GOOS == "linux" {
+			rc = filepath.Join(home, ".bashrc")
+		}
 	case "fish":
 		rc = filepath.Join(home, ".config", "fish", "config.fish")
 		line = fmt.Sprintf("fish_add_path --prepend %q %s", dir, pathMarker)

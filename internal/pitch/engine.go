@@ -233,12 +233,16 @@ func extractRuntime(archive, destination, member string) error {
 	return closeErr
 }
 func getRuntime(r runner, cache string, pin RuntimePin) (string, error) {
-	dir := filepath.Join(cache, "runtime", pin.SHA256)
+	asset, err := pin.host()
+	if err != nil {
+		return "", err
+	}
+	dir := filepath.Join(cache, "runtime", asset.SHA256)
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return "", err
 	}
 	archive := filepath.Join(dir, "bun.zip")
-	if err := cacheRuntimeArchive(r.ctx, archive, pin.SHA256); err != nil {
+	if err := cacheRuntimeArchive(r.ctx, archive, asset.SHA256); err != nil {
 		return "", err
 	}
 	binary := filepath.Join(dir, "bun")
@@ -249,17 +253,17 @@ func getRuntime(r runner, cache string, pin RuntimePin) (string, error) {
 		}
 		defer os.RemoveAll(temp)
 		candidate := filepath.Join(temp, "bun")
-		if err := extractRuntime(archive, candidate, pin.Member); err != nil {
+		if err := extractRuntime(archive, candidate, asset.Member); err != nil {
 			return "", err
 		}
-		if err := requireHash(candidate, pin.BinarySHA256); err != nil {
+		if err := requireHash(candidate, asset.BinarySHA256); err != nil {
 			return "", err
 		}
 		if err := os.Link(candidate, binary); err != nil && !os.IsExist(err) {
 			return "", err
 		}
 	}
-	if err := requireHash(binary, pin.BinarySHA256); err != nil {
+	if err := requireHash(binary, asset.BinarySHA256); err != nil {
 		return "", err
 	}
 	revision, err := r.output("", binary, "--revision")
