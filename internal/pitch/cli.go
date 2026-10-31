@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type stringsFlag []string
@@ -16,9 +17,8 @@ func (s *stringsFlag) String() string     { return fmt.Sprint([]string(*s)) }
 func (s *stringsFlag) Set(v string) error { *s = append(*s, v); return nil }
 
 type Options struct {
-	Cache, Out, Settings string
-	Extensions           stringsFlag
-	Patches              stringsFlag
+	Cache, Out, Settings, Pi string
+	Extensions               stringsFlag
 }
 
 func Main(ctx context.Context, args []string, stdout, stderr io.Writer) int {
@@ -44,17 +44,18 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer) error
 		fmt.Fprintln(stdout, Version)
 		return nil
 	}
+	cache, err := os.UserCacheDir()
+	if err != nil {
+		return err
+	}
+	cache = filepath.Join(cache, "pitch")
 	switch args[0] {
 	case "build":
-		cache, err := os.UserCacheDir()
-		if err != nil {
-			return err
-		}
 		opts := Options{}
 		f := flag.NewFlagSet("build", flag.ContinueOnError)
 		f.SetOutput(stderr)
-		f.Var(&opts.Patches, "patch", "trusted local unified diff, applied on top of pitch's Pi in flag order (repeatable)")
-		f.StringVar(&opts.Cache, "cache-dir", filepath.Join(cache, "pitch"), "downloads, pristine sources and retained build logs")
+		f.StringVar(&opts.Pi, "pi", "", "build this Pi (a .tar.gz from `pitch prepare`) instead of the one built into pitch")
+		f.StringVar(&opts.Cache, "cache-dir", cache, "downloads, pristine sources and retained build logs")
 		f.StringVar(&opts.Out, "out", "", "build into this new directory (never overwritten) instead of building what `pitch pi` runs")
 		name := f.String("name", "", "also install a command with this name that runs the build; pi takes the place of your Pi")
 		f.StringVar(&opts.Settings, "settings", "", "JSON file with Pi packages declarations; relative sources resolve from this file")
@@ -66,8 +67,8 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer) error
 			return fmt.Errorf("unexpected arguments: %v", f.Args())
 		}
 		if opts.Out == "" {
-			if opts.Settings != "" || len(opts.Extensions) > 0 || len(opts.Patches) > 0 {
-				return fmt.Errorf("--settings, --extension and --patch need --out; without it pitch builds from your Pi settings")
+			if opts.Settings != "" || len(opts.Extensions) > 0 || opts.Pi != "" {
+				return fmt.Errorf("--settings, --extension and --pi need --out; without it pitch builds from your Pi settings")
 			}
 			return buildInstalled(ctx, *name, stdout)
 		}
@@ -79,15 +80,29 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer) error
 		}
 		fmt.Fprintf(stdout, "Built %s\n", filepath.Join(opts.Out, "pi"))
 		return nil
-	case "prepare": // for scripts/release.ts
-		if len(args) != 2 {
-			return fmt.Errorf("usage: pitch prepare OUT.tar.gz")
-		}
-		cache, err := os.UserCacheDir()
+	case "prepare": // for scripts/release.ts and bench/build-variants.ts
+		pins, err := sourcePins()
 		if err != nil {
 			return err
 		}
-		return Prepare(ctx, filepath.Join(cache, "pitch"), args[1], stdout)
+		pinned := pins.Pi.Commit
+		f := flag.NewFlagSet("prepare", flag.ContinueOnError)
+		f.SetOutput(stderr)
+		f.StringVar(&pins.Pi.Repository, "repo", pins.Pi.Repository, "Pi repository (a URL or a local path)")
+		f.StringVar(&pins.Pi.Commit, "commit", pins.Pi.Commit, "full commit to build")
+		if err := f.Parse(args[1:]); err != nil {
+			return err
+		}
+		if f.NArg() != 1 {
+			return fmt.Errorf("usage: pitch prepare [--repo REPO --commit SHA] OUT.tar.gz")
+		}
+		if !strings.Contains(pins.Pi.Repository, "://") && !filepath.IsAbs(pins.Pi.Repository) {
+			return fmt.Errorf("--repo must be a URL or an absolute path")
+		}
+		if pins.Pi.Commit != pinned {
+			pins.Pi.Branch = ""
+		}
+		return Prepare(ctx, cache, pins.Pi, f.Arg(0), stdout)
 	case "status", "off", "on", "uninstall":
 		if len(args) != 1 {
 			return fmt.Errorf("usage: pitch %s", args[0])

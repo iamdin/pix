@@ -253,3 +253,30 @@ func TestManifestJSON(t *testing.T) {
 		t.Fatal("floating or obsolete toolchain dependency")
 	}
 }
+
+func TestUnpackPi(t *testing.T) {
+	pins, err := sourcePins()
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := runner{context.Background(), os.Environ()}
+	pack := func(info preparedInfo) string {
+		dir := t.TempDir()
+		if err := writeJSON(filepath.Join(dir, preparedFile), info); err != nil {
+			t.Fatal(err)
+		}
+		archive := filepath.Join(t.TempDir(), "pi.tar.gz")
+		if err := r.command("", nil, "tar", "-czf", archive, "-C", dir, "."); err != nil {
+			t.Fatal(err)
+		}
+		return archive
+	}
+	variant := pins.Pi
+	variant.Commit = strings.Repeat("a", 40)
+	if info, err := unpackPi(r, pins, pack(preparedInfo{Pitch: Version, Pi: variant}), filepath.Join(t.TempDir(), "pi"), io.Discard); err != nil || info.Pi.Commit != variant.Commit {
+		t.Fatalf("--pi takes any commit: %+v %v", info, err)
+	}
+	if _, err := unpackPi(r, pins, pack(preparedInfo{Pitch: "0.0.0", Pi: pins.Pi}), filepath.Join(t.TempDir(), "pi"), io.Discard); err == nil {
+		t.Fatal("accepted Pi prepared by another pitch")
+	}
+}

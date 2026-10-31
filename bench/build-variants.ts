@@ -4,12 +4,12 @@
  *   bun bench/build-variants.ts --repo /abs/pi --out /abs/dir base= md=streaming-markdown no-hl=all-highlight-cache
  *   bun bench/build-variants.ts --repo /abs/pi --out /abs/dir --combos
  *
- * A patch is a commit `perf(<name>): ...` between --tag and --branch on the fork (defaults v1.4.0 and pitch-v1.4.0;
- * the branch must be at the commit pinned in sources.lock.json). A variant keeps some patches: pitch builds the branch with the reverse diff of every
- * other patch passed as --patch. Each argument is variant=patches: a comma list of patch names, `all`, or
- * `all-name,...` (every patch but those). Empty = no patches. --combos builds every subset, named by its patches joined
- * with `+` (`base` for none). Outputs go to <out>/<variant> (never overwritten: pitch refuses an existing directory).
- * Prints variant=/abs/pi lines for bench/run.ts --build.
+ * A patch is a commit `perf(<name>): ...` between --tag and --branch on the fork (defaults v1.4.0 and pitch-v1.4.0).
+ * A variant keeps some patches: the branch with every other patch reverted, as a commit of its own (in a scratch worktree,
+ * on no branch), which `pitch prepare --repo --commit` builds and `pitch build --pi` compiles. Each argument is
+ * variant=patches: a comma list of patch names, `all`, or `all-name,...` (every patch but those). Empty = no patches.
+ * --combos builds every subset, named by its patches joined with `+` (`base` for none). Outputs go to <out>/<variant>
+ * (never overwritten: pitch refuses an existing directory). Prints variant=/abs/pi lines for bench/run.ts --build.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -35,7 +35,7 @@ function git(...cmd: string[]): string {
 	return proc.stdout.toString();
 }
 
-// name -> commit, oldest first; the reverse diffs are applied newest first.
+// name -> commit, oldest first; reverted newest first.
 const commits = new Map<string, string>();
 for (const line of git("log", "--reverse", "--format=%H %s", `${args.tag}..${args.branch}`).trim().split("\n")) {
 	const match = /^(\w+) perf\(([\w-]+)\):/.exec(line);
@@ -64,22 +64,31 @@ const variants = args.combos
 			return { variant: arg.slice(0, at), names: select(arg.slice(at + 1)) };
 		});
 
+function run(cmd: string[], log: string) {
+	const proc = Bun.spawnSync(cmd, { cwd: root });
+	fs.appendFileSync(log, proc.stdout.toString() + proc.stderr.toString());
+	if (proc.exitCode !== 0) throw new Error(`${cmd.slice(0, 2).join(" ")} failed, see ${log}`);
+}
+
+const pitch = path.join(root, "bin/pitch");
 const lines: string[] = [];
 for (const { variant, names } of variants) {
 	const out = path.join(args.out, variant);
-	const flags = patches
-		.filter((name) => !names.includes(name))
-		.reverse()
-		.flatMap((name) => {
-			const revert = path.join(args.out!, `revert-${name}.patch`);
-			const commit = commits.get(name)!;
-			fs.writeFileSync(revert, git("diff", commit, `${commit}^`));
-			return ["--patch", revert];
-		});
 	const log = `${out}.log`;
-	const proc = Bun.spawnSync([path.join(root, "bin/pitch"), "build", ...flags, "--out", out], { cwd: root });
-	fs.writeFileSync(log, proc.stdout.toString() + proc.stderr.toString());
-	if (proc.exitCode !== 0) throw new Error(`${variant}: pitch build failed, see ${log}`);
+	const tree = path.join(args.out, `${variant}.worktree`);
+	git("worktree", "add", "--detach", tree, args.branch!);
+	let commit: string;
+	try {
+		for (const name of patches.filter((name) => !names.includes(name)).reverse()) {
+			git("-C", tree, "revert", "--no-edit", commits.get(name)!);
+		}
+		commit = git("-C", tree, "rev-parse", "HEAD").trim();
+	} finally {
+		git("worktree", "remove", "--force", tree);
+	}
+	const pi = `${out}.tar.gz`;
+	run([pitch, "prepare", "--repo", path.resolve(args.repo!), "--commit", commit, pi], log);
+	run([pitch, "build", "--pi", pi, "--out", out], log);
 	console.error(`built ${variant} (${names.join(",") || "no patches"})`);
 	lines.push(`${variant}=${path.join(out, "pi")}`);
 }

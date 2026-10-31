@@ -8,7 +8,7 @@
 curl -fsSL https://raw.githubusercontent.com/iamdin/pitch/main/install.sh | sh
 ```
 
-装到 `~/.local/bin/pitch`（`PITCH_INSTALL_DIR` 可改），校验 sha256。pitch 自带 Bun 和已经打好补丁、构建并测试过的 Pi，`pitch build` 只在本机编译你的扩展，约一分钟；不需要 Node。来自 npm 的扩展用 npm 下载，来自 Git 的用 git。不改动全局安装。从源码构建：`go build -trimpath -o bin/pitch ./cmd/pitch`（需要 Go 1.24+ 和本地的 `internal/pitch/runtime-data/bun.zip`，它不在仓库里；没有 `runtime-data/pi.tar.gz` 时，`pitch build` 在本机准备 Pi，需要 Git、Node 24+ 和 npm，`bun scripts/release.ts` 会生成它）。用 `--patch` 加了补丁时同样在本机准备。
+装到 `~/.local/bin/pitch`（`PITCH_INSTALL_DIR` 可改），校验 sha256。pitch 自带 Bun 和已经打好补丁、构建并测试过的 Pi，`pitch build` 只在本机编译你的扩展，约一分钟；不需要 Node。来自 npm 的扩展用 npm 下载，来自 Git 的用 git。不改动全局安装。从源码构建：`go build -trimpath -o bin/pitch ./cmd/pitch`（需要 Go 1.24+ 和本地的 `internal/pitch/runtime-data/bun.zip`，它不在仓库里。这样的开发构建不带 Pi：先 `pitch prepare /abs/pi.tar.gz`（需要 Git、Node 24+ 和 npm），再 `pitch build --pi /abs/pi.tar.gz --out DIR`；`bun scripts/release.ts` 会把 Pi 打进 pitch）。
 
 ## 使用
 
@@ -103,15 +103,13 @@ Go CLI 是编排主体；小型 JS 桥接直接使用这份 Pi 的包管理器�
 
 v1.4.0 官方 AOT，原版 → 默认（Apple M4，CPU 时间 / RSS）：6 万字流式 Markdown 24.2 s → 4.8 s；200 KB write（`pi -p`）9.7 s → 0.1 s；TUI 中 200 KB write 内存 316 MB → 105 MB；启动不变；读一张 3000 px 图片 25 s → 0.3 s。
 
-**`streaming-tool-arguments` 行为差异**：大工具参数的中间解析快照更新变少，原始 delta 和最终参数保持完整。依赖每条 delta 都有最新解析快照的扩展，可用 `--patch` 反向应用这个提交的 diff 去掉它。
+**`streaming-tool-arguments` 行为差异**：大工具参数的中间解析快照更新变少，原始 delta 和最终参数保持完整。依赖每条 delta 都有最新解析快照的扩展，用 `pitch off` 换回原版 Pi。
 
-`--patch` 支持本地 Git unified diff，路径相对当前目录；每份必须为非符号链接普通文件，1 byte–16 MiB。读取后固定副本，在 pitch 的 Pi 上按参数顺序应用（这时 Pi 在本机准备，需要 Git、Node 24+ 和 npm），不做远程下载、依赖求解或自动冲突修复。失败立即停止并保留构建目录；已有输出不覆盖。
-
-**仅应用可信补丁**：修改后的源码、构建脚本、测试及 smoke 都能执行代码；临时 HOME 不是沙箱。pitch 的补丁测试在发版时运行，带 `--patch` 时不运行；外部补丁不会自动发现并运行自带测试，贡献者需要自行验证并说明测试命令。贡献与重放方式见 [PATCHES.md](PATCHES.md)。
+补丁怎么维护、怎么改见 [PATCHES.md](PATCHES.md)。
 
 ## 产物与可移植性
 
-保留完整输出目录，不只复制 `pi`。`pitch-build.json` 记录源码、工具链、入口、实际包版本/commit、参数和文件哈希；`patches` 按实际应用顺序记录本地补丁来源、recipe 副本及 SHA-256，`source_tree` 记录全部补丁后的 Git tree，`extensions_auto_load` 标明新加载语义。`recipe/extensions.json` 保留原生 packages 声明、解析出的入口及发现的 npm 锁文件内容；不包含其他输入设置。
+保留完整输出目录，不只复制 `pi`。`pitch-build.json` 记录源码、工具链、入口、实际包版本/commit、参数和文件哈希，`source_tree` 记录所构建 Pi 的 Git tree，`checks` 列出实际跑过的检查，`extensions_auto_load` 标明新加载语义。`recipe/extensions.json` 保留原生 packages 声明、解析出的入口及发现的 npm 锁文件内容；不包含其他输入设置。
 
 `--compile-in-place` 保留构建时模块身份。已验证选中的 pi-loop/受控扩展在构建目录、本地入口移走后仍自动加载；另用禁止磁盘代码和字符串代码生成的诊断构建验证不是源码回退。**这不等于任意扩展跨机器可移植。** 动态路径、原生库及运行时资源仍需逐项处理；Bun 将 in-place 定位为本机构建。
 

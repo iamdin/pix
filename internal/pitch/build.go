@@ -18,7 +18,6 @@ type Manifest struct {
 	Pitch              string            `json:"pitch"`
 	BuilderSHA256      string            `json:"builder_sha256"`
 	Sources            Sources           `json:"sources"`
-	Patches            []Patch           `json:"patches,omitempty"`
 	Extensions         []Extension       `json:"extensions"`
 	ExtensionsAutoLoad bool              `json:"extensions_auto_load,omitempty"`
 	SourceTree         string            `json:"source_tree"`
@@ -42,12 +41,16 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if runtime.GOOS+"/"+runtime.GOARCH != pins.Bun.Platform {
 		return fmt.Errorf("this alpha supports only %s", pins.Bun.Platform)
 	}
-	local, err := readLocalPatches(opts.Patches)
-	if err != nil {
-		return err
-	}
 	if _, err := exec.LookPath("codesign"); err != nil {
 		return fmt.Errorf("build requires codesign in PATH")
+	}
+	if opts.Pi != "" {
+		if opts.Pi, err = filepath.Abs(opts.Pi); err != nil {
+			return err
+		}
+		if _, err = os.Stat(opts.Pi); err != nil {
+			return err
+		}
 	}
 	if opts.Settings != "" {
 		opts.Settings, err = filepath.Abs(opts.Settings)
@@ -100,18 +103,12 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 		return err
 	}
 	defer log.Close()
-	// A release carries Pi already built and tested; with local patches, or in a development build, Pi is prepared here.
-	prepared := len(local) == 0 && hasPreparedPi()
-	total := 4
-	if !prepared {
-		total = 6
-	}
 	n := 0
 	step := func(s string) {
 		n++
-		fmt.Fprintf(stdout, "[%d/%d] %s\n", n, total, s)
+		fmt.Fprintf(stdout, "[%d/4] %s\n", n, s)
 	}
-	fmt.Fprintf(stdout, "Building Pi %s (the release pitch %s is pinned to), a few minutes\nLog: %s\n", strings.TrimPrefix(pins.Pi.Tag, "v"), Version, filepath.Join(stage, "build.log"))
+	fmt.Fprintf(stdout, "Building Pi %s with pitch %s, a few minutes\nLog: %s\n", strings.TrimPrefix(pins.Pi.Tag, "v"), Version, filepath.Join(stage, "build.log"))
 	bun, err := getRuntime(r, opts.Cache, pins.Bun)
 	if err != nil {
 		return err
@@ -123,18 +120,9 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err = materializeAssets(dataDir); err != nil {
 		return err
 	}
-	patches, err := preparePatches(dataDir, local)
-	if err != nil {
-		return err
-	}
 	source := filepath.Join(stage, "pi")
-	var info preparedInfo
-	if prepared {
-		step("Unpack the patched Pi")
-		info, err = unpackPreparedPi(r, pins, stage, source, log)
-	} else {
-		info, err = preparePi(r, opts.Cache, pins, patches, bun, stage, source, log, step)
-	}
+	step("Unpack the patched Pi")
+	info, err := unpackPi(r, pins, opts.Pi, source, log)
 	if err != nil {
 		return err
 	}
@@ -191,11 +179,6 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err = r.command(source, log, bun, args...); err != nil {
 		return err
 	}
-	if !prepared {
-		if err = verifySource(r, source, info.SourceTree); err != nil {
-			return err
-		}
-	}
 	for _, extension := range extensions {
 		if err = requireHash(extension.Entry, extension.SHA256); err != nil {
 			return err
@@ -204,25 +187,14 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err = packageAssets(source, opts.Out); err != nil {
 		return err
 	}
-	for _, name := range []string{"LICENSE.Pi", "LICENSE.Bun"} {
+	// Most of pitch's Pi patches follow Pi-Bolt (MIT).
+	for _, name := range []string{"LICENSE.Pi", "LICENSE.Bun", "LICENSE.Pi-Bolt"} {
 		if err = copyFile(filepath.Join(dataDir, name), filepath.Join(opts.Out, name), 0644); err != nil {
 			return err
 		}
 	}
-	// Most of pitch's Pi patches follow Pi-Bolt (MIT).
-	if err = copyFile(filepath.Join(dataDir, "LICENSE.Pi-Bolt"), filepath.Join(opts.Out, "LICENSE.Pi-Bolt"), 0644); err != nil {
-		return err
-	}
 	if err = os.Mkdir(filepath.Join(opts.Out, "recipe"), 0755); err != nil {
 		return err
-	}
-	for _, patch := range patches {
-		if err = requireHash(filepath.Join(stage, patch.File), patch.SHA256); err != nil {
-			return err
-		}
-		if err = copyFile(filepath.Join(stage, patch.File), filepath.Join(opts.Out, patch.File), 0644); err != nil {
-			return err
-		}
 	}
 	for name, path := range map[string]string{"entry.ts": entry, "tsconfig.json": tsconfig, "sources.lock.json": filepath.Join(dataDir, "sources.lock.json"), "metafile.json": filepath.Join(stage, "metafile.json")} {
 		if err = copyFile(path, filepath.Join(opts.Out, "recipe", name), 0644); err != nil {
@@ -240,7 +212,7 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err = r.command("", log, "codesign", "--verify", "--strict", executable); err != nil {
 		return err
 	}
-	if err = smoke(ctx, executable, stage, pins.Pi.Tag); err != nil {
+	if err = smoke(ctx, executable, stage, info.Pi.Tag); err != nil {
 		return err
 	}
 	if err = copyFile(filepath.Join(stage, "build.log"), filepath.Join(opts.Out, "build.log"), 0600); err != nil {
@@ -261,7 +233,13 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err != nil {
 		return err
 	}
-	manifest := Manifest{Schema: 1, Pitch: Version, BuilderSHA256: builderHash, Sources: pins, Patches: patches, Extensions: extensions, ExtensionsAutoLoad: true, SourceTree: info.SourceTree, NPMLock: info.NPMLock, Node: info.Node, NPM: info.NPM, BuiltAt: time.Now().UTC().Format(time.RFC3339), CompilerArgs: args, Work: stage, Checks: []string{"runtime archive and binary SHA-256", "runtime revision and code signature", "pinned Pi commit and source tree", "patch unit tests", "artifact code signature", "version", "help", "isolated RPC get_state"}, Limitations: []string{"Local patches can execute code during build, tests and smoke; isolation is not a sandbox. Patch hashes record inputs, not trust or semantic equivalence.", "With streaming-tool-arguments, intermediate argument snapshots of large tool calls may lag; raw deltas and final arguments remain complete.", "Experimental Bun AOT; built-in mutation and module-loader behavior differ from stock Pi.", "Pi's built-in extensions (llama.cpp, codemode, tool-search, mcp) always load; user, project and settings extensions on disk do not; not a sandbox.", "Selected extensions auto-load, including during build smoke checks; use trusted packages only. No extension permission sandbox.", "Code loaded from disk or generated at runtime is interpreted, not AOT. In-place module identities and cross-machine portability require validation.", "No performance, full provider, TUI, image or multi-day stability claim.", "Package sources use pinned Pi resolution in isolated storage; npm install scripts are disabled. Local dependencies, dynamic imports and native/runtime assets are not made hermetic by this build."}, Files: hashes}
+	checks := []string{"runtime archive and binary SHA-256", "runtime revision and code signature", "Pi commit and source tree, when Pi was prepared"}
+	if info.Tested {
+		checks = append(checks, "patch unit tests, when Pi was prepared")
+	}
+	checks = append(checks, "artifact code signature", "version", "help", "isolated RPC get_state")
+	pins.Pi = info.Pi
+	manifest := Manifest{Schema: 1, Pitch: Version, BuilderSHA256: builderHash, Sources: pins, Extensions: extensions, ExtensionsAutoLoad: true, SourceTree: info.SourceTree, NPMLock: info.NPMLock, Node: info.Node, NPM: info.NPM, BuiltAt: time.Now().UTC().Format(time.RFC3339), CompilerArgs: args, Work: stage, Checks: checks, Limitations: []string{"With streaming-tool-arguments, intermediate argument snapshots of large tool calls may lag; raw deltas and final arguments remain complete.", "Experimental Bun AOT; built-in mutation and module-loader behavior differ from stock Pi.", "Pi's built-in extensions (llama.cpp, codemode, tool-search, mcp) always load; user, project and settings extensions on disk do not; not a sandbox.", "Selected extensions auto-load, including during build smoke checks; use trusted packages only. No extension permission sandbox.", "Code loaded from disk or generated at runtime is interpreted, not AOT. In-place module identities and cross-machine portability require validation.", "No performance, full provider, TUI, image or multi-day stability claim.", "Package sources use pinned Pi resolution in isolated storage; npm install scripts are disabled. Local dependencies, dynamic imports and native/runtime assets are not made hermetic by this build."}, Files: hashes}
 	if err = writeJSON(filepath.Join(opts.Out, "pitch-build.json"), manifest); err != nil {
 		return err
 	}

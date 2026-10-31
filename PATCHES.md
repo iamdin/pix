@@ -14,24 +14,10 @@ pitch 构建的 Pi 是它的 fork，仓库里不维护补丁文件。Fork 规范
 
 发版（`bun scripts/release.ts`）时在维护者机器上准备一次：拉固定 commit、`npm ci`、构建、跑全部补丁测试，打包嵌入 pitch。用户的 `pitch build` 只编译。
 
-## 使用自己的补丁
-
-1. 基于 `getpie-dev/pi` 的 `pitch-<tag>` 分支（`sources.lock.json` 里的 commit）制作补丁。
-2. 使用标准 Git diff，带 `a/`、`b/` 路径。包含新增文件时要让 Git 识别这些文件，例如对自己新增的文件执行 `git add -N path`。
-3. `pitch build --patch first.patch --patch second.patch --out NEW`；顺序就是应用顺序。带空格的路径使用 shell 引号。
-4. 这时 Pi 在本机准备，需要 Git、Node 24+ 和 npm；pitch 的补丁测试不再运行（你的补丁可能改到它们），自己的测试自行运行。
-
-每一步使用 Git 的索引检查，不使用三方合并、忽略上下文或自动修复。失配时保留工作树和日志，修正补丁后用新输出目录重试。
-
-本地 patch 在准备前读入并固定副本。拒绝空文件、目录、符号链接和超过 16 MiB 的文件。Git 拒绝目录穿越及穿越工作树符号链接写入，但这**不是执行沙箱**；可信源码才可编译、测试和运行。
-
 ## 来源记录
 
-`pitch-build.json` 的 `sources.pi` 记录 fork、分支和 commit；`patches` 数组按应用顺序记录本地补丁：
+`pitch-build.json` 的 `sources.pi` 记录构建的 Pi：fork、分支和 commit；`source_tree` 是该 commit 的 Git tree，`checks` 列出实际跑过的检查（补丁单测只在准备锁定的 commit 时跑）。不承诺生成的二进制逐字节一致。
 
-- `kind`：`local`；
-- `source`：本地输入的绝对路径（分享 manifest 前注意路径隐私）；
-- `file`：产物中的 recipe 副本；
-- `sha256`：该副本的字节哈希。
+## 改补丁
 
-`source_tree` 是打完所有补丁后的 Git tree，可用同一 commit 加同样的补丁核对。不承诺生成的二进制逐字节一致。
+在 fork 里改提交，再用 `pitch prepare --repo /abs/pi --commit SHA /abs/pi.tar.gz` 构建出 Pi（需要 Git、Node 24+ 和 npm），`pitch build --pi /abs/pi.tar.gz --out NEW` 编译。比较补丁组合用 `bench/build-variants.ts`，它在 fork 里 revert 掉不要的补丁再走同样两步。

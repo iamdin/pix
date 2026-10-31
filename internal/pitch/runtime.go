@@ -3,7 +3,6 @@ package pitch
 import (
 	"context"
 	"embed"
-	"io"
 	"os"
 	"path/filepath"
 )
@@ -12,17 +11,6 @@ import (
 //
 //go:embed runtime-data
 var runtimeData embed.FS
-
-// writeRuntimeData copies an embedded runtime-data file to w.
-func writeRuntimeData(name string, w io.Writer) error {
-	f, err := runtimeData.Open("runtime-data/" + name)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	_, err = io.Copy(w, f)
-	return err
-}
 
 // Canary assets are disposable; keep the exact validated compiler with the CLI.
 func cacheRuntimeArchive(ctx context.Context, target, expected string) error {
@@ -37,7 +25,12 @@ func cacheRuntimeArchive(ctx context.Context, target, expected string) error {
 		return err
 	}
 	defer os.Remove(f.Name())
-	writeErr := writeRuntimeData("bun.zip", f)
+	bun, err := runtimeData.ReadFile("runtime-data/bun.zip")
+	if err != nil {
+		f.Close()
+		return err
+	}
+	_, writeErr := f.Write(bun)
 	closeErr := f.Close()
 	if writeErr != nil {
 		return writeErr
