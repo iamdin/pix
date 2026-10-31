@@ -1,6 +1,6 @@
 # pitch
 
-用 Go 编排固定 Pi 的官方 Bun AOT 构建。**当前 alpha.7，仅支持 macOS ARM64，仍为实验性工具链。**
+用 Go 编排固定 Pi 的官方 Bun AOT 构建。**当前 alpha.8，仅支持 macOS ARM64，仍为实验性工具链。**
 
 ## 安装
 

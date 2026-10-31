@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-const Version = "0.1.0-alpha.7"
+const Version = "0.1.0-alpha.8"
 
 const defaultFeatures = "all"
 const allFeatures = "streaming-markdown,highlight-cache,streaming-tool-arguments,write-call-highlight"
