@@ -1,6 +1,6 @@
 diff --git a/packages/coding-agent/src/utils/image-resize-bun.ts b/packages/coding-agent/src/utils/image-resize-bun.ts
 new file mode 100644
-index 000000000..a7b3fdf73
+index 000000000..7f922a928
 --- /dev/null
 +++ b/packages/coding-agent/src/utils/image-resize-bun.ts
 @@ -0,0 +1,82 @@
@@ -28,7 +28,7 @@ index 000000000..a7b3fdf73
 +	return (globalThis as { Bun?: { Image?: BunImageConstructor } }).Bun?.Image;
 +}
 +
-+/** Rejects when Bun cannot decode the image, so the caller can try Photon. */
++/** Rejects when Bun cannot decode the image. */
 +export async function resizeImageWithBun(
 +	Image: BunImageConstructor,
 +	inputBytes: Uint8Array,
@@ -100,7 +100,7 @@ index 3f80111ff..3d0e1f75e 100644
  	maxHeight: 2000,
  	maxBytes: DEFAULT_MAX_BYTES,
 diff --git a/packages/coding-agent/src/utils/image-resize.ts b/packages/coding-agent/src/utils/image-resize.ts
-index ccdb98015..14af51bd5 100644
+index ccdb98015..81d924c6e 100644
 --- a/packages/coding-agent/src/utils/image-resize.ts
 +++ b/packages/coding-agent/src/utils/image-resize.ts
 @@ -1,4 +1,5 @@
@@ -114,18 +114,18 @@ index ccdb98015..14af51bd5 100644
   * block the TUI event loop. If the worker cannot be loaded (for example in some
   * Bun compiled executable layouts), fall back to in-process resizing so image
 - * reads still work.
-+ * reads still work. Under a Bun with `Bun.Image`, resize natively instead (image-resize-bun.ts).
++ * reads still work. Under Bun, `Bun.Image` resizes natively instead (image-resize-bun.ts).
   */
  export async function resizeImage(
  	inputBytes: Uint8Array,
  	mimeType: string,
  	options?: ImageResizeOptions,
  ): Promise<ResizedImage | null> {
++	// Under Bun, Bun.Image replaces Photon; Node (Pi's tests, npm installs) keeps Photon.
 +	const BunImage = getBunImage();
 +	if (BunImage) {
-+		try {
-+			return await resizeImageWithBun(BunImage, inputBytes, mimeType, options);
-+		} catch {}
++		// An image Bun cannot decode is one that cannot be resized, as with resizeImageInProcess().
++		return resizeImageWithBun(BunImage, inputBytes, mimeType, options).catch(() => null);
 +	}
 +
  	const isTypeScriptRuntime = import.meta.url.endsWith(".ts");
@@ -133,12 +133,13 @@ index ccdb98015..14af51bd5 100644
  		isTypeScriptRuntime ? "./image-resize-worker.ts" : "./image-resize-worker.js",
 diff --git a/packages/coding-agent/test/image-resize-bun.bun.ts b/packages/coding-agent/test/image-resize-bun.bun.ts
 new file mode 100644
-index 000000000..14eb5e71f
+index 000000000..82071ea32
 --- /dev/null
 +++ b/packages/coding-agent/test/image-resize-bun.bun.ts
-@@ -0,0 +1,72 @@
+@@ -0,0 +1,76 @@
 +// Runs under Bun (`bun test ./test/image-resize-bun.bun.ts`): Bun.Image does not exist in Node, where vitest runs.
 +import { describe, expect, it } from "vitest";
++import { resizeImage } from "../src/utils/image-resize.ts";
 +import { getBunImage, resizeImageWithBun } from "../src/utils/image-resize-bun.ts";
 +import { resizeImageInProcess } from "../src/utils/image-resize-core.ts";
 +
@@ -205,7 +206,10 @@ index 000000000..14eb5e71f
 +		expect(bun!.width).toBeLessThan(2000);
 +	});
 +
-+	it("rejects what it cannot decode, so resizeImage() falls back to Photon", async () => {
-+		await expect(resizeImageWithBun(Image, new Uint8Array([1, 2, 3, 4]), "image/png")).rejects.toThrow();
++	it("resizeImage() gives up on what Bun cannot decode, like Photon", async () => {
++		const garbage = new Uint8Array(4_000_000).fill(7);
++		await expect(resizeImageWithBun(Image, garbage, "image/png")).rejects.toThrow();
++		expect(await resizeImage(garbage, "image/png")).toBeNull();
++		expect(await resizeImageInProcess(garbage, "image/png")).toBeNull();
 +	});
 +});
