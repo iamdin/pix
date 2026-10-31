@@ -6,10 +6,10 @@ description: Move pitch's Pi performance patches to a new upstream Pi tag. Each 
 # Upgrading Pi with the performance patches
 
 Paths are relative to the pitch project (`/Volumes/SSD/GitHub/iamdin/pitch`). The Pi fork is `/Volumes/SSD/GitHub/iamdin/pi`
-(remotes: `getpie` = github.com/getpie-dev/pi, pitch's fork; `origin` = earendil-works/pi; `bolt` = opensec-git/Pi-Bolt,
-reference only). pitch builds the fork's branch `pitch-<tag>`: the upstream tag plus one commit per patch, pinned by
-commit in `internal/pitch/data/sources.lock.json`. There are no patch files. The fork rules (naming, never
-rewriting or deleting a branch a release pinned, `fix(<name>)` commits after release) are in PATCHES.md.
+(remotes: `getpie` = github.com/getpie-dev/pi, pitch's fork; `origin` = earendil-works/pi). pitch builds the
+fork's branch `pitch-<tag>`: the upstream tag plus one commit per patch, pinned by commit in
+`internal/pitch/data/sources.lock.json`. There are no patch files. The fork rules (naming, never rewriting or deleting
+a branch a release pinned, `fix(<name>)` commits after release) are in PATCHES.md.
 
 ## What a patch is
 

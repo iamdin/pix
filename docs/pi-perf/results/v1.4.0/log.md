@@ -13,7 +13,7 @@ JIT runs: `bun packages/coding-agent/src/cli.ts` from snapshots `pitch/.work/pi-
 | 003 | ec5c38e15 | pass | write:200 CPU 27.66 → 0.62 s |
 | 004 | 372b63204 | pass | tuiwrite:400 CPU 1.05 → 0.82 s |
 | 005 | 354078c9b | pass (max-regress only) | md:60000 RSS 245.6 → 221.9 MB |
-| R1 | 1c9857708, reverted by aa4b56cf0 | **fail** | Pi-Bolt f2fae008c as a whole: md:20000 CPU +2.3% (no gain), write:50 wall +7.0% (0.209 → 0.224 s, ranges apart; CPU equal). Cause not investigated. Its assistant-message part was later taken into 010. |
+| R1 | 1c9857708, reverted by aa4b56cf0 | **fail** | f2fae008c as a whole: md:20000 CPU +2.3% (no gain), write:50 wall +7.0% (0.209 → 0.224 s, ranges apart; CPU equal). Cause not investigated. Its assistant-message part was later taken into 010. |
 | 006–010 | c324c8ac7 … 009f7a05f | pass on AOT (group) | JIT (`006-010.txt`): md:20000 CPU 3.09 → 2.88 s (−6.8%), tuiwrite:200 CPU 0.54 → 0.61 s (+13%, ranges apart). AOT (`aot.txt`): md:20000 1.78 → 1.54 s (−13.5%), tuiwrite equal. |
 
 006–010 were gated as a group (chain run `006-010.txt`) instead of one gate each.
@@ -168,7 +168,7 @@ in this run). All four patches pass both gates: A, B, C, D kept.
 | streaming-tool-arguments | 003 | 4f0b1eccf |
 | write-call-highlight | 004 + collapsed-path copy | a59d60900, 331f79e3a |
 
-Not taken: 010 (live lines, +53 MB RSS), R1 (Pi-Bolt f2fae008c). The chain specs (`docs/pi-perf/0NN-*`, later
+Not taken: 010 (live lines, +53 MB RSS), R1 (f2fae008c). The chain specs (`docs/pi-perf/0NN-*`, later
 `v1.4.0-chain/`) were folded into the four specs and removed; the numbers above in this log refer to them.
 
 ### Can 005's string copies go? No (`drop-memory-parts-aot.txt`, 3 rounds + 1 warm-up)

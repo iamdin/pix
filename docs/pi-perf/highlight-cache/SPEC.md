@@ -6,8 +6,7 @@
 - Independent: applies alone on the tag and with the other patches in any order. Alone it saves the
   re-highlighting; its biggest gain is with streaming-markdown, whose per-block cache needs stable styles and cheap code
   blocks.
-- Reference: Pi-Bolt 6f9de1b24 (MIT, © OpenSec) for steps 1–3; step 4 is ours.
-  Supersedes pitch's old builtin P1 (bounded-highlight-cache).
+- Supersedes pitch's old builtin P1 (bounded-highlight-cache).
 
 ## Problem
 

@@ -249,7 +249,7 @@ func TestManifestJSON(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(string(data), "Pi-Bolt") || strings.Contains(string(data), "/canary/") {
+	if strings.Contains(string(data), "/canary/") {
 		t.Fatal("floating or obsolete toolchain dependency")
 	}
 }

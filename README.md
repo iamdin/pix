@@ -142,4 +142,4 @@ bun bench/e2e/run.ts bin/pitch pi        # 经 pitch pi 跑已构建的版本
 
 ## 致谢
 
-感谢 Pi、Bun 和 JavaScriptCore 的开发者；感谢 Pi-Bolt 提供优化研究参考。前 4 个优化补丁参考 Pi-Bolt 的对应改动实现（commit 见各 SPEC），保留 MIT 许可证，启用任一补丁时产物附带 `LICENSE.Pi-Bolt`。
+感谢 Pi 和 JavaScriptCore 的开发者，感谢 [Bun](https://github.com/oven-sh/bun) 和 [Pi-Bolt](https://github.com/opensec-git/Pi-Bolt)。

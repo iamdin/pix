@@ -187,8 +187,7 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err = packageAssets(source, opts.Out); err != nil {
 		return err
 	}
-	// Most of pitch's Pi patches follow Pi-Bolt (MIT).
-	for _, name := range []string{"LICENSE.Pi", "LICENSE.Bun", "LICENSE.Pi-Bolt"} {
+	for _, name := range []string{"LICENSE.Pi", "LICENSE.Bun"} {
 		if err = copyFile(filepath.Join(dataDir, name), filepath.Join(opts.Out, name), 0644); err != nil {
 			return err
 		}

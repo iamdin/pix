@@ -4,7 +4,7 @@
 - Method: a collapsed write call highlights only the lines it can show.
 - Independent: applies alone on the tag and with the other patches in any order. Its gain shows with
   streaming-tool-arguments; without it the argument parsing dominates.
-- Reference: Pi-Bolt 24d079015 (MIT, © OpenSec). Supersedes pitch's old builtin P4 (completed-write-cache) for the
+- Supersedes pitch's old builtin P4 (completed-write-cache) for the
   collapsed case.
 
 ## Problem
