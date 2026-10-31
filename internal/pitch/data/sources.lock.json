@@ -4,7 +4,7 @@
     "repository": "https://github.com/getpie-dev/pi.git",
     "branch": "pitch-v1.4.0",
     "tag": "v1.4.0",
-    "commit": "d95a12ee1b88c6d216468b4eb8a5d388d0623a3e"
+    "commit": "f9731d41a29da59e2893622d7189ce85840cf137"
   },
   "bun": {
     "repository": "https://github.com/oven-sh/bun.git",

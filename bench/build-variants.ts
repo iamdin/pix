@@ -4,7 +4,7 @@
  *   bun bench/build-variants.ts --repo /abs/pi --out /abs/dir base= md=streaming-markdown no-hl=all-highlight-cache
  *   bun bench/build-variants.ts --repo /abs/pi --out /abs/dir --combos
  *
- * A patch is a commit `perf(<name>): ...` between --tag and --branch on the fork (defaults v1.4.0 and pitch-v1.4.0).
+ * A patch is a commit `perf(<name>): ...` (and its `fix(<name>)` commits) between --tag and --branch on the fork (defaults v1.4.0 and pitch-v1.4.0).
  * A variant keeps some patches: the branch with every other patch reverted, as a commit of its own (in a scratch worktree,
  * on no branch), which `pitch prepare --repo --commit` builds and `pitch build --pi` compiles. Each argument is
  * variant=patches: a comma list of patch names, `all`, or `all-name,...` (every patch but those). Empty = no patches.
@@ -35,13 +35,14 @@ function git(...cmd: string[]): string {
 	return proc.stdout.toString();
 }
 
-// name -> commit, oldest first; reverted newest first.
-const commits = new Map<string, string>();
+// A patch is its `perf(<name>)` commit and any `fix(<name>)` commits after it (PATCHES.md), oldest first; a variant
+// reverts the commits of the patches it drops, newest first.
+const commits: { name: string; commit: string }[] = [];
 for (const line of git("log", "--reverse", "--format=%H %s", `${args.tag}..${args.branch}`).trim().split("\n")) {
-	const match = /^(\w+) perf\(([\w-]+)\):/.exec(line);
-	if (match) commits.set(match[2], match[1]);
+	const match = /^(\w+) (?:perf|fix)\(([\w-]+)\):/.exec(line);
+	if (match) commits.push({ name: match[2], commit: match[1] });
 }
-const patches = [...commits.keys()];
+const patches = [...new Set(commits.map((c) => c.name))];
 
 function select(list: string): string[] {
 	if (list === "") return [];
@@ -49,7 +50,7 @@ function select(list: string): string[] {
 		const drop = new Set(list === "all" ? [] : list.slice(4).split(","));
 		return patches.filter((name) => !drop.has(name));
 	}
-	for (const name of list.split(",")) if (!commits.has(name)) throw new Error(`no patch ${name} on ${args.branch}`);
+	for (const name of list.split(",")) if (!patches.includes(name)) throw new Error(`no patch ${name} on ${args.branch}`);
 	return list.split(",");
 }
 
@@ -79,8 +80,8 @@ for (const { variant, names } of variants) {
 	git("worktree", "add", "--detach", tree, args.branch!);
 	let commit: string;
 	try {
-		for (const name of patches.filter((name) => !names.includes(name)).reverse()) {
-			git("-C", tree, "revert", "--no-edit", commits.get(name)!);
+		for (const { commit } of commits.filter((c) => !names.includes(c.name)).reverse()) {
+			git("-C", tree, "revert", "--no-edit", commit);
 		}
 		commit = git("-C", tree, "rev-parse", "HEAD").trim();
 	} finally {
