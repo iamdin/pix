@@ -29,7 +29,7 @@ func TestPins(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pins.Pi.Tag != "v1.4.0" || pins.Pi.Repository != "https://github.com/iamdin/pi.git" || len(pins.Pi.Commit) != 40 || pins.Bun.Repository != "https://github.com/oven-sh/bun.git" || pins.Bun.Platform != "darwin/arm64" || len(pins.Bun.Commit) != 40 || len(pins.Bun.WebKitCommit) != 40 {
+	if pins.Pi.Tag != "v1.4.0" || pins.Pi.Repository != "https://github.com/getpie-dev/pi.git" || len(pins.Pi.Commit) != 40 || pins.Bun.Repository != "https://github.com/oven-sh/bun.git" || pins.Bun.Platform != "darwin/arm64" || len(pins.Bun.Commit) != 40 || len(pins.Bun.WebKitCommit) != 40 {
 		t.Fatalf("unexpected pins: %+v", pins)
 	}
 }

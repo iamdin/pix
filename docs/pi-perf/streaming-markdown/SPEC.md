@@ -2,7 +2,7 @@
 
 - Method: a streaming Markdown reply is lexed, rendered, wrapped and joined incrementally, so the cost of a chunk does not
   grow with the length of the reply.
-- Verified on: Pi v1.4.0, `iamdin/pi` branch `pitch-v1.4.0` commit 40b48953a
+- Verified on: Pi v1.4.0, `getpie-dev/pi` branch `pitch-v1.4.0` commit 40b48953a
 - Independent: applies alone on the tag and with the other patches in any order.
 - Reference: Pi-Bolt 75ac3b9ec, 62b7398c9, b0dcef8e8, 79406d9a2, a7fc7b03e, 7aad135ba, 9759aac32 (MIT, © OpenSec). Implement the
   parts below in order: each builds on the one before.

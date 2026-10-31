@@ -83,7 +83,7 @@ Go CLI 是编排主体；小型 JS 桥接直接使用这份 Pi 的包管理器�
 
 | 组件 | 固定版本 |
 |---|---|
-| Pi | v1.4.0 加 pitch 补丁：[iamdin/pi](https://github.com/iamdin/pi) `pitch-v1.4.0`，d95a12ee1b88c6d216468b4eb8a5d388d0623a3e |
+| Pi | v1.4.0 加 pitch 补丁：[getpie-dev/pi](https://github.com/getpie-dev/pi) `pitch-v1.4.0`，d95a12ee1b88c6d216468b4eb8a5d388d0623a3e |
 | Bun | 000ef503730334a388c47b1bd025851a76b4832e |
 | WebKit/JSC | 8c6c963e3c49fe39942d9625d1fc924128fad26e |
 

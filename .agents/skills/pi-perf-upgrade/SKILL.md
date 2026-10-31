@@ -1,12 +1,12 @@
 ---
 name: pi-perf-upgrade
-description: Move pitch's Pi performance patches to a new upstream Pi tag. Each patch (docs/pi-perf/<name>/) is one optimization method and one commit on pitch's Pi fork (github.com/iamdin/pi, branch pitch-<tag>); rebases the branch onto the tag, checks each patch against its spec and tests, and gates every patch alone and against the full set with bench/run.ts on AOT builds, so nothing gets slower. Use when upgrading the Pi version pitch builds, or to re-check the patches on the current one.
+description: Move pitch's Pi performance patches to a new upstream Pi tag. Each patch (docs/pi-perf/<name>/) is one optimization method and one commit on pitch's Pi fork (github.com/getpie-dev/pi, branch pitch-<tag>); rebases the branch onto the tag, checks each patch against its spec and tests, and gates every patch alone and against the full set with bench/run.ts on AOT builds, so nothing gets slower. Use when upgrading the Pi version pitch builds, or to re-check the patches on the current one.
 ---
 
 # Upgrading Pi with the performance patches
 
 Paths are relative to the pitch project (`/Volumes/SSD/GitHub/iamdin/pitch`). The Pi fork is `/Volumes/SSD/GitHub/iamdin/pi`
-(remotes: `iamdin` = github.com/iamdin/pi, pitch's fork; `origin` = earendil-works/pi; `bolt` = opensec-git/Pi-Bolt,
+(remotes: `getpie` = github.com/getpie-dev/pi, pitch's fork; `origin` = earendil-works/pi; `bolt` = opensec-git/Pi-Bolt,
 reference only). pitch builds the fork's branch `pitch-<tag>`: the upstream tag plus one commit per patch, pinned by
 commit in `internal/pitch/data/sources.lock.json`. There are no patch files.
 
@@ -43,7 +43,7 @@ measurably slower. Code may overlap, but each commit must revert cleanly from th
    2. Check the rebased commit against every invariant and step of the spec; fix it in that commit (`git commit
       --fixup` and an autosquash rebase), keeping one method per commit.
    3. Run the spec's tests. All must pass, including the ones it adds. Compare failures with the untouched tag first.
-3. `git push iamdin pitch-TAG`. In pitch: set `pi` in `internal/pitch/data/sources.lock.json` (tag, branch, commit; the
+3. `git push getpie pitch-TAG` (as gh account oxwen11, an admin of getpie-dev). In pitch: set `pi` in `internal/pitch/data/sources.lock.json` (tag, branch, commit; the
    model catalog revision from the tag's `nix/model-catalog.json`), update `piTests` in `internal/pitch/catalog.go` to
    the specs' tests, `go test ./...`, `go build -o bin/pitch ./cmd/pitch`.
 4. Gate on AOT, which is what pitch ships: `bun bench/build-variants.ts --repo /abs/pi --tag TAG --branch pitch-TAG
