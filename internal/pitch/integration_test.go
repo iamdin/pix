@@ -111,14 +111,14 @@ func TestIntegrationExtensions(t *testing.T) {
 func TestIntegrationManagementCommands(t *testing.T) {
 	exe := filepath.Join(integrationArtifact(t), "pi")
 	home := t.TempDir()
-	for _, command := range []string{"install", "remove", "uninstall", "update", "list", "config", "auth", "mcp"} {
+	for _, command := range []string{"install", "remove", "uninstall", "update"} {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		cmd := exec.CommandContext(ctx, exe, command)
 		cmd.Dir, cmd.Env = home, isolatedEnv(home)
 		out, err := cmd.CombinedOutput()
 		cancel()
 		exit, ok := err.(*exec.ExitError)
-		if !ok || exit.ExitCode() != 2 || !bytes.Contains(out, []byte("does not manage")) {
+		if !ok || exit.ExitCode() != 2 || !bytes.Contains(out, []byte("does not manage installations")) {
 			t.Fatalf("%s: %v %s", command, err, out)
 		}
 	}

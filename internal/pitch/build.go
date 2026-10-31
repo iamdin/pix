@@ -373,5 +373,10 @@ func packageAssets(source, out string) error {
 			return err
 		}
 	}
+	// Native clipboard and modifier-key helpers, next to the executable as in Pi's own binaries.
+	native := "native/darwin/prebuilds/darwin-arm64"
+	if err := copyTree(filepath.Join(source, "packages/tui", native), filepath.Join(out, native)); err != nil {
+		return err
+	}
 	return copyFile(filepath.Join(source, "node_modules/@silvia-odwyer/photon-node/photon_rs_bg.wasm"), filepath.Join(out, "photon_rs_bg.wasm"), 0644)
 }
