@@ -223,7 +223,7 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 		return err
 	}
 	executable := filepath.Join(opts.Out, "pi")
-	args := []string{"build", "--compile", "--aot", "--format=esm", "--aot-allow-code-from-disk", "--no-compile-autoload-dotenv", "--no-compile-autoload-bunfig", "--tsconfig-override=" + tsconfig, "--metafile=" + filepath.Join(stage, "metafile.json"), entry, filepath.Join(source, "packages/coding-agent/src/utils/image-resize-worker.ts"), filepath.Join(source, "packages/coding-agent/src/extensions/codemode/worker.ts"), "--outfile", executable}
+	args := []string{"build", "--compile", "--aot", "--format=esm", "--aot-allow-code-from-disk", "--no-compile-autoload-dotenv", "--no-compile-autoload-bunfig", "--tsconfig-override=" + tsconfig, "--metafile=" + filepath.Join(stage, "metafile.json"), entry, filepath.Join(source, "packages/coding-agent/src/utils/image-resize-worker.ts"), filepath.Join(source, "packages/coding-agent/src/extensions/codemode/worker.ts"), filepath.Join(source, "packages/codemode/src/runtime/worker.ts"), "--outfile", executable}
 	args = append(args, "--compile-in-place", "--asset="+filepath.Join(source, "packages/coding-agent/package.json"))
 	for _, extension := range extensions {
 		args = append(args, extension.Entry)
