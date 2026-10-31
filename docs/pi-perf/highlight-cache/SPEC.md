@@ -2,9 +2,7 @@
 
 - Method: work whose input did not change (highlighting a code block, looking for Mermaid, the thinking style) is not
   done again on each render.
-- Verified on: Pi v1.4.0 (fork `perf2-v1.4.0`, commits b596cddb4 + 05b47bf9d), diff `v1.4.0.diff` (its `write.ts`
-  part made with `git diff -U1`, so that it applies with and without write-call-highlight, which changes the lines next
-  to it)
+- Verified on: Pi v1.4.0, `iamdin/pi` branch `pitch-v1.4.0` commit 31dc37c9a
 - Independent: applies alone on the tag and with the other patches in any order. Alone it saves the
   re-highlighting; its biggest gain is with streaming-markdown, whose per-block cache needs stable styles and cheap code
   blocks.

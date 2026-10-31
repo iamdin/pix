@@ -154,7 +154,7 @@ func buildInstalled(ctx context.Context, name string, stdout io.Writer) error {
 	if err := os.MkdirAll(filepath.Join(in.Home, "versions"), 0755); err != nil {
 		return err
 	}
-	opts := Options{Features: defaultFeatures, Out: filepath.Join(in.Home, "versions", time.Now().Format("20060102-150405.000"))}
+	opts := Options{Out: filepath.Join(in.Home, "versions", time.Now().Format("20060102-150405.000"))}
 	cache, err := os.UserCacheDir()
 	if err != nil {
 		return err
@@ -473,11 +473,8 @@ func status(stdout io.Writer) error {
 		fmt.Fprintf(stdout, "Command:    `%s`, %s\n", in.Name, state)
 	}
 	fmt.Fprintf(stdout, "Build:      Pi %s, built %s\n", strings.TrimPrefix(manifest.Sources.Pi.Tag, "v"), manifest.BuiltAt)
-	ids := []string{}
-	for _, f := range manifest.Features {
-		ids = append(ids, f.ID)
-	}
-	fmt.Fprintf(stdout, "Patches:    %s\n", strings.Join(ids, ", "))
+	pi := manifest.Sources.Pi
+	fmt.Fprintf(stdout, "Source:     %s %s %.7s\n", strings.TrimSuffix(pi.Repository, ".git"), pi.Branch, pi.Commit)
 	fmt.Fprintf(stdout, "Extensions: %d compiled in\n", len(manifest.Extensions))
 	for _, e := range manifest.Extensions {
 		fmt.Fprintf(stdout, "            %s %s\n", e.Name, e.Version)

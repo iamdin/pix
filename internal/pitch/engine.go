@@ -272,35 +272,13 @@ func getRuntime(r runner, cache string, pin RuntimePin) (string, error) {
 	return binary, nil
 }
 
-func verifyTag(r runner, pin Source) error {
-	ref := "refs/tags/" + pin.Tag
-	rows, err := r.output("", "git", "ls-remote", "--tags", pin.Repository, ref, ref+"^{}")
-	if err != nil {
-		return err
-	}
-	refs := map[string]string{}
-	for _, line := range strings.Split(rows, "\n") {
-		fields := strings.Fields(line)
-		if len(fields) == 2 {
-			refs[fields[1]] = fields[0]
-		}
-	}
-	commit := refs[ref]
-	if peeled := refs[ref+"^{}"]; peeled != "" {
-		commit = peeled
-	}
-	if commit != pin.Commit {
-		return fmt.Errorf("Pi tag %s is missing or moved; refusing the build", pin.Tag)
-	}
-	return nil
-}
 func checkout(r runner, cache string, pin Source, log io.Writer) (string, error) {
 	path := filepath.Join(cache, "pi-"+pin.Commit)
 	if !exists(path) {
 		if err := os.Mkdir(path, 0700); err != nil {
 			return "", err
 		}
-		for _, args := range [][]string{{"init", "-q"}, {"remote", "add", "origin", pin.Repository}, {"fetch", "--depth", "1", "origin", "refs/tags/" + pin.Tag}, {"checkout", "--detach", "FETCH_HEAD"}} {
+		for _, args := range [][]string{{"init", "-q"}, {"remote", "add", "origin", pin.Repository}, {"fetch", "--depth", "1", "origin", pin.Commit}, {"checkout", "--detach", "FETCH_HEAD"}} {
 			if err := r.command(path, log, "git", args...); err != nil {
 				return "", err
 			}

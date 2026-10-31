@@ -1,7 +1,6 @@
 # A collapsed write call highlights the lines it shows, not the whole file
 
-- Verified on: Pi v1.4.0 (fork `perf2-v1.4.0`, commits a59d60900 + 331f79e3a), diff `v1.4.0.diff` (made with `git diff -U1`, so that it
-  applies with and without highlight-cache, which changes a line next to it)
+- Verified on: Pi v1.4.0, `iamdin/pi` branch `pitch-v1.4.0` commit b577999cb
 - Method: a collapsed write call highlights only the lines it can show.
 - Independent: applies alone on the tag and with the other patches in any order. Its gain shows with
   streaming-tool-arguments; without it the argument parsing dominates.

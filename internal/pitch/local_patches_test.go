@@ -14,20 +14,6 @@ func testDiff(before, after string) string {
 	return "diff --git a/example.txt b/example.txt\n--- a/example.txt\n+++ b/example.txt\n@@ -1 +1 @@\n-" + before + "\n+" + after + "\n"
 }
 
-func TestDefaultPatchSet(t *testing.T) {
-	chosen, err := selectFeatures(defaultFeatures)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var ids []string
-	for _, f := range chosen {
-		ids = append(ids, f.ID)
-	}
-	if strings.Join(ids, ",") != "streaming-markdown,highlight-cache,streaming-tool-arguments,write-call-highlight,native-image-resize" {
-		t.Fatalf("default: %v", ids)
-	}
-}
-
 func TestLocalPatchInputs(t *testing.T) {
 	dir := t.TempDir()
 	good := filepath.Join(dir, "good.patch")
@@ -102,7 +88,7 @@ func TestLocalPatchReplay(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			patches, err := preparePatches(recipe, nil, inputs)
+			patches, err := preparePatches(recipe, inputs)
 			if err != nil {
 				t.Fatal(err)
 			}

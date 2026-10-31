@@ -1,9 +1,10 @@
 {
   "schema": 1,
   "pi": {
-    "repository": "https://github.com/earendil-works/pi.git",
+    "repository": "https://github.com/iamdin/pi.git",
+    "branch": "pitch-v1.4.0",
     "tag": "v1.4.0",
-    "commit": "4a080252f06caf63a525d7873c5d94d3c23887e0"
+    "commit": "d95a12ee1b88c6d216468b4eb8a5d388d0623a3e"
   },
   "bun": {
     "delivery": "embedded",

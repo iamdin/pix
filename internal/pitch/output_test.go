@@ -23,7 +23,7 @@ func TestBuildDoesNotOverwrite(t *testing.T) {
 	root := t.TempDir()
 	out := filepath.Join(root, "output")
 	put(t, filepath.Join(out, "keep"), "original")
-	err := Build(context.Background(), Options{Out: out, Cache: filepath.Join(root, "cache"), Features: "none"}, io.Discard)
+	err := Build(context.Background(), Options{Out: out, Cache: filepath.Join(root, "cache")}, io.Discard)
 	if err == nil {
 		t.Fatal("accepted existing output")
 	}

@@ -53,7 +53,7 @@ func Verify(directory string) error {
 	}
 	seenPatches := map[string]bool{}
 	for _, patch := range manifest.Patches {
-		if (patch.Kind != "builtin" && patch.Kind != "local") || patch.Source == "" ||
+		if patch.Kind != "local" || patch.Source == "" ||
 			!strings.HasPrefix(patch.File, "recipe/") || filepath.Base(patch.File) == "." ||
 			patch.File != "recipe/"+filepath.Base(patch.File) || !strings.HasSuffix(patch.File, ".patch") ||
 			len(patch.SHA256) != 64 || seenPatches[patch.File] || actual[patch.File] != patch.SHA256 {

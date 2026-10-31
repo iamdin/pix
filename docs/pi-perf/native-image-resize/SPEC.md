@@ -1,7 +1,7 @@
 # Large images are resized with Bun.Image, not Photon
 
 - Method: under Bun, image resizing uses Bun's native pipeline (`Bun.Image`) instead of Photon (WebAssembly).
-- Verified on: Pi v1.4.0 (fork branch `native-image-resize`, commits 84002da18 + 8c760118d), diff `v1.4.0.diff`
+- Verified on: Pi v1.4.0, `iamdin/pi` branch `pitch-v1.4.0` commit d95a12ee1
 - Independent: applies alone on the tag and with the other patches in any order (it touches only the image resize files).
 - Reference: none; pitch's own.
 

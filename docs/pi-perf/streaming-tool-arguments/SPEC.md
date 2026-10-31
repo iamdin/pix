@@ -1,9 +1,9 @@
 # Parse streaming tool-call arguments geometrically, not on every delta
 
-- Verified on: Pi v1.4.0 (fork `perf2-v1.4.0`, commit 4f0b1eccf), diff `v1.4.0.diff`
+- Verified on: Pi v1.4.0, `iamdin/pi` branch `pitch-v1.4.0` commit 57f01a394
 - Method: a growing tool-call argument is parsed at geometrically spaced sizes, not on every delta.
 - Independent: applies alone on the tag and with the other patches in any order.
-- Reference: pitch's builtin P3 (`internal/pitch/data/0003-geometric-tool-arguments.patch`, applied unchanged); same idea as
+- Reference: pitch's earlier P3 (geometric tool arguments); same idea as
   Pi-Bolt 94559b68f (MIT, © OpenSec).
 
 ## Problem

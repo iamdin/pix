@@ -24,32 +24,13 @@ func put(t *testing.T, path, content string) {
 		t.Fatal(err)
 	}
 }
-func TestPinsAndFeatures(t *testing.T) {
+func TestPins(t *testing.T) {
 	pins, err := sourcePins()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pins.Pi.Tag != "v1.4.0" || pins.Bun.Repository != "https://github.com/oven-sh/bun.git" || pins.Bun.Platform != "darwin/arm64" || len(pins.Bun.Commit) != 40 || len(pins.Bun.WebKitCommit) != 40 {
+	if pins.Pi.Tag != "v1.4.0" || pins.Pi.Repository != "https://github.com/iamdin/pi.git" || len(pins.Pi.Commit) != 40 || pins.Bun.Repository != "https://github.com/oven-sh/bun.git" || pins.Bun.Platform != "darwin/arm64" || len(pins.Bun.Commit) != 40 || len(pins.Bun.WebKitCommit) != 40 {
 		t.Fatalf("unexpected pins: %+v", pins)
-	}
-	for _, f := range features {
-		data, err := assets.ReadFile("data/" + f.Patch)
-		if err != nil || hashBytes(data) != f.SHA256 {
-			t.Fatalf("patch identity: %s: %v", f.ID, err)
-		}
-	}
-	for _, c := range []struct {
-		value string
-		valid bool
-	}{
-		{"none", true}, {"all", true}, {"highlight-cache,streaming-tool-arguments", true}, {"unknown", false}, {"none,highlight-cache", false}, {"highlight-cache,highlight-cache", false}, {"", false},
-	} {
-		t.Run(c.value, func(t *testing.T) {
-			_, err := selectFeatures(c.value)
-			if (err == nil) != c.valid {
-				t.Fatalf("err=%v", err)
-			}
-		})
 	}
 }
 func TestCLI(t *testing.T) {
@@ -57,7 +38,7 @@ func TestCLI(t *testing.T) {
 		args []string
 		code int
 	}{
-		{nil, 0}, {[]string{"--version"}, 0}, {[]string{"features"}, 0}, {[]string{"doctor"}, 1}, {[]string{"build", "--help"}, 0},
+		{nil, 0}, {[]string{"--version"}, 0}, {[]string{"doctor"}, 1}, {[]string{"build", "--help"}, 0},
 		{[]string{"build", "--bun-version", "latest"}, 1}, {[]string{"build", "--pi-version", "main"}, 1}, {[]string{"build", "extra"}, 1}, {[]string{"verify"}, 1}, {[]string{"wat"}, 1},
 	} {
 		var out, errors bytes.Buffer
@@ -235,7 +216,7 @@ func TestProcessCancellation(t *testing.T) {
 		t.Fatalf("cancellation: %v %s", err, time.Since(start))
 	}
 }
-func TestTagAndSourceGuards(t *testing.T) {
+func TestSourceGuard(t *testing.T) {
 	dir := t.TempDir()
 	r := runner{context.Background(), append(os.Environ(), "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_NOSYSTEM=1")}
 	git := func(args ...string) string {
@@ -250,16 +231,6 @@ func TestTagAndSourceGuards(t *testing.T) {
 	put(t, filepath.Join(dir, "source"), "original")
 	git("add", "source")
 	git("-c", "user.name=test", "-c", "user.email=test@localhost", "-c", "commit.gpgsign=false", "commit", "-qm", "fixture")
-	commit := git("rev-parse", "HEAD")
-	git("-c", "user.name=test", "-c", "user.email=test@localhost", "-c", "tag.gpgsign=false", "tag", "-a", "v1.4.0", "-m", "fixture")
-	pin := Source{Repository: dir, Tag: "v1.4.0", Commit: commit}
-	if err := verifyTag(r, pin); err != nil {
-		t.Fatal(err)
-	}
-	pin.Commit = strings.Repeat("0", 40)
-	if err := verifyTag(r, pin); err == nil {
-		t.Fatal("accepted moved tag")
-	}
 	tree := git("write-tree")
 	if err := verifySource(r, dir, tree); err != nil {
 		t.Fatal(err)

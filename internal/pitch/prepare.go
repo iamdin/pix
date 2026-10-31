@@ -8,44 +8,35 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"slices"
 	"strings"
 )
 
 // preparedInfo describes a patched, built and tested Pi source tree (pitch-prepared.json in its root).
 type preparedInfo struct {
-	Pitch      string   `json:"pitch"`
-	Features   []string `json:"features"`
-	SourceTree string   `json:"source_tree"`
-	NPMLock    string   `json:"npm_lock_sha256"`
-	Node       string   `json:"node"`
-	NPM        string   `json:"npm"`
+	Pitch      string `json:"pitch"`
+	Commit     string `json:"commit"`
+	SourceTree string `json:"source_tree"`
+	NPMLock    string `json:"npm_lock_sha256"`
+	Node       string `json:"node"`
+	NPM        string `json:"npm"`
 }
 
 const preparedFile = "pitch-prepared.json"
-
-func featureIDs(features []Feature) []string {
-	ids := []string{}
-	for _, f := range features {
-		ids = append(ids, f.ID)
-	}
-	return ids
-}
 
 func hasPreparedPi() bool {
 	_, err := runtimeData.Open("runtime-data/pi.tar.gz")
 	return err == nil
 }
 
-// preparePi checks out the pinned Pi, applies the patches, installs dependencies, builds Pi and runs the patch tests.
+// preparePi checks out the pinned Pi, applies local patches, installs dependencies, builds Pi and runs the patch tests.
 // It needs git, Node 24+ and npm; releases run it once (Prepare) so `pitch build` does not.
-func preparePi(r runner, cache string, pins Sources, chosen []Feature, patches []Patch, bun, stage, source string, log io.Writer, step func(string)) (info preparedInfo, err error) {
+func preparePi(r runner, cache string, pins Sources, patches []Patch, bun, stage, source string, log io.Writer, step func(string)) (info preparedInfo, err error) {
 	for _, tool := range []string{"git", "node", "npm"} {
 		if _, err := exec.LookPath(tool); err != nil {
-			return info, fmt.Errorf("preparing Pi with these patches requires %s in PATH", tool)
+			return info, fmt.Errorf("preparing Pi requires %s in PATH", tool)
 		}
 	}
-	info = preparedInfo{Pitch: Version, Features: featureIDs(chosen)}
+	info = preparedInfo{Pitch: Version, Commit: pins.Pi.Commit}
 	if info.Node, err = r.output("", "node", "--version"); err != nil {
 		return info, err
 	}
@@ -56,10 +47,7 @@ func preparePi(r runner, cache string, pins Sources, chosen []Feature, patches [
 	if info.NPM, err = r.output("", "npm", "--version"); err != nil {
 		return info, err
 	}
-	step("Get Pi source, apply patches")
-	if err = verifyTag(r, pins.Pi); err != nil {
-		return info, err
-	}
+	step("Get Pi source")
 	pristine, err := checkout(r, cache, pins.Pi, log)
 	if err != nil {
 		return info, err
@@ -104,15 +92,18 @@ func preparePi(r runner, cache string, pins Sources, chosen []Feature, patches [
 	if err = verifySource(r, source, info.SourceTree); err != nil {
 		return info, err
 	}
-	step("Test patches")
-	for _, feature := range chosen {
-		for _, test := range feature.Tests {
+	// Local patches may change or take out pitch's patches (bench/build-variants.ts reverts them), and their tests with them.
+	if len(patches) > 0 {
+		step("Skip the patch tests (local patches)")
+	} else {
+		step("Test patches")
+		for _, test := range piTests {
 			name := test.Args[0]
 			if name == "bun" {
 				name = bun
 			}
 			if err = r.command(filepath.Join(source, test.Dir), log, name, test.Args[1:]...); err != nil {
-				return info, fmt.Errorf("%s tests: %w", feature.ID, err)
+				return info, fmt.Errorf("patch tests: %w", err)
 			}
 		}
 	}
@@ -121,7 +112,7 @@ func preparePi(r runner, cache string, pins Sources, chosen []Feature, patches [
 }
 
 // unpackPreparedPi extracts the Pi that the release embeds (Prepare) into source.
-func unpackPreparedPi(r runner, stage, source string, chosen []Feature, log io.Writer) (info preparedInfo, err error) {
+func unpackPreparedPi(r runner, pins Sources, stage, source string, log io.Writer) (info preparedInfo, err error) {
 	archive := filepath.Join(stage, "pi.tar.gz")
 	f, err := os.Create(archive)
 	if err != nil {
@@ -150,20 +141,16 @@ func unpackPreparedPi(r runner, stage, source string, chosen []Feature, log io.W
 	if err = json.Unmarshal(data, &info); err != nil {
 		return info, err
 	}
-	if info.Pitch != Version || !slices.Equal(info.Features, featureIDs(chosen)) {
-		return info, fmt.Errorf("the embedded Pi was prepared for pitch %s with %v, not this pitch", info.Pitch, info.Features)
+	if info.Pitch != Version || info.Commit != pins.Pi.Commit {
+		return info, fmt.Errorf("the embedded Pi was prepared for pitch %s from %s, not this pitch", info.Pitch, info.Commit)
 	}
 	return info, nil
 }
 
-// Prepare writes the default-feature Pi, patched, built, tested and without dev dependencies, to a .tar.gz that
+// Prepare writes Pi, patched, built, tested and without dev dependencies, to a .tar.gz that
 // releases embed as runtime-data/pi.tar.gz.
 func Prepare(ctx context.Context, cache, out string, stdout io.Writer) (err error) {
 	pins, err := sourcePins()
-	if err != nil {
-		return err
-	}
-	chosen, err := selectFeatures(defaultFeatures)
 	if err != nil {
 		return err
 	}
@@ -203,12 +190,12 @@ func Prepare(ctx context.Context, cache, out string, stdout io.Writer) (err erro
 	if err = materializeAssets(dataDir); err != nil {
 		return err
 	}
-	patches, err := preparePatches(dataDir, chosen, nil)
+	patches, err := preparePatches(dataDir, nil)
 	if err != nil {
 		return err
 	}
 	source := filepath.Join(stage, "pi")
-	info, err := preparePi(r, cache, pins, chosen, patches, bun, stage, source, log, func(s string) { fmt.Fprintln(stdout, s) })
+	info, err := preparePi(r, cache, pins, patches, bun, stage, source, log, func(s string) { fmt.Fprintln(stdout, s) })
 	if err != nil {
 		return err
 	}

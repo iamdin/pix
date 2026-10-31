@@ -1,7 +1,7 @@
 # <one-line summary>
 
 - Method: <the one optimization method, in one sentence>
-- Verified on: Pi <tag> (fork commit <sha>), diff `<tag>.diff`
+- Verified on: Pi <tag> (fork commit <sha>), `iamdin/pi` branch `pitch-<tag>` commit <sha>
 - Independent: applies alone on the tag and with the other patches in any order
 - Reference: <Bolt commit(s) studied, license MIT; the code here is our own>
 

@@ -67,14 +67,8 @@ func readPatch(path string) ([]byte, error) {
 	return data, nil
 }
 
-func preparePatches(recipe string, chosen []Feature, local []localPatch) ([]Patch, error) {
+func preparePatches(recipe string, local []localPatch) ([]Patch, error) {
 	result := []Patch{}
-	for _, feature := range chosen {
-		if err := requireHash(filepath.Join(recipe, feature.Patch), feature.SHA256); err != nil {
-			return nil, err
-		}
-		result = append(result, Patch{"builtin", feature.ID, "recipe/" + feature.Patch, feature.SHA256})
-	}
 	for i, input := range local {
 		name := fmt.Sprintf("custom-%04d.patch", i+1)
 		f, err := os.OpenFile(filepath.Join(recipe, name), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
