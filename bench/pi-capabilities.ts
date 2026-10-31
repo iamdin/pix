@@ -29,11 +29,34 @@ const chunk = (delta: object, finish_reason: string | null = null) => ({
 	model: "fake",
 	choices: [{ index: 0, delta, finish_reason }],
 });
+// An answer of 40 chunks, 50 ms apart: long enough to abort or steer while it streams.
+function slowAnswer() {
+	let timer: Timer | undefined;
+	const encoder = new TextEncoder();
+	const stream = new ReadableStream({
+		start(controller) {
+			let i = 0;
+			const next = () => {
+				if (i === 40) {
+					controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk({}, "stop"))}\n\ndata: [DONE]\n\n`));
+					controller.close();
+					return;
+				}
+				controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk({ role: "assistant", content: `word${i++} ` }))}\n\n`));
+				timer = setTimeout(next, 50);
+			};
+			next();
+		},
+		cancel: () => clearTimeout(timer),
+	});
+	return new Response(stream, { headers: { "content-type": "text/event-stream" } });
+}
 const server = Bun.serve({
 	port: 0,
 	async fetch(req) {
 		const body = await req.json();
 		requests.push(body);
+		if (JSON.stringify(body.messages.findLast((m: any) => m.role === "user")?.content).includes("SLOW")) return slowAnswer();
 		const call = calls[requests.length - 1];
 		if (!call) return sse([chunk({ role: "assistant", content: "Done." }), chunk({}, "stop")]);
 		const tool_calls = [{ index: 0, id: `c${requests.length}`, type: "function", function: { name: call.name, arguments: JSON.stringify(call.args) } }];
@@ -212,6 +235,28 @@ for (const scenario of scenarios) {
 	const html = path.join(home, "rpc.html");
 	await check("export_html", { type: "export_html", outputPath: html }, () => fs.existsSync(html));
 	await check("new_session", { type: "new_session" }, () => true);
+
+	// Interrupting a streaming answer: abort stops it, steer and follow_up add a message the model then gets.
+	const streaming = async (message: string) => {
+		const start = lines.length;
+		await send({ type: "prompt", message });
+		await waitFor((line) => lines.indexOf(line) >= start && line.type === "message_update");
+		return start;
+	};
+	const settledAfter = (start: number) => waitFor((line) => lines.indexOf(line) >= start && line.type === "agent_settled");
+	let start = await streaming("SLOW abort test");
+	await check("abort", { type: "abort" }, () => true);
+	await settledAfter(start);
+	const afterAbort = await send({ type: "get_messages" });
+	const last = afterAbort?.data?.messages?.at(-1);
+	report("rpc abort stops the answer", last?.role === "assistant" && last?.stopReason === "aborted" && !JSON.stringify(last).includes("word39"), JSON.stringify(last));
+	for (const [type, mark] of [["steer", "STEER-MARK"], ["follow_up", "FOLLOW-MARK"]]) {
+		const before = requests.length;
+		start = await streaming(`SLOW ${type} test`);
+		await check(type, { type, message: mark }, () => true);
+		await settledAfter(start);
+		report(`rpc ${type} reaches the model`, requests.slice(before).some((r) => JSON.stringify(r.messages).includes(mark)), `${requests.length - before} requests`);
+	}
 	proc.kill();
 	await proc.exited;
 }
