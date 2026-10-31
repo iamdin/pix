@@ -191,11 +191,11 @@ func buildInstalled(ctx context.Context, name string, stdout io.Writer) error {
 		return nil
 	}
 	fmt.Fprintf(stdout, "Done. Start it with `%s` or `pitch pi`.\n", in.Name)
-		if path, _ := exec.LookPath(in.Name); path != in.command() {
-			if err := addToPath(in, stdout); err != nil {
-				return err
-			}
+	if path, _ := exec.LookPath(in.Name); path != in.command() {
+		if err := addToPath(in, stdout); err != nil {
+			return err
 		}
+	}
 	return nil
 }
 
