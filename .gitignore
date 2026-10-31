@@ -3,5 +3,6 @@
 dist/
 pitch-dist/
 bin/
-internal/pitch/runtime-data/
+internal/pitch/runtime-data/*/*.zip
+internal/pitch/runtime-data/*/*.tar.gz
 dist-release/

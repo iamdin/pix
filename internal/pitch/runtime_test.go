@@ -2,6 +2,7 @@ package pitch
 
 import (
 	"context"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -11,6 +12,9 @@ import (
 )
 
 func TestFreshRuntimeSurvivesDeletedUpstreamAsset(t *testing.T) {
+	if _, err := fs.Stat(runtimeData, runtimeDataDir+"/bun.zip"); err != nil {
+		t.Skip("no bun.zip in runtime-data (a plain checkout; releases have it)")
+	}
 	pins, err := sourcePins()
 	if err != nil {
 		t.Fatal(err)
