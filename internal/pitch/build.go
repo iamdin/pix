@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 )
@@ -188,7 +189,11 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	}
 	for _, feature := range chosen {
 		for _, test := range feature.Tests {
-			if err = r.command(filepath.Join(source, test.Dir), log, test.Args[0], test.Args[1:]...); err != nil {
+			name := test.Args[0]
+			if name == "bun" {
+				name = bun
+			}
+			if err = r.command(filepath.Join(source, test.Dir), log, name, test.Args[1:]...); err != nil {
 				return fmt.Errorf("%s tests: %w", feature.ID, err)
 			}
 		}
@@ -261,8 +266,8 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 			return err
 		}
 	}
-	// Every patch follows Pi-Bolt (MIT).
-	if len(chosen) > 0 {
+	// Every patch but native-image-resize follows Pi-Bolt (MIT).
+	if slices.ContainsFunc(chosen, func(f Feature) bool { return f.ID != "native-image-resize" }) {
 		if err = copyFile(filepath.Join(dataDir, "LICENSE.Pi-Bolt"), filepath.Join(opts.Out, "LICENSE.Pi-Bolt"), 0644); err != nil {
 			return err
 		}

@@ -73,7 +73,7 @@ Go CLI 是编排主体；小型 JS 桥接直接使用这份 Pi 的包管理器�
 
 不提供 Pi/Bun 版本选择。Pi 只跟上游发布 tag；Bun AOT 只在 canary 中提供，因此 Bun 固定到某个官方 canary 构建，随维护者升级。Bun 固定归档嵌入 Go CLI（约 65 MiB），校验归档/程序哈希、revision 和签名；不依赖已删除的上游下载资产，不静默升级。Git/npm/模型目录的冷获取仍需要网络。当前使用官方预编译 Bun，不是自建优化版 Bun/JSC。
 
-**alpha.7 起默认打上 4 个经过 AOT 性能关卡的优化补丁**（见下）。alpha.6 撤回的旧组合（P1–P5）已删除；旧产物不自动修改。
+**默认打上 5 个经过 AOT 性能关卡的优化补丁**（见下）。alpha.6 撤回的旧组合（P1–P5）已删除；旧产物不自动修改。
 
 ```sh
 ./bin/pitch features --json
@@ -85,7 +85,7 @@ Go CLI 是编排主体；小型 JS 桥接直接使用这份 Pi 的包管理器�
 ./bin/pitch build --features none --patch ./my.patch --out dist/only-mine
 ```
 
-默认 `--features all`，即下表 4 个补丁。每个补丁是一种独立的优化方法，可单独或任意组合应用；构建时运行每个补丁自带的测试。方法、不变量和测量见 `docs/pi-perf/<name>/SPEC.md`，结果见 `docs/pi-perf/results/v1.4.0/log.md`。
+默认 `--features all`，即下表 5 个补丁。每个补丁是一种独立的优化方法，可单独或任意组合应用；构建时运行每个补丁自带的测试。方法、不变量和测量见 `docs/pi-perf/<name>/SPEC.md`，结果见 `docs/pi-perf/results/v1.4.0/log.md`。
 
 | 补丁 | 方法 |
 |---|---|
@@ -93,8 +93,9 @@ Go CLI 是编排主体；小型 JS 桥接直接使用这份 Pi 的包管理器�
 | `highlight-cache` | 代码块高亮结果复用，不每帧重算 |
 | `streaming-tool-arguments` | 流式工具参数按几何间隔重新解析 |
 | `write-call-highlight` | 折叠的 write 调用只高亮显示的行 |
+| `native-image-resize` | 大图用 Bun.Image 原生缩放，不用 Photon（AOT 没有 JIT，WebAssembly 慢几十倍） |
 
-v1.4.0 官方 AOT，原版 → 默认（Apple M4，CPU 时间 / RSS）：6 万字流式 Markdown 24.2 s → 4.8 s；200 KB write（`pi -p`）9.7 s → 0.1 s；TUI 中 200 KB write 内存 316 MB → 105 MB；启动不变。
+v1.4.0 官方 AOT，原版 → 默认（Apple M4，CPU 时间 / RSS）：6 万字流式 Markdown 24.2 s → 4.8 s；200 KB write（`pi -p`）9.7 s → 0.1 s；TUI 中 200 KB write 内存 316 MB → 105 MB；启动不变；读一张 3000 px 图片 25 s → 0.3 s。
 
 **`streaming-tool-arguments` 行为差异**：大工具参数的中间解析快照更新变少，原始 delta 和最终参数保持完整。依赖每条 delta 都有最新解析快照的插件应使用 `--features` 排除它。
 
@@ -136,4 +137,4 @@ bun bench/e2e/run.ts "$PWD/dist/my-pi/pi"
 
 ## 致谢
 
-感谢 Pi、Bun 和 JavaScriptCore 的开发者；感谢 Pi-Bolt 提供优化研究参考。4 个优化补丁参考 Pi-Bolt 的对应改动实现（commit 见各 SPEC），保留 MIT 许可证，启用任一补丁时产物附带 `LICENSE.Pi-Bolt`。
+感谢 Pi、Bun 和 JavaScriptCore 的开发者；感谢 Pi-Bolt 提供优化研究参考。前 4 个优化补丁参考 Pi-Bolt 的对应改动实现（commit 见各 SPEC），保留 MIT 许可证，启用任一补丁时产物附带 `LICENSE.Pi-Bolt`。

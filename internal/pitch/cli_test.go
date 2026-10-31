@@ -22,7 +22,7 @@ func TestCLIPatchSelection(t *testing.T) {
 	if err := json.Unmarshal(out.Bytes(), &catalog); err != nil {
 		t.Fatal(err)
 	}
-	if catalog.Default == nil || len(catalog.Default) != 4 || len(catalog.Features) != 4 || len(catalog.Pi.Commit) != 40 {
+	if catalog.Default == nil || len(catalog.Default) != 5 || len(catalog.Features) != 5 || len(catalog.Pi.Commit) != 40 {
 		t.Fatalf("catalog: %s", &out)
 	}
 	for _, args := range [][]string{

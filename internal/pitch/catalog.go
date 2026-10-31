@@ -10,10 +10,10 @@ import (
 	"strings"
 )
 
-const Version = "0.1.0-alpha.9"
+const Version = "0.1.0-alpha.10"
 
 const defaultFeatures = "all"
-const allFeatures = "streaming-markdown,highlight-cache,streaming-tool-arguments,write-call-highlight"
+const allFeatures = "streaming-markdown,highlight-cache,streaming-tool-arguments,write-call-highlight,native-image-resize"
 
 //go:embed data
 var assets embed.FS
@@ -42,7 +42,7 @@ type Sources struct {
 	ModelCatalog string     `json:"model_catalog"`
 }
 
-// Test is a test command run in a package of the patched source.
+// Test is a test command run in a package of the patched source; "bun" runs the pinned Bun.
 type Test struct {
 	Dir  string   `json:"dir"`
 	Args []string `json:"args"`
@@ -74,6 +74,10 @@ var features = []Feature{
 	}},
 	{"write-call-highlight", "write-call-highlight.patch", "778719a4313192a6f55786908a6e8ac81d512601c96551d1b899daed3355065a", "A collapsed write call highlights only the lines it shows.", []Test{
 		vitest("packages/coding-agent", "test/write-call-collapsed-highlight.test.ts"),
+	}},
+	{"native-image-resize", "native-image-resize.patch", "e55f4b3d1ce59c84be118b544cfdcd045a2c783af248ae28aa2e773a4e36d0c9", "Large images are resized with Bun.Image instead of Photon, whose WebAssembly runs without a JIT in AOT builds.", []Test{
+		{"packages/coding-agent", []string{"bun", "test", "./test/image-resize-bun.bun.ts"}},
+		vitest("packages/coding-agent", "test/image-processing.test.ts", "test/image-resize-callers.test.ts"),
 	}},
 }
 

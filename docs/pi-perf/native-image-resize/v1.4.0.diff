@@ -1,0 +1,211 @@
+diff --git a/packages/coding-agent/src/utils/image-resize-bun.ts b/packages/coding-agent/src/utils/image-resize-bun.ts
+new file mode 100644
+index 000000000..a7b3fdf73
+--- /dev/null
++++ b/packages/coding-agent/src/utils/image-resize-bun.ts
+@@ -0,0 +1,82 @@
++/**
++ * Image resizing with Bun's native image pipeline (`Bun.Image`), used when the runtime has it.
++ *
++ * It follows the strategy of resizeImageInProcess() (same target sizes, PNG then JPEG quality steps,
++ * shrinking by 0.75) without Photon. Photon is WebAssembly, and Bun's AOT executables run WebAssembly
++ * without a JIT, so resizing a large image with it takes tens of seconds there. `Bun.Image` decodes,
++ * resizes and encodes natively off the JS thread, and applies the JPEG EXIF orientation itself.
++ */
++import { DEFAULT_OPTIONS, type ImageResizeOptions, type ResizedImage } from "./image-resize-core.ts";
++
++interface BunImage {
++	metadata(): Promise<{ width: number; height: number }>;
++	resize(width: number, height: number, options: { filter: "lanczos3" }): BunImage;
++	png(): BunImage;
++	jpeg(options: { quality: number }): BunImage;
++	bytes(): Promise<Uint8Array>;
++}
++
++export type BunImageConstructor = new (input: Uint8Array) => BunImage;
++
++export function getBunImage(): BunImageConstructor | undefined {
++	return (globalThis as { Bun?: { Image?: BunImageConstructor } }).Bun?.Image;
++}
++
++/** Rejects when Bun cannot decode the image, so the caller can try Photon. */
++export async function resizeImageWithBun(
++	Image: BunImageConstructor,
++	inputBytes: Uint8Array,
++	mimeType: string,
++	options?: ImageResizeOptions,
++): Promise<ResizedImage | null> {
++	const opts = { ...DEFAULT_OPTIONS, ...options };
++	const inputBase64Size = Math.ceil(inputBytes.byteLength / 3) * 4;
++	// Width and height after the EXIF orientation, as Photon reports them after applyExifOrientation().
++	const { width: originalWidth, height: originalHeight } = await new Image(inputBytes).metadata();
++	const format = mimeType.split("/")[1] ?? "png";
++
++	if (originalWidth <= opts.maxWidth && originalHeight <= opts.maxHeight && inputBase64Size < opts.maxBytes) {
++		return {
++			data: Buffer.from(inputBytes).toString("base64"),
++			mimeType: mimeType || `image/${format}`,
++			originalWidth,
++			originalHeight,
++			width: originalWidth,
++			height: originalHeight,
++			wasResized: false,
++		};
++	}
++
++	let width = originalWidth;
++	let height = originalHeight;
++	if (width > opts.maxWidth) {
++		height = Math.round((height * opts.maxWidth) / width);
++		width = opts.maxWidth;
++	}
++	if (height > opts.maxHeight) {
++		width = Math.round((width * opts.maxHeight) / height);
++		height = opts.maxHeight;
++	}
++
++	const qualitySteps = Array.from(new Set([opts.jpegQuality, 85, 70, 55, 40]));
++	while (true) {
++		const resized = () => new Image(inputBytes).resize(width, height, { filter: "lanczos3" });
++		const encoders = [
++			{ mimeType: "image/png", encode: () => resized().png() },
++			...qualitySteps.map((quality) => ({ mimeType: "image/jpeg", encode: () => resized().jpeg({ quality }) })),
++		];
++		// Same order as resizeImageInProcess(), which takes the first candidate under the limit.
++		for (const encoder of encoders) {
++			const data = Buffer.from(await encoder.encode().bytes()).toString("base64");
++			if (Buffer.byteLength(data, "utf-8") < opts.maxBytes) {
++				return { data, mimeType: encoder.mimeType, originalWidth, originalHeight, width, height, wasResized: true };
++			}
++		}
++		if (width === 1 && height === 1) return null;
++		const nextWidth = width === 1 ? 1 : Math.max(1, Math.floor(width * 0.75));
++		const nextHeight = height === 1 ? 1 : Math.max(1, Math.floor(height * 0.75));
++		if (nextWidth === width && nextHeight === height) return null;
++		width = nextWidth;
++		height = nextHeight;
++	}
++}
+diff --git a/packages/coding-agent/src/utils/image-resize-core.ts b/packages/coding-agent/src/utils/image-resize-core.ts
+index 3f80111ff..3d0e1f75e 100644
+--- a/packages/coding-agent/src/utils/image-resize-core.ts
++++ b/packages/coding-agent/src/utils/image-resize-core.ts
+@@ -31,7 +31,7 @@ export type ResizeImageWorkerResponse =
+ // 4.5MB of base64 payload. Provides headroom below Anthropic's 5MB limit.
+ const DEFAULT_MAX_BYTES = 4.5 * 1024 * 1024;
+ 
+-const DEFAULT_OPTIONS: Required<ImageResizeOptions> = {
++export const DEFAULT_OPTIONS: Required<ImageResizeOptions> = {
+ 	maxWidth: 2000,
+ 	maxHeight: 2000,
+ 	maxBytes: DEFAULT_MAX_BYTES,
+diff --git a/packages/coding-agent/src/utils/image-resize.ts b/packages/coding-agent/src/utils/image-resize.ts
+index ccdb98015..14af51bd5 100644
+--- a/packages/coding-agent/src/utils/image-resize.ts
++++ b/packages/coding-agent/src/utils/image-resize.ts
+@@ -1,4 +1,5 @@
+ import { Worker } from "node:worker_threads";
++import { getBunImage, resizeImageWithBun } from "./image-resize-bun.ts";
+ import {
+ 	IMAGE_RESIZE_WORKER_RESPONSE_TYPE,
+ 	type ImageResizeOptions,
+@@ -79,13 +80,20 @@ async function resizeImageInWorker(
+  * Runs Photon in a worker thread so WASM decoding, resizing, and encoding do not
+  * block the TUI event loop. If the worker cannot be loaded (for example in some
+  * Bun compiled executable layouts), fall back to in-process resizing so image
+- * reads still work.
++ * reads still work. Under a Bun with `Bun.Image`, resize natively instead (image-resize-bun.ts).
+  */
+ export async function resizeImage(
+ 	inputBytes: Uint8Array,
+ 	mimeType: string,
+ 	options?: ImageResizeOptions,
+ ): Promise<ResizedImage | null> {
++	const BunImage = getBunImage();
++	if (BunImage) {
++		try {
++			return await resizeImageWithBun(BunImage, inputBytes, mimeType, options);
++		} catch {}
++	}
++
+ 	const isTypeScriptRuntime = import.meta.url.endsWith(".ts");
+ 	const workerUrl = new URL(
+ 		isTypeScriptRuntime ? "./image-resize-worker.ts" : "./image-resize-worker.js",
+diff --git a/packages/coding-agent/test/image-resize-bun.bun.ts b/packages/coding-agent/test/image-resize-bun.bun.ts
+new file mode 100644
+index 000000000..14eb5e71f
+--- /dev/null
++++ b/packages/coding-agent/test/image-resize-bun.bun.ts
+@@ -0,0 +1,72 @@
++// Runs under Bun (`bun test ./test/image-resize-bun.bun.ts`): Bun.Image does not exist in Node, where vitest runs.
++import { describe, expect, it } from "vitest";
++import { getBunImage, resizeImageWithBun } from "../src/utils/image-resize-bun.ts";
++import { resizeImageInProcess } from "../src/utils/image-resize-core.ts";
++
++const Image = getBunImage()!;
++// A 2x2 PNG to scale into test images.
++const TINY_PNG = Buffer.from(
++	"iVBORw0KGgoAAAANSUhEUgAAAAIAAAACAQMAAABIeJ9nAAAABlBMVEX/AAD///9BHTQRAAAADElEQVQI12NgYGAAAAAEAAEnNCcKAAAAAElFTkSuQmCC",
++	"base64",
++);
++
++async function photo(width: number, height: number) {
++	return new Image(TINY_PNG).resize(width, height, { filter: "lanczos3" }).png().bytes();
++}
++
++function rotatedJpeg(jpeg: Uint8Array) {
++	const exif = Buffer.concat([
++		Buffer.from("Exif\0\0"),
++		Buffer.from("49492a0008000000010012010300010000000600000000000000", "hex"),
++	]);
++	const app1 = Buffer.concat([Buffer.from([0xff, 0xe1, (exif.length + 2) >> 8, (exif.length + 2) & 255]), exif]);
++	return new Uint8Array(Buffer.concat([jpeg.subarray(0, 2), app1, jpeg.subarray(2)]));
++}
++
++describe("resizeImageWithBun", () => {
++	it("is available under Bun", () => {
++		expect(Image).toBeDefined();
++	});
++
++	it("returns a small image unchanged, like Photon", async () => {
++		const input = await photo(100, 50);
++		const bun = await resizeImageWithBun(Image, input, "image/png");
++		expect(bun).toEqual(await resizeImageInProcess(input, "image/png"));
++	});
++
++	it("resizes a large image to the same size and format as Photon", async () => {
++		const input = await photo(3000, 1000);
++		const bun = await resizeImageWithBun(Image, input, "image/png");
++		const photon = await resizeImageInProcess(input, "image/png");
++		expect(bun).toMatchObject({
++			width: 2000,
++			height: 667,
++			originalWidth: 3000,
++			originalHeight: 1000,
++			wasResized: true,
++		});
++		expect({ ...bun, data: "" }).toEqual({ ...photon!, data: "" });
++		expect(await new Image(Buffer.from(bun!.data, "base64")).metadata()).toMatchObject({ width: 2000, height: 667 });
++	});
++
++	it("reports dimensions after the EXIF orientation, like Photon", async () => {
++		const input = rotatedJpeg(await new Image(await photo(40, 20)).jpeg({ quality: 80 }).bytes());
++		const options = { maxWidth: 10, maxHeight: 10 };
++		const bun = await resizeImageWithBun(Image, input, "image/jpeg", options);
++		const photon = await resizeImageInProcess(input, "image/jpeg", options);
++		expect(bun).toMatchObject({ originalWidth: 20, originalHeight: 40, width: 5, height: 10 });
++		expect({ ...bun, data: "", mimeType: "" }).toEqual({ ...photon!, data: "", mimeType: "" });
++	});
++
++	it("stays under maxBytes by lowering quality and size", async () => {
++		const input = await photo(3000, 3000);
++		const bun = await resizeImageWithBun(Image, input, "image/png", { maxBytes: 2000 });
++		expect(bun).not.toBeNull();
++		expect(Buffer.byteLength(bun!.data)).toBeLessThan(2000);
++		expect(bun!.width).toBeLessThan(2000);
++	});
++
++	it("rejects what it cannot decode, so resizeImage() falls back to Photon", async () => {
++		await expect(resizeImageWithBun(Image, new Uint8Array([1, 2, 3, 4]), "image/png")).rejects.toThrow();
++	});
++});

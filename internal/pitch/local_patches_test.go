@@ -23,7 +23,7 @@ func TestDefaultPatchSet(t *testing.T) {
 	for _, f := range chosen {
 		ids = append(ids, f.ID)
 	}
-	if strings.Join(ids, ",") != "streaming-markdown,highlight-cache,streaming-tool-arguments,write-call-highlight" {
+	if strings.Join(ids, ",") != "streaming-markdown,highlight-cache,streaming-tool-arguments,write-call-highlight,native-image-resize" {
 		t.Fatalf("default: %v", ids)
 	}
 }
