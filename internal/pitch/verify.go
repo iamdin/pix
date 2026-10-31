@@ -67,7 +67,8 @@ func smoke(ctx context.Context, executable, stage, tag string) error {
 		return err
 	}
 	env := []string{"HOME=" + home, "PI_CODING_AGENT_DIR=" + filepath.Join(home, "agent"), "PATH=/usr/bin:/bin", "PI_OFFLINE=1", "PI_SKIP_VERSION_CHECK=1", "TERM=xterm-256color"}
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	// Generous: a machine busy with other work can be many times slower, and extensions load at start.
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Minute)
 	defer cancel()
 	r := runner{ctx, env}
 	version, err := r.output(home, executable, "--version")
@@ -89,7 +90,7 @@ func smoke(ctx context.Context, executable, stage, tag string) error {
 }
 
 func rpcRequest(ctx context.Context, executable, dir string, env, args []string, command string) (map[string]any, error) {
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, executable, args...)
 	cmd.Dir, cmd.Env = dir, env
