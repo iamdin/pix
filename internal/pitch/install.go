@@ -528,6 +528,9 @@ func uninstall(stdout io.Writer) error {
 	if err := os.RemoveAll(in.Home); err != nil {
 		return err
 	}
-	fmt.Fprintf(stdout, "Removed %s. `%s` is the original Pi again (in new terminals).\n", in.Home, in.Name)
+	fmt.Fprintf(stdout, "Removed %s and `%s`.\n", in.Home, in.Name)
+	if in.Name == "pi" {
+		fmt.Fprintln(stdout, "`pi` is the original Pi again (in new terminals).")
+	}
 	return nil
 }
