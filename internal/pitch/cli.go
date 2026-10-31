@@ -37,7 +37,7 @@ func Main(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 
 func execute(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "help" {
-		fmt.Fprintln(stdout, "pitch — a pinned Pi built with official Bun AOT\n\nCommands: features, build\nUse pitch <command> --help. Experimental: macOS ARM64 only.\nPi and Bun versions are maintained by pitch, not user-selectable.")
+		fmt.Fprintln(stdout, "pitch — a pinned Pi built with official Bun AOT\n\nInstall:  install [--name pi], update, status, off, on, rollback, uninstall\nBuild:    features, build\nUse pitch <command> --help. Experimental: macOS ARM64 only.\nPi and Bun versions are maintained by pitch, not user-selectable.")
 		return nil
 	}
 	pins, err := sourcePins()
@@ -102,6 +102,32 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer) error
 			return fmt.Errorf("--features cannot be empty; use all or none")
 		}
 		return Build(ctx, opts, stdout)
+	case "install":
+		f := flag.NewFlagSet("install", flag.ContinueOnError)
+		f.SetOutput(stderr)
+		name := f.String("name", "", "command name for the pitch build (default: ask, or pi; pi takes the place of your Pi)")
+		if err := f.Parse(args[1:]); err != nil {
+			return err
+		}
+		if f.NArg() != 0 {
+			return fmt.Errorf("usage: pitch install [--name NAME]")
+		}
+		return install(ctx, *name, stdout)
+	case "update", "status", "off", "on", "rollback", "uninstall":
+		if len(args) != 1 {
+			return fmt.Errorf("usage: pitch %s", args[0])
+		}
+		switch args[0] {
+		case "update":
+			return update(ctx, stdout)
+		case "status":
+			return status(stdout)
+		case "rollback":
+			return rollback(stdout)
+		case "uninstall":
+			return uninstall(stdout)
+		}
+		return setOff(args[0] == "off", stdout)
 	default:
 		return fmt.Errorf("unknown command %q", args[0])
 	}

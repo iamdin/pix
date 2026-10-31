@@ -1,6 +1,6 @@
 # pitch
 
-用 Go 编排固定 Pi 的官方 Bun AOT 构建。**当前 alpha.9，仅支持 macOS ARM64，仍为实验性工具链。**
+用 Go 编排固定 Pi 的官方 Bun AOT 构建。**当前 alpha.10，仅支持 macOS ARM64，仍为实验性工具链。**
 
 ## 安装
 
@@ -9,6 +9,24 @@ curl -fsSL https://raw.githubusercontent.com/iamdin/pitch/main/install.sh | sh
 ```
 
 装到 `~/.local/bin/pitch`（`PITCH_INSTALL_DIR` 可改），校验 sha256。构建 Pi 需要 Git、Node 24+、npm、codesign 和网络；不需要预装 Pi 或 Bun，不改动全局安装。从源码构建：`go build -trimpath -o bin/pitch ./cmd/pitch`（需要 Go 1.24+ 和本地的 `internal/pitch/runtime-data/bun.zip`，它不在仓库里）。
+
+## 使用
+
+```sh
+pitch install            # 按 ~/.pi/agent/settings.json 的插件构建，装成 `pi` 命令（可用 --name 另起名字）
+pi                       # 照常使用
+
+pitch status             # 当前版本、补丁、编进去的插件、设置是否有变化
+pitch off / pitch on     # 临时换回原版 Pi / 再换回来（或 PITCH_OFF=1 pi）
+pitch update             # 插件变了之后重建；自检通过才切换
+pitch rollback           # 回到上一个版本
+pitch uninstall          # 删掉 ~/.pitch 和加过的 PATH 行，`pi` 变回原版
+```
+
+- 原版 Pi 一个文件都不改：`~/.pitch/bin/pi` 排在 PATH 前面，找不到它时就是原版。
+- `pi install/remove/update/config` 交给原版 Pi 执行，执行完提示 `pitch update`。
+- 原版 Pi 升级到比 pitch 构建更新的版本时，`pi` 自动运行原版并提示一行，等 pitch 跟上后再 `pitch update`。
+- 保留当前和上一个版本（`~/.pitch/versions`），更旧的连同它在缓存里的构建目录一起删掉。
 
 ## 构建
 

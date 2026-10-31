@@ -26,3 +26,4 @@ esac
 for tool in git node npm; do
 	command -v "$tool" >/dev/null || echo "Note: pitch build needs $tool (Node 24+)"
 done
+echo "Next: pitch install (builds your Pi with its packages, a few minutes)"
