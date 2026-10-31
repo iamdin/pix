@@ -460,29 +460,29 @@ func status(stdout io.Writer) error {
 	}
 	fmt.Fprintf(stdout, "pitch %s\n", Version)
 	if exists(filepath.Join(in.Home, "off")) {
-		fmt.Fprintln(stdout, "Runs:     the original Pi (`pitch on` switches back)")
+		fmt.Fprintln(stdout, "Runs:       the original Pi (`pitch on` switches back)")
 	} else {
-		fmt.Fprintln(stdout, "Runs:     the pitch build")
+		fmt.Fprintln(stdout, "Runs:       the pitch build")
 	}
 	if in.Name != "" {
 		state := "on PATH"
 		if path, _ := exec.LookPath(in.Name); path != in.command() {
 			state = fmt.Sprintf("not first on PATH (found %q); put %s first", path, filepath.Dir(in.command()))
 		}
-		fmt.Fprintf(stdout, "Command:  `%s`, %s\n", in.Name, state)
+		fmt.Fprintf(stdout, "Command:    `%s`, %s\n", in.Name, state)
 	}
-	fmt.Fprintf(stdout, "Build:    Pi %s, built %s\n", strings.TrimPrefix(manifest.Sources.Pi.Tag, "v"), manifest.BuiltAt)
+	fmt.Fprintf(stdout, "Build:      Pi %s, built %s\n", strings.TrimPrefix(manifest.Sources.Pi.Tag, "v"), manifest.BuiltAt)
 	ids := []string{}
 	for _, f := range manifest.Features {
 		ids = append(ids, f.ID)
 	}
-	fmt.Fprintf(stdout, "Patches:  %s\n", strings.Join(ids, ", "))
-	fmt.Fprintf(stdout, "Plugins:  %d compiled in\n", len(manifest.Extensions))
+	fmt.Fprintf(stdout, "Patches:    %s\n", strings.Join(ids, ", "))
+	fmt.Fprintf(stdout, "Extensions: %d compiled in\n", len(manifest.Extensions))
 	for _, e := range manifest.Extensions {
-		fmt.Fprintf(stdout, "          %s %s\n", e.Name, e.Version)
+		fmt.Fprintf(stdout, "            %s %s\n", e.Name, e.Version)
 	}
 	if in.Stock != "" {
-		fmt.Fprintf(stdout, "Original: %s %s\n", in.Stock, packageVersion(in.StockPackage))
+		fmt.Fprintf(stdout, "Original:   %s %s\n", in.Stock, packageVersion(in.StockPackage))
 	}
 	settings, err := agentSettings()
 	if err != nil {

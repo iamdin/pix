@@ -207,7 +207,7 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 		for i, extension := range extensions {
 			names[i] = extension.Name
 		}
-		fmt.Fprintf(stdout, "Plugins: %s\n", strings.Join(names, ", "))
+		fmt.Fprintf(stdout, "Extensions: %s\n", strings.Join(names, ", "))
 	}
 	if err = os.MkdirAll(filepath.Dir(opts.Out), 0755); err != nil {
 		return err
