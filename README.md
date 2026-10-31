@@ -125,6 +125,11 @@ PITCH_TEST_ARTIFACT="$PWD/dist/my-pi" go test -race ./...
 
 # 固定 Pi 工作树必须已完成 offline 构建；包测试使用本地 npm/Git fixtures
 PITCH_TEST_PI=/absolute/build-work/pi go test -race ./...
+
+# Pi 原生能力端到端（69 项：CLI、工具、codemode、MCP、会话、技能/模板/扩展、RPC、TUI），用本地假模型
+# 先在原版 Pi 上跑通，再跑构建产物；--only <子串> 只跑部分
+bun bench/e2e/run.ts ~/.bun/bin/pi
+bun bench/e2e/run.ts "$PWD/dist/my-pi/pi"
 ```
 
 未设置环境变量时，相应集成测试会跳过。性能记录见 `docs/pi-perf/results/`。失败构建和实验保留在 `.work/` 或系统 pitch 缓存，不修改历史 pix 产物。
