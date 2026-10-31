@@ -93,9 +93,9 @@ function agent(options: { settings?: object; mcp?: object } = {}): Agent {
 const mcpServer = (exposure?: string) => ({ command: "node", args: [path.join(fixtures, "mcp-echo-server.mjs")], ...(exposure && { exposure }) });
 
 /** A PNG of the given size; 3000 is larger than the read tool sends, so it gets resized. */
-function png(file: string, size: number) {
-	fs.writeFileSync(file, Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64"));
-	Bun.spawnSync(["sips", "-z", String(size), String(size), file]);
+async function png(file: string, size: number) {
+	const pixel = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
+	fs.writeFileSync(file, await new Bun.Image(pixel).resize(size, size).png().bytes());
 }
 
 async function run(a: Agent, args: string[], stdin?: string) {
@@ -218,7 +218,7 @@ async function check(name: string, fn: () => Promise<void>) {
 await check("print mode: inputs and built-in tools", async () => {
 	const a = agent();
 	fs.writeFileSync(path.join(a.cwd, "AGENTS.md"), "CONTEXT-MARK\n");
-	png(path.join(a.cwd, "big.png"), 3000);
+	await png(path.join(a.cwd, "big.png"), 3000);
 	script(
 		{ name: "read", args: { path: "hello.txt", offset: 2, limit: 1 } },
 		{ name: "read", args: { path: "nope.txt" } },
@@ -257,7 +257,7 @@ await check("subcommands and info flags", async () => {
 
 await check("codemode (only mode, with MCP)", async () => {
 	const a = agent({ settings: { codemode: { mode: "only" } }, mcp: { t: mcpServer() } });
-	png(path.join(a.cwd, "pic.png"), 64);
+	await png(path.join(a.cwd, "pic.png"), 64);
 	const scripts = [
 		'text("T-MARK"); console.log("C-MARK"); const f = await tools.read({ path: "hello.txt" }); const b = await tools.bash({ command: "echo B-$((2+3))" }); await tools.write({ path: "c.txt", content: "a" }); await tools.edit({ path: "c.txt", edits: [{ oldText: "a", newText: "EDITED" }] }); return [f.split("\\n")[0], b.output.trim(), await tools.read({ path: "c.txt" })].join("|");',
 		'const t = Date.now(); await Promise.all([1, 2, 3].map((i) => tools.bash({ command: "sleep 0.5" }))); return "PARALLEL-" + (Date.now() - t < 1400);',
@@ -394,7 +394,8 @@ await check("tui: prompt, !bash, /model, /export, /copy, escape, /quit", async (
 		await tty.submit("/model fake2", "fake/fake2");
 		await tty.submit("", "Model: fake2");
 		await tty.submit("/copy", /[Cc]opied/);
-		need(Bun.spawnSync(["pbpaste"]).stdout.toString().includes("TTY-ANSWER"), "clipboard");
+		// Linux without a display has no clipboard to read back; Pi falls back to OSC 52.
+		if (process.platform === "darwin") need(Bun.spawnSync(["pbpaste"]).stdout.toString().includes("TTY-ANSWER"), "clipboard");
 		const html = path.join(a.home, "tty.html");
 		await tty.submit(`/export ${html}`, "tty.html");
 		need(fs.existsSync(html), "export");
