@@ -123,7 +123,13 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 		return err
 	}
 	defer log.Close()
-	fmt.Fprintf(stdout, "Building Pi %s, a few minutes\nLog:        %s\n", pins.Pi.Tag, filepath.Join(stage, "build.log"))
+	fmt.Fprintf(stdout, "Building Pi %s (the release pitch %s is pinned to), a few minutes\nLog: %s\n", strings.TrimPrefix(pins.Pi.Tag, "v"), Version, filepath.Join(stage, "build.log"))
+	n := 0
+	step := func(s string) {
+		n++
+		fmt.Fprintf(stdout, "[%d/6] %s\n", n, s)
+	}
+	step("Get Bun and Pi source, apply patches")
 	bun, err := getRuntime(r, opts.Cache, pins.Bun)
 	if err != nil {
 		return err
@@ -179,6 +185,7 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err = download(ctx, "https://pi.dev/api/models/revisions/"+pins.ModelCatalog+"?types=chat,image,classifier", catalogPath, strings.TrimPrefix(pins.ModelCatalog, "sha256-")); err != nil {
 		return err
 	}
+	step("Install dependencies and build Pi")
 	for _, command := range [][]string{{"npm", "ci", "--ignore-scripts", "--no-audit", "--no-fund"}, {"node", "packages/ai/scripts/hydrate-model-catalog.ts", catalogPath}, {"npm", "run", "build:offline"}} {
 		if err = r.command(source, log, command[0], command[1:]...); err != nil {
 			return err
@@ -187,6 +194,7 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err = verifySource(r, source, tree); err != nil {
 		return err
 	}
+	step("Test patches")
 	for _, feature := range chosen {
 		for _, test := range feature.Tests {
 			name := test.Args[0]
@@ -198,16 +206,13 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 			}
 		}
 	}
+	step("Fetch extensions")
 	extensions, err := resolveExtensions(r, source, stage, opts.Extensions, opts.Settings, log)
 	if err != nil {
 		return err
 	}
-	for i, extension := range extensions {
-		label := ""
-		if i == 0 {
-			label = "Extensions:"
-		}
-		fmt.Fprintf(stdout, "%-12s%s\n", label, extension.Name)
+	for _, extension := range extensions {
+		fmt.Fprintf(stdout, "      %s\n", extension.Name)
 	}
 	if err = os.MkdirAll(filepath.Dir(opts.Out), 0755); err != nil {
 		return err
@@ -250,6 +255,7 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 			args = append(args, "--asset="+asset)
 		}
 	}
+	step("Compile to machine code (the longest step)")
 	if err = r.command(source, log, bun, args...); err != nil {
 		return err
 	}
@@ -298,6 +304,7 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 			}
 		}
 	}
+	step("Check the build")
 	if err = r.command("", log, "codesign", "--verify", "--strict", executable); err != nil {
 		return err
 	}
