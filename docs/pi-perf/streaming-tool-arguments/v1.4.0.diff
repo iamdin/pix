@@ -1,0 +1,508 @@
+diff --git a/packages/ai/src/api/anthropic-messages.ts b/packages/ai/src/api/anthropic-messages.ts
+index 2754794c3..56d6f4e61 100644
+--- a/packages/ai/src/api/anthropic-messages.ts
++++ b/packages/ai/src/api/anthropic-messages.ts
+@@ -41,7 +41,7 @@ import { appendAssistantMessageDiagnostic } from "../utils/diagnostics.ts";
+ import { AssistantMessageEventStream } from "../utils/event-stream.ts";
+ import { headersToRecord } from "../utils/headers.ts";
+ import { type ClientIdentity, getIdentityHeaders } from "../utils/identity.ts";
+-import { parseJsonWithRepair, parseStreamingJson, parseToolCallArguments } from "../utils/json-parse.ts";
++import { parseJsonWithRepair, parseStreamingJsonWhileStreaming, parseToolCallArguments } from "../utils/json-parse.ts";
+ import { getProviderEnvValue } from "../utils/provider-env.ts";
+ import { retryProviderRequest } from "../utils/provider-retry.ts";
+ import { sanitizeSurrogates } from "../utils/sanitize-unicode.ts";
+@@ -797,7 +797,7 @@ export const stream: StreamFunction<"anthropic-messages", AnthropicOptions> = (
+ 						const block = blocks[index];
+ 						if (block && block.type === "toolCall") {
+ 							block.partialJson += event.delta.partial_json;
+-							block.arguments = parseStreamingJson(block.partialJson);
++							block.arguments = parseStreamingJsonWhileStreaming(block, block.partialJson, block.arguments);
+ 							stream.push({
+ 								type: "toolcall_delta",
+ 								contentIndex: index,
+diff --git a/packages/ai/src/api/bedrock-converse-stream.ts b/packages/ai/src/api/bedrock-converse-stream.ts
+index 8c6df2531..b002348e3 100644
+--- a/packages/ai/src/api/bedrock-converse-stream.ts
++++ b/packages/ai/src/api/bedrock-converse-stream.ts
+@@ -54,7 +54,7 @@ import { normalizeProviderError } from "../utils/error-body.ts";
+ import { AssistantMessageEventStream } from "../utils/event-stream.ts";
+ import { providerHeadersToRecord } from "../utils/headers.ts";
+ import { type ClientIdentity, getClientVersion } from "../utils/identity.ts";
+-import { parseStreamingJson, parseToolCallArguments } from "../utils/json-parse.ts";
++import { parseStreamingJsonWhileStreaming, parseToolCallArguments } from "../utils/json-parse.ts";
+ import { resolveHttpProxyUrlForTarget } from "../utils/node-http-proxy.ts";
+ import { getProviderEnvValue } from "../utils/provider-env.ts";
+ import { sanitizeSurrogates } from "../utils/sanitize-unicode.ts";
+@@ -344,7 +344,12 @@ export const stream: StreamFunction<"bedrock-converse-stream", BedrockOptions> =
+ 			}
+ 
+ 			// A stream can settle without stopping every block, so finalize here too.
+-			for (const block of output.content) finalizeStreamingBlock(block as Block);
++			for (const block of blocks) {
++				if (block.type === "toolCall" && block.partialJson !== undefined) {
++					Object.assign(block, parseToolCallArguments(block.partialJson));
++				}
++				finalizeStreamingBlock(block);
++			}
+ 			stream.push({ type: "done", reason: output.stopReason, message: output });
+ 			stream.end();
+ 		} catch (error) {
+@@ -640,7 +645,7 @@ function handleContentBlockDelta(
+ 		}
+ 	} else if (delta?.toolUse && block?.type === "toolCall") {
+ 		block.partialJson = (block.partialJson || "") + (delta.toolUse.input || "");
+-		block.arguments = parseStreamingJson(block.partialJson);
++		block.arguments = parseStreamingJsonWhileStreaming(block, block.partialJson, block.arguments);
+ 		stream.push({ type: "toolcall_delta", contentIndex: index, delta: delta.toolUse.input || "", partial: output });
+ 	} else if (delta?.reasoningContent) {
+ 		let thinkingBlock = block;
+diff --git a/packages/ai/src/api/mistral-conversations.ts b/packages/ai/src/api/mistral-conversations.ts
+index 9ac710399..dbc14f0d5 100644
+--- a/packages/ai/src/api/mistral-conversations.ts
++++ b/packages/ai/src/api/mistral-conversations.ts
+@@ -18,7 +18,7 @@ import { AssistantMessageEventStream } from "../utils/event-stream.ts";
+ import { shortHash } from "../utils/hash.ts";
+ import { headersToRecord } from "../utils/headers.ts";
+ import { getIdentityHeaders } from "../utils/identity.ts";
+-import { parseStreamingJson, parseToolCallArguments } from "../utils/json-parse.ts";
++import { parseStreamingJsonWhileStreaming, parseToolCallArguments } from "../utils/json-parse.ts";
+ import { sanitizeSurrogates } from "../utils/sanitize-unicode.ts";
+ import { getSystemMessageText, renderSystemMessageUpdate } from "../utils/text.ts";
+ import { getCurrentTools, resolveTranscript } from "../utils/transcript.ts";
+@@ -746,7 +746,7 @@ async function consumeChatStream(
+ 					? toolCall.function.arguments
+ 					: JSON.stringify(toolCall.function.arguments || {});
+ 			block.partialArgs = (block.partialArgs || "") + argsDelta;
+-			block.arguments = parseStreamingJson<ToolCall["arguments"]>(block.partialArgs);
++			block.arguments = parseStreamingJsonWhileStreaming(block, block.partialArgs, block.arguments);
+ 			stream.push({
+ 				type: "toolcall_delta",
+ 				contentIndex: toolBlocksByKey.get(key)!,
+diff --git a/packages/ai/src/api/openai-completions.ts b/packages/ai/src/api/openai-completions.ts
+index 083b6dc8f..6b3c059aa 100644
+--- a/packages/ai/src/api/openai-completions.ts
++++ b/packages/ai/src/api/openai-completions.ts
+@@ -40,7 +40,7 @@ import { AssistantMessageEventStream } from "../utils/event-stream.ts";
+ import { shortHash } from "../utils/hash.ts";
+ import { headersToRecord } from "../utils/headers.ts";
+ import { type ClientIdentity, getIdentityHeaders } from "../utils/identity.ts";
+-import { parseStreamingJson, parseToolCallArguments } from "../utils/json-parse.ts";
++import { parseStreamingJsonWhileStreaming, parseToolCallArguments } from "../utils/json-parse.ts";
+ import { getProviderEnvValue } from "../utils/provider-env.ts";
+ import { retryProviderRequest } from "../utils/provider-retry.ts";
+ import { sanitizeSurrogates } from "../utils/sanitize-unicode.ts";
+@@ -669,7 +669,7 @@ export const stream: StreamFunction<"openai-completions", OpenAICompletionsOptio
+ 							if (toolCall.function?.arguments) {
+ 								delta = toolCall.function.arguments;
+ 								block.partialArgs = (block.partialArgs ?? "") + toolCall.function.arguments;
+-								block.arguments = parseStreamingJson(block.partialArgs);
++								block.arguments = parseStreamingJsonWhileStreaming(block, block.partialArgs, block.arguments);
+ 							} else if (toolCall.custom?.input) {
+ 								const nextInput = getCustomToolCallInput(block) + toolCall.custom.input;
+ 								delta = appendCustomToolCallInput(block, nextInput, false) ?? "";
+diff --git a/packages/ai/src/api/openai-responses-shared.ts b/packages/ai/src/api/openai-responses-shared.ts
+index 3f6371053..e4b71c66f 100644
+--- a/packages/ai/src/api/openai-responses-shared.ts
++++ b/packages/ai/src/api/openai-responses-shared.ts
+@@ -33,7 +33,7 @@ import type {
+ } from "../types.ts";
+ import type { AssistantMessageEventStream } from "../utils/event-stream.ts";
+ import { shortHash } from "../utils/hash.ts";
+-import { parseStreamingJson, parseToolCallArguments } from "../utils/json-parse.ts";
++import { parseStreamingJson, parseStreamingJsonWhileStreaming, parseToolCallArguments } from "../utils/json-parse.ts";
+ import { sanitizeSurrogates } from "../utils/sanitize-unicode.ts";
+ import { getSystemMessageText, renderSystemMessageUpdate } from "../utils/text.ts";
+ import { resolveTranscript, resolveTranscriptTools, type TranscriptToolSupport } from "../utils/transcript.ts";
+@@ -734,7 +734,11 @@ export async function processResponsesStream<TApi extends Api>(
+ 			const slot = getSlot(event.output_index, "toolCall");
+ 			if (!slot || slot.block.partialJson === undefined) continue;
+ 			slot.block.partialJson += event.delta;
+-			slot.block.arguments = parseStreamingJson(slot.block.partialJson);
++			slot.block.arguments = parseStreamingJsonWhileStreaming(
++				slot.block,
++				slot.block.partialJson,
++				slot.block.arguments,
++			);
+ 			pushToolCallDelta(slot, event.delta);
+ 		} else if (event.type === "response.function_call_arguments.done") {
+ 			const slot = getSlot(event.output_index, "toolCall");
+diff --git a/packages/ai/src/api/pi-messages.ts b/packages/ai/src/api/pi-messages.ts
+index 605194937..253526015 100644
+--- a/packages/ai/src/api/pi-messages.ts
++++ b/packages/ai/src/api/pi-messages.ts
+@@ -28,7 +28,7 @@ import { appendAssistantMessageDiagnostic, createAssistantMessageDiagnostic } fr
+ import { AssistantMessageEventStream } from "../utils/event-stream.ts";
+ import { headersToRecord, providerHeadersToRecord } from "../utils/headers.ts";
+ import { getIdentityHeaders } from "../utils/identity.ts";
+-import { parseStreamingJson } from "../utils/json-parse.ts";
++import { parseStreamingJsonWhileStreaming } from "../utils/json-parse.ts";
+ import { getProviderEnvValue } from "../utils/provider-env.ts";
+ 
+ export interface PiMessagesOptions extends StreamOptions {
+@@ -255,8 +255,8 @@ function createEventConverter(model: Model<"pi-messages">) {
+ 			case "toolcall_delta": {
+ 				const json = `${toolJson.get(event.contentIndex) ?? ""}${event.delta}`;
+ 				toolJson.set(event.contentIndex, json);
+-				(partial.content[event.contentIndex] as ToolCall).arguments =
+-					parseStreamingJson<ToolCall["arguments"]>(json);
++				const block = partial.content[event.contentIndex] as ToolCall;
++				block.arguments = parseStreamingJsonWhileStreaming(block, json, block.arguments);
+ 				break;
+ 			}
+ 			case "toolcall_end":
+diff --git a/packages/ai/src/utils/json-parse.ts b/packages/ai/src/utils/json-parse.ts
+index d6fdce639..939c868fa 100644
+--- a/packages/ai/src/utils/json-parse.ts
++++ b/packages/ai/src/utils/json-parse.ts
+@@ -119,6 +119,30 @@ export function parseToolCallArguments(json: string | undefined): Pick<ToolCall,
+ 	}
+ }
+ 
++const streamingParseLengths = new WeakMap<object, number>();
++
++/** Only for append-only deltas; final/replacement arguments must still be parsed in full. */
++export function parseStreamingJsonWhileStreaming<T = Record<string, unknown>>(
++	block: object,
++	partialJson: string | undefined,
++	current: T | undefined,
++): T {
++	const length = partialJson?.length ?? 0;
++	const parsed = streamingParseLengths.get(block);
++	// shortcut: large previews update at 12.5% growth; use an incremental parser if per-delta snapshots are needed.
++	if (
++		current !== undefined &&
++		parsed !== undefined &&
++		parsed >= 1024 &&
++		length >= parsed &&
++		length - parsed < Math.floor(parsed / 8)
++	) {
++		return current;
++	}
++	streamingParseLengths.set(block, length);
++	return parseStreamingJson<T>(partialJson);
++}
++
+ /**
+  * Attempts to parse potentially incomplete JSON during streaming.
+  * Always returns a valid object, even if the JSON is incomplete.
+diff --git a/packages/ai/test/streaming-json-budget.test.ts b/packages/ai/test/streaming-json-budget.test.ts
+new file mode 100644
+index 000000000..ce982682a
+--- /dev/null
++++ b/packages/ai/test/streaming-json-budget.test.ts
+@@ -0,0 +1,84 @@
++import { describe, expect, it } from "vitest";
++import {
++	parseStreamingJson,
++	parseStreamingJsonWhileStreaming,
++	parseToolCallArguments,
++} from "../src/utils/json-parse.ts";
++
++describe("streaming argument parse budget", () => {
++	it("parses every small prefix with the unchanged parser", () => {
++		const samples = [
++			JSON.stringify({ path: "日本語/😀.ts", content: 'a\\b\n\t"x"', nested: [true, null, -1.2e5] }),
++			'{"text":"ab\\u00e9 \\url{x}"}',
++			'{"x":[1,2,{"y":false}],"bad":.5}',
++			'{"__proto__":{"x":1}}',
++		];
++		for (const json of samples) {
++			const block = {};
++			let current: unknown;
++			for (let end = 0; end <= json.length; end++) {
++				const prefix = json.slice(0, end);
++				current = parseStreamingJsonWhileStreaming(block, prefix, current);
++				expect(current).toEqual(parseStreamingJson(prefix));
++			}
++		}
++	});
++
++	it("bounds total reparsed input for tiny deltas and preserves final arguments", () => {
++		const expected = { path: "out.ts", content: '日本語 😀 \\ "\n'.repeat(5000) };
++		const json = JSON.stringify(expected);
++		for (const step of [1, 16, 97, 4096]) {
++			const block = {};
++			let current: unknown;
++			let work = 0;
++			let lastLength = 0;
++			for (let end = step; end < json.length + step; end += step) {
++				const prefix = json.slice(0, end);
++				const next = parseStreamingJsonWhileStreaming(block, prefix, current);
++				if (next !== current) {
++					work += prefix.length;
++					lastLength = prefix.length;
++					expect(next).toEqual(parseStreamingJson(prefix));
++				} else {
++					expect(prefix.length - lastLength).toBeLessThan(lastLength / 8);
++				}
++				current = next;
++			}
++			// Small inputs are eager; after that the geometric schedule must stay linear.
++			expect(work).toBeLessThan(1024 * 1024 + json.length * 10);
++			expect(parseToolCallArguments(json)).toEqual({ arguments: expected });
++		}
++	});
++
++	it("isolates interleaved calls even when their public ids match", () => {
++		const first = { id: "same" };
++		const second = { id: "same" };
++		const prefix = `{"content":"${"a".repeat(2000)}`;
++		const current = parseStreamingJsonWhileStreaming(first, prefix, undefined);
++		expect(parseStreamingJsonWhileStreaming(first, `${prefix}x`, current)).toBe(current);
++		expect(parseStreamingJsonWhileStreaming(second, `${prefix}y`, {})).toEqual(parseStreamingJson(`${prefix}y`));
++		expect(Object.keys(first)).toEqual(["id"]);
++	});
++
++	it("does not skip the first parse, an absent value, or a shorter restart", () => {
++		const block = {};
++		const json = JSON.stringify({ content: "a".repeat(2000) });
++		const current = parseStreamingJsonWhileStreaming(block, json, {});
++		expect(current).toEqual(JSON.parse(json));
++		expect(parseStreamingJsonWhileStreaming(block, json, undefined)).toEqual(current);
++		expect(parseStreamingJsonWhileStreaming(block, '{"next":1}', current)).toEqual({ next: 1 });
++	});
++
++	it("keeps final validation separate from a cached valid prefix", () => {
++		const block = {};
++		const prefix = JSON.stringify({ content: "a".repeat(2000) });
++		const current = parseStreamingJsonWhileStreaming(block, prefix, undefined);
++		for (const final of [`${prefix}garbage`, prefix.slice(0, -1)]) {
++			expect(parseToolCallArguments(final).argumentsError).toBeDefined();
++			expect(parseToolCallArguments(final).arguments).toEqual({});
++		}
++		const replacement = JSON.stringify({ content: "b".repeat(2000) });
++		expect(parseToolCallArguments(replacement).arguments).not.toEqual(current);
++		expect(parseToolCallArguments(replacement).arguments).toEqual(JSON.parse(replacement));
++	});
++});
+diff --git a/packages/ai/test/streaming-json-providers.test.ts b/packages/ai/test/streaming-json-providers.test.ts
+new file mode 100644
+index 000000000..67071308c
+--- /dev/null
++++ b/packages/ai/test/streaming-json-providers.test.ts
+@@ -0,0 +1,225 @@
++import { describe, expect, it, vi } from "vitest";
++
++const bedrock = vi.hoisted(() => ({ events: [] as unknown[] }));
++vi.mock("@aws-sdk/client-bedrock-runtime", () => ({
++	BedrockRuntimeClient: class {
++		middlewareStack = { add: () => undefined };
++		async send() {
++			return {
++				$metadata: {},
++				stream: (async function* () {
++					yield* bedrock.events;
++				})(),
++			};
++		}
++	},
++	BedrockRuntimeServiceException: class extends Error {},
++	ConverseStreamCommand: class {},
++	StopReason: {
++		END_TURN: "end_turn",
++		STOP_SEQUENCE: "stop_sequence",
++		MAX_TOKENS: "max_tokens",
++		MODEL_CONTEXT_WINDOW_EXCEEDED: "model_context_window_exceeded",
++		TOOL_USE: "tool_use",
++	},
++	CachePointType: { DEFAULT: "default" },
++	CacheTTL: { ONE_HOUR: "ONE_HOUR" },
++	ConversationRole: { ASSISTANT: "assistant", USER: "user" },
++	ImageFormat: {},
++	ToolResultStatus: { ERROR: "error", SUCCESS: "success" },
++}));
++
++import { stream as anthropic } from "../src/api/anthropic-messages.ts";
++import { stream as converse } from "../src/api/bedrock-converse-stream.ts";
++import { stream as mistral } from "../src/api/mistral-conversations.ts";
++import { stream as completions } from "../src/api/openai-completions.ts";
++import { stream as responses } from "../src/api/openai-responses.ts";
++import { stream as pi } from "../src/api/pi-messages.ts";
++import type { Api, Model } from "../src/types.ts";
++import { parseToolCallArguments } from "../src/utils/json-parse.ts";
++import { normalizeContext } from "../src/utils/transcript.ts";
++
++const apis = [
++	"openai-completions",
++	"anthropic-messages",
++	"openai-responses",
++	"mistral-conversations",
++	"bedrock-converse-stream",
++	"pi-messages",
++] as const;
++const usage = {
++	input: 1,
++	output: 1,
++	cacheRead: 0,
++	cacheWrite: 0,
++	totalTokens: 2,
++	cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
++};
++function model<T extends Api>(api: T): Model<T> {
++	return {
++		api,
++		id: "test",
++		name: "test",
++		provider: "test",
++		baseUrl: "http://127.0.0.1:1",
++		reasoning: false,
++		input: ["text"],
++		contextWindow: 100000,
++		maxTokens: 20000,
++		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
++	};
++}
++
++function events(api: (typeof apis)[number], json: string, final = json, omitBlockStop = false): unknown[] {
++	const deltas = [];
++	for (let i = 0; i < json.length; i += 16) deltas.push(json.slice(i, i + 16));
++	if (api === "openai-completions" || api === "mistral-conversations") {
++		return [
++			...deltas.map((delta) => ({
++				id: "chat-1",
++				choices: [
++					{
++						index: 0,
++						delta: {
++							tool_calls: [
++								{ index: 0, id: "call_1", type: "function", function: { name: "write", arguments: delta } },
++							],
++						},
++					},
++				],
++			})),
++			{ id: "chat-1", choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }] },
++		];
++	}
++	if (api === "anthropic-messages") {
++		return [
++			{ type: "message_start", message: { id: "msg_1", model: "test", usage: {} } },
++			{
++				type: "content_block_start",
++				index: 0,
++				content_block: { type: "tool_use", id: "call_1", name: "write", input: {} },
++			},
++			...deltas.map((delta) => ({
++				type: "content_block_delta",
++				index: 0,
++				delta: { type: "input_json_delta", partial_json: delta },
++			})),
++			{ type: "content_block_stop", index: 0 },
++			{ type: "message_delta", delta: { stop_reason: "tool_use" }, usage: {} },
++			{ type: "message_stop" },
++		];
++	}
++	if (api === "bedrock-converse-stream") {
++		return [
++			{ messageStart: { role: "assistant" } },
++			{ contentBlockStart: { contentBlockIndex: 0, start: { toolUse: { toolUseId: "call_1", name: "write" } } } },
++			...deltas.map((delta) => ({
++				contentBlockDelta: { contentBlockIndex: 0, delta: { toolUse: { input: delta } } },
++			})),
++			...(omitBlockStop ? [] : [{ contentBlockStop: { contentBlockIndex: 0 } }]),
++			{ messageStop: { stopReason: "tool_use" } },
++		];
++	}
++	if (api === "pi-messages") {
++		return [
++			{ type: "start" },
++			{ type: "toolcall_start", contentIndex: 0, id: "call_1", toolName: "write" },
++			...deltas.map((delta) => ({ type: "toolcall_delta", contentIndex: 0, delta })),
++			{
++				type: "toolcall_end",
++				contentIndex: 0,
++				toolCall: { type: "toolCall", id: "call_1", name: "write", ...parseToolCallArguments(final) },
++			},
++			{ type: "done", reason: "toolUse", usage },
++		];
++	}
++	const item = { type: "function_call", id: "fc_1", call_id: "call_1", name: "write", arguments: "" };
++	return [
++		{ type: "response.created", response: { id: "resp_1" } },
++		{ type: "response.output_item.added", output_index: 0, item },
++		...deltas.map((delta) => ({ type: "response.function_call_arguments.delta", output_index: 0, delta })),
++		{ type: "response.function_call_arguments.done", output_index: 0, arguments: final },
++		{ type: "response.output_item.done", output_index: 0, item: { ...item, arguments: final } },
++		{ type: "response.completed", response: { id: "resp_1", status: "completed", output: [] } },
++	];
++}
++
++function run(api: (typeof apis)[number], json: string, final = json, omitBlockStop = false) {
++	const wire = events(api, json, final, omitBlockStop);
++	bedrock.events = wire;
++	const body = wire
++		.map((event) => {
++			const kind = (event as { type?: string }).type;
++			return `${kind ? `event: ${kind}\n` : ""}data: ${JSON.stringify(event)}\n\n`;
++		})
++		.join("");
++	const options = {
++		apiKey: "test",
++		cacheRetention: "none" as const,
++		maxRetries: 0,
++		fetch: vi.fn<typeof fetch>(async () => new Response(body, { headers: { "content-type": "text/event-stream" } })),
++	};
++	const context = normalizeContext({ messages: [{ role: "user", content: "write", timestamp: 0 }] });
++	switch (api) {
++		case "openai-completions":
++			return completions(model(api), context, options);
++		case "anthropic-messages":
++			return anthropic(model(api), context, options);
++		case "openai-responses":
++			return responses(model(api), context, options);
++		case "mistral-conversations":
++			return mistral(model(api), context, options);
++		case "bedrock-converse-stream":
++			return converse(model(api), context, options);
++		case "pi-messages":
++			return pi(model(api), context, options);
++	}
++}
++
++const expected = { path: "日本語/😀.ts", content: `${'const x = "\\😀";\n'.repeat(500)}FINAL TAIL` };
++const json = JSON.stringify(expected);
++
++describe("coalesced tool arguments at provider boundaries", () => {
++	for (const api of apis) {
++		it(`${api} preserves every raw delta and the fully parsed terminal call`, async () => {
++			const stream = run(api, json);
++			let raw = "";
++			let ends = 0;
++			for await (const event of stream) {
++				if (event.type === "toolcall_delta") raw += event.delta;
++				if (event.type === "toolcall_end") {
++					ends++;
++					expect(event.toolCall.arguments).toEqual(expected);
++				}
++			}
++			const result = await stream.result();
++			expect(result.stopReason, result.errorMessage).toBe("toolUse");
++			expect(raw).toBe(json);
++			expect(ends).toBe(1);
++			expect(result.content[0]).toMatchObject({ type: "toolCall", arguments: expected });
++			expect(Object.keys(result.content[0]).sort()).toEqual(["arguments", "id", "name", "type"]);
++		});
++		it(`${api} rejects malformed final JSON despite a cached usable prefix`, async () => {
++			const result = await run(api, `${json}BAD`).result();
++			const call = result.content[0];
++			expect(call.type).toBe("toolCall");
++			if (call.type !== "toolCall") throw new Error("missing call");
++			expect(call.arguments).toEqual({});
++			expect(call.argumentsError).toContain("Received arguments:");
++		});
++	}
++	for (const api of ["openai-responses", "pi-messages"] as const) {
++		it(`${api} accepts an authoritative same-length final replacement`, async () => {
++			const replacement = { ...expected, content: expected.content.replace("FINAL TAIL", "OTHER TAIL") };
++			const result = await run(api, json, JSON.stringify(replacement)).result();
++			expect(result.content[0]).toMatchObject({ arguments: replacement });
++		});
++	}
++	for (const malformed of [false, true]) {
++		it(`finalizes Bedrock arguments without contentBlockStop, malformed=${malformed}`, async () => {
++			const result = await run("bedrock-converse-stream", json + (malformed ? "BAD" : ""), undefined, true).result();
++			expect(result.content[0]).toMatchObject({ arguments: malformed ? {} : expected });
++			if (malformed) expect(result.content[0]).toHaveProperty("argumentsError");
++		});
++	}
++});

@@ -1,0 +1,38 @@
+
+scenario     build        metric           median                min–max    vs base  n
+startup      base         wall_s            0.032            0.021–0.034             3
+startup      005          wall_s            0.025            0.022–0.026     -20.3%  3
+startup      010          wall_s            0.021            0.019–0.041     -34.6%  3
+startup      base         cpu_s             0.027            0.018–0.029             3
+startup      005          cpu_s             0.022            0.019–0.022     -20.3%  3
+startup      010          cpu_s             0.018            0.017–0.034     -32.1%  3
+startup      base         peak_rss_mb      41.700          41.700–41.800             3
+startup      005          peak_rss_mb      41.700          41.700–41.700       0.0%  3
+startup      010          peak_rss_mb      41.900          41.900–41.900       0.5%  3
+write:200    base         wall_s            9.541            9.531–9.628             3
+write:200    005          wall_s            0.098            0.097–0.101     -99.0%  3
+write:200    010          wall_s            0.097            0.096–0.104     -99.0%  3
+write:200    base         cpu_s             9.560            9.550–9.646             3
+write:200    005          cpu_s             0.096            0.095–0.098     -99.0%  3
+write:200    010          cpu_s             0.095            0.094–0.100     -99.0%  3
+write:200    base         peak_rss_mb     247.500        237.100–274.800             3
+write:200    005          peak_rss_mb      79.700          79.100–80.000     -67.8%  3
+write:200    010          peak_rss_mb      79.700          79.400–80.000     -67.8%  3
+tuiwrite:200 base         wall_s           15.504          15.457–15.614             3
+tuiwrite:200 005          wall_s            0.308            0.308–0.312     -98.0%  3
+tuiwrite:200 010          wall_s            0.308            0.307–0.308     -98.0%  3
+tuiwrite:200 base         cpu_s            15.430          15.400–15.550             3
+tuiwrite:200 005          cpu_s             0.180            0.180–0.180     -98.8%  3
+tuiwrite:200 010          cpu_s             0.180            0.170–0.180     -98.8%  3
+tuiwrite:200 base         rss_mb          311.900        306.900–327.700             3
+tuiwrite:200 005          rss_mb          104.900        104.000–105.300     -66.4%  3
+tuiwrite:200 010          rss_mb          105.600        105.400–105.800     -66.1%  3
+md:20000     base         wall_s           17.588          17.586–17.595             3
+md:20000     005          wall_s           17.621          17.590–17.641       0.2%  3
+md:20000     010          wall_s           17.615          17.599–17.617       0.2%  3
+md:20000     base         cpu_s             6.410            6.380–6.440             3
+md:20000     005          cpu_s             1.780            1.760–1.780     -72.2%  3
+md:20000     010          cpu_s             1.540            1.510–1.560     -76.0%  3
+md:20000     base         rss_mb          152.600        143.200–153.800             3
+md:20000     005          rss_mb           93.100          91.800–95.000     -39.0%  3
+md:20000     010          rss_mb           92.000          91.800–93.400     -39.7%  3

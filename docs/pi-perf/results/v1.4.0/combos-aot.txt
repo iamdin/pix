@@ -1,0 +1,562 @@
+{"build":"abcd","scenario":"startup","round":-1,"ok":true,"wall_s":0.0191,"cpu_s":0.0158,"peak_rss_mb":41.7}
+{"build":"bcd","scenario":"startup","round":-1,"ok":true,"wall_s":0.0939,"cpu_s":0.0388,"peak_rss_mb":41.7}
+{"build":"acd","scenario":"startup","round":-1,"ok":true,"wall_s":0.091,"cpu_s":0.0377,"peak_rss_mb":41.7}
+{"build":"cd","scenario":"startup","round":-1,"ok":true,"wall_s":0.0933,"cpu_s":0.0388,"peak_rss_mb":41.8}
+{"build":"abd","scenario":"startup","round":-1,"ok":true,"wall_s":0.0931,"cpu_s":0.0387,"peak_rss_mb":41.7}
+{"build":"bd","scenario":"startup","round":-1,"ok":true,"wall_s":0.1175,"cpu_s":0.0386,"peak_rss_mb":41.7}
+{"build":"ad","scenario":"startup","round":-1,"ok":true,"wall_s":0.1003,"cpu_s":0.0385,"peak_rss_mb":41.6}
+{"build":"d","scenario":"startup","round":-1,"ok":true,"wall_s":0.1272,"cpu_s":0.0386,"peak_rss_mb":41.8}
+{"build":"abc","scenario":"startup","round":-1,"ok":true,"wall_s":0.1267,"cpu_s":0.0393,"peak_rss_mb":41.8}
+{"build":"bc","scenario":"startup","round":-1,"ok":true,"wall_s":0.1209,"cpu_s":0.039,"peak_rss_mb":41.7}
+{"build":"ac","scenario":"startup","round":-1,"ok":true,"wall_s":0.1217,"cpu_s":0.0382,"peak_rss_mb":41.7}
+{"build":"c","scenario":"startup","round":-1,"ok":true,"wall_s":0.1241,"cpu_s":0.0385,"peak_rss_mb":41.7}
+{"build":"ab","scenario":"startup","round":-1,"ok":true,"wall_s":0.1155,"cpu_s":0.0388,"peak_rss_mb":41.8}
+{"build":"b","scenario":"startup","round":-1,"ok":true,"wall_s":0.1198,"cpu_s":0.0396,"peak_rss_mb":41.7}
+{"build":"a","scenario":"startup","round":-1,"ok":true,"wall_s":0.1221,"cpu_s":0.043,"peak_rss_mb":41.6}
+{"build":"base","scenario":"startup","round":-1,"ok":true,"wall_s":0.1199,"cpu_s":0.0392,"peak_rss_mb":41.7}
+{"build":"abcd","scenario":"write:200","round":-1,"ok":true,"wall_s":0.1257,"cpu_s":0.1044,"peak_rss_mb":78.8}
+{"build":"bcd","scenario":"write:200","round":-1,"ok":true,"wall_s":0.1248,"cpu_s":0.1066,"peak_rss_mb":79.3}
+{"build":"acd","scenario":"write:200","round":-1,"ok":true,"wall_s":0.128,"cpu_s":0.1094,"peak_rss_mb":79.5}
+{"build":"cd","scenario":"write:200","round":-1,"ok":true,"wall_s":0.1555,"cpu_s":0.1077,"peak_rss_mb":78.3}
+{"build":"abd","scenario":"write:200","round":-1,"ok":true,"wall_s":9.7665,"cpu_s":9.7744,"peak_rss_mb":225.6}
+{"build":"bd","scenario":"write:200","round":-1,"ok":true,"wall_s":9.7597,"cpu_s":9.7624,"peak_rss_mb":254.8}
+{"build":"ad","scenario":"write:200","round":-1,"ok":true,"wall_s":9.7799,"cpu_s":9.7745,"peak_rss_mb":236.4}
+{"build":"d","scenario":"write:200","round":-1,"ok":true,"wall_s":9.7877,"cpu_s":9.7678,"peak_rss_mb":250.5}
+{"build":"abc","scenario":"write:200","round":-1,"ok":true,"wall_s":0.1315,"cpu_s":0.1077,"peak_rss_mb":79.8}
+{"build":"bc","scenario":"write:200","round":-1,"ok":true,"wall_s":0.1288,"cpu_s":0.1073,"peak_rss_mb":78.9}
+{"build":"ac","scenario":"write:200","round":-1,"ok":true,"wall_s":0.1507,"cpu_s":0.1063,"peak_rss_mb":80.3}
+{"build":"c","scenario":"write:200","round":-1,"ok":true,"wall_s":0.1296,"cpu_s":0.1082,"peak_rss_mb":79.3}
+{"build":"ab","scenario":"write:200","round":-1,"ok":true,"wall_s":9.7816,"cpu_s":9.7595,"peak_rss_mb":246.4}
+{"build":"b","scenario":"write:200","round":-1,"ok":true,"wall_s":9.7492,"cpu_s":9.7464,"peak_rss_mb":268.1}
+{"build":"a","scenario":"write:200","round":-1,"ok":true,"wall_s":9.7545,"cpu_s":9.7556,"peak_rss_mb":247.2}
+{"build":"base","scenario":"write:200","round":-1,"ok":true,"wall_s":9.755,"cpu_s":9.7538,"peak_rss_mb":256.6}
+{"build":"abcd","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":0.308,"cpu_s":0.18,"rss_mb":105.5}
+{"build":"bcd","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":0.307,"cpu_s":0.19,"rss_mb":105.1}
+{"build":"acd","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":0.34,"cpu_s":0.22,"rss_mb":106.3}
+{"build":"cd","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":0.352,"cpu_s":0.23,"rss_mb":106.3}
+{"build":"abd","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":10.454,"cpu_s":10.55,"rss_mb":1941.5}
+{"build":"bd","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":10.234,"cpu_s":10.24,"rss_mb":3857.7}
+{"build":"ad","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":15.652,"cpu_s":15.67,"rss_mb":3806.4}
+{"build":"d","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":15.67,"cpu_s":15.71,"rss_mb":3844.2}
+{"build":"abc","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":0.392,"cpu_s":0.26,"rss_mb":123.2}
+{"build":"bc","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":0.394,"cpu_s":0.28,"rss_mb":125.4}
+{"build":"ac","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":0.437,"cpu_s":0.31,"rss_mb":122.9}
+{"build":"c","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":0.433,"cpu_s":0.3,"rss_mb":120.2}
+{"build":"ab","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":10.098,"cpu_s":10.01,"rss_mb":330.3}
+{"build":"b","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":10.11,"cpu_s":10.01,"rss_mb":346.7}
+{"build":"a","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":15.723,"cpu_s":15.64,"rss_mb":285.5}
+{"build":"base","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":15.691,"cpu_s":15.61,"rss_mb":307.4}
+{"build":"abcd","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.33,"cpu_s":1.48,"rss_mb":89}
+{"build":"bcd","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.22,"cpu_s":5.29,"rss_mb":137.5}
+{"build":"acd","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.291,"cpu_s":3.42,"rss_mb":113.6}
+{"build":"cd","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.216,"cpu_s":6.28,"rss_mb":143.7}
+{"build":"abd","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.303,"cpu_s":1.5,"rss_mb":89.3}
+{"build":"bd","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.219,"cpu_s":5.31,"rss_mb":136.9}
+{"build":"ad","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.361,"cpu_s":3.56,"rss_mb":114.6}
+{"build":"d","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.708,"cpu_s":6.47,"rss_mb":142.2}
+{"build":"abc","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.605,"cpu_s":1.58,"rss_mb":91.1}
+{"build":"bc","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.562,"cpu_s":5.55,"rss_mb":141}
+{"build":"ac","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.579,"cpu_s":3.56,"rss_mb":121.2}
+{"build":"c","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.567,"cpu_s":6.43,"rss_mb":144.1}
+{"build":"ab","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.578,"cpu_s":1.56,"rss_mb":91.8}
+{"build":"b","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.555,"cpu_s":5.46,"rss_mb":139.2}
+{"build":"a","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.619,"cpu_s":3.68,"rss_mb":119.9}
+{"build":"base","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.593,"cpu_s":6.58,"rss_mb":146.5}
+{"build":"abcd","scenario":"md:60000","round":-1,"ok":true,"wall_s":53,"cpu_s":4.81,"rss_mb":124.1}
+{"build":"bcd","scenario":"md:60000","round":-1,"ok":true,"wall_s":52.424,"cpu_s":21.55,"rss_mb":162.7}
+{"build":"acd","scenario":"md:60000","round":-1,"ok":true,"wall_s":52.686,"cpu_s":16.81,"rss_mb":159.2}
+{"build":"cd","scenario":"md:60000","round":-1,"ok":true,"wall_s":52.393,"cpu_s":24.8,"rss_mb":165.5}
+{"build":"abd","scenario":"md:60000","round":-1,"ok":true,"wall_s":53.114,"cpu_s":4.77,"rss_mb":122.2}
+{"build":"bd","scenario":"md:60000","round":-1,"ok":true,"wall_s":52.464,"cpu_s":21.48,"rss_mb":164.8}
+{"build":"ad","scenario":"md:60000","round":-1,"ok":true,"wall_s":52.708,"cpu_s":16.77,"rss_mb":154.8}
+{"build":"d","scenario":"md:60000","round":-1,"ok":true,"wall_s":52.464,"cpu_s":24.64,"rss_mb":173.5}
+{"build":"abc","scenario":"md:60000","round":-1,"ok":true,"wall_s":53.089,"cpu_s":5.02,"rss_mb":119.3}
+{"build":"bc","scenario":"md:60000","round":-1,"ok":true,"wall_s":52.395,"cpu_s":21.33,"rss_mb":169.3}
+{"build":"ac","scenario":"md:60000","round":-1,"ok":true,"wall_s":52.689,"cpu_s":16.6,"rss_mb":159.5}
+{"build":"c","scenario":"md:60000","round":-1,"ok":true,"wall_s":52.451,"cpu_s":24.88,"rss_mb":167.5}
+{"build":"ab","scenario":"md:60000","round":-1,"ok":true,"wall_s":53.068,"cpu_s":4.8,"rss_mb":134.1}
+{"build":"b","scenario":"md:60000","round":-1,"ok":true,"wall_s":52.423,"cpu_s":21.3,"rss_mb":165.4}
+{"build":"a","scenario":"md:60000","round":-1,"ok":true,"wall_s":52.639,"cpu_s":16.62,"rss_mb":160.9}
+{"build":"base","scenario":"md:60000","round":-1,"ok":true,"wall_s":52.463,"cpu_s":24.63,"rss_mb":168.7}
+{"build":"base","scenario":"startup","round":0,"ok":true,"wall_s":0.0212,"cpu_s":0.0187,"peak_rss_mb":41.7}
+{"build":"a","scenario":"startup","round":0,"ok":true,"wall_s":0.0193,"cpu_s":0.0172,"peak_rss_mb":41.6}
+{"build":"b","scenario":"startup","round":0,"ok":true,"wall_s":0.0193,"cpu_s":0.0172,"peak_rss_mb":41.7}
+{"build":"ab","scenario":"startup","round":0,"ok":true,"wall_s":0.0218,"cpu_s":0.0181,"peak_rss_mb":41.8}
+{"build":"c","scenario":"startup","round":0,"ok":true,"wall_s":0.0204,"cpu_s":0.0167,"peak_rss_mb":41.7}
+{"build":"ac","scenario":"startup","round":0,"ok":true,"wall_s":0.0197,"cpu_s":0.0163,"peak_rss_mb":41.7}
+{"build":"bc","scenario":"startup","round":0,"ok":true,"wall_s":0.0193,"cpu_s":0.0159,"peak_rss_mb":41.7}
+{"build":"abc","scenario":"startup","round":0,"ok":true,"wall_s":0.0193,"cpu_s":0.0159,"peak_rss_mb":41.8}
+{"build":"d","scenario":"startup","round":0,"ok":true,"wall_s":0.019,"cpu_s":0.0157,"peak_rss_mb":41.8}
+{"build":"ad","scenario":"startup","round":0,"ok":true,"wall_s":0.0193,"cpu_s":0.0159,"peak_rss_mb":41.7}
+{"build":"bd","scenario":"startup","round":0,"ok":true,"wall_s":0.0186,"cpu_s":0.0156,"peak_rss_mb":41.7}
+{"build":"abd","scenario":"startup","round":0,"ok":true,"wall_s":0.0184,"cpu_s":0.0152,"peak_rss_mb":41.7}
+{"build":"cd","scenario":"startup","round":0,"ok":true,"wall_s":0.0191,"cpu_s":0.0158,"peak_rss_mb":41.8}
+{"build":"acd","scenario":"startup","round":0,"ok":true,"wall_s":0.0191,"cpu_s":0.0156,"peak_rss_mb":41.7}
+{"build":"bcd","scenario":"startup","round":0,"ok":true,"wall_s":0.019,"cpu_s":0.0157,"peak_rss_mb":41.7}
+{"build":"abcd","scenario":"startup","round":0,"ok":true,"wall_s":0.019,"cpu_s":0.016,"peak_rss_mb":41.7}
+{"build":"base","scenario":"write:200","round":0,"ok":true,"wall_s":9.6355,"cpu_s":9.6578,"peak_rss_mb":244.7}
+{"build":"a","scenario":"write:200","round":0,"ok":true,"wall_s":9.7754,"cpu_s":9.7918,"peak_rss_mb":255}
+{"build":"b","scenario":"write:200","round":0,"ok":true,"wall_s":9.727,"cpu_s":9.7447,"peak_rss_mb":251.5}
+{"build":"ab","scenario":"write:200","round":0,"ok":true,"wall_s":9.7119,"cpu_s":9.7258,"peak_rss_mb":248.1}
+{"build":"c","scenario":"write:200","round":0,"ok":true,"wall_s":0.1013,"cpu_s":0.097,"peak_rss_mb":79.3}
+{"build":"ac","scenario":"write:200","round":0,"ok":true,"wall_s":0.1012,"cpu_s":0.0972,"peak_rss_mb":78.6}
+{"build":"bc","scenario":"write:200","round":0,"ok":true,"wall_s":0.1024,"cpu_s":0.098,"peak_rss_mb":79.8}
+{"build":"abc","scenario":"write:200","round":0,"ok":true,"wall_s":0.1015,"cpu_s":0.0974,"peak_rss_mb":79.7}
+{"build":"d","scenario":"write:200","round":0,"ok":true,"wall_s":9.7405,"cpu_s":9.7568,"peak_rss_mb":248.3}
+{"build":"ad","scenario":"write:200","round":0,"ok":true,"wall_s":9.7126,"cpu_s":9.7241,"peak_rss_mb":253.2}
+{"build":"bd","scenario":"write:200","round":0,"ok":true,"wall_s":9.8296,"cpu_s":9.7942,"peak_rss_mb":240.7}
+{"build":"abd","scenario":"write:200","round":0,"ok":true,"wall_s":9.7244,"cpu_s":9.7357,"peak_rss_mb":245.7}
+{"build":"cd","scenario":"write:200","round":0,"ok":true,"wall_s":0.1047,"cpu_s":0.0988,"peak_rss_mb":79.7}
+{"build":"acd","scenario":"write:200","round":0,"ok":true,"wall_s":0.1036,"cpu_s":0.0978,"peak_rss_mb":79.4}
+{"build":"bcd","scenario":"write:200","round":0,"ok":true,"wall_s":0.1021,"cpu_s":0.0967,"peak_rss_mb":80}
+{"build":"abcd","scenario":"write:200","round":0,"ok":true,"wall_s":0.1032,"cpu_s":0.0982,"peak_rss_mb":79.9}
+{"build":"base","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":15.617,"cpu_s":15.55,"rss_mb":327.4}
+{"build":"a","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":15.659,"cpu_s":15.6,"rss_mb":283.9}
+{"build":"b","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":10.02,"cpu_s":9.94,"rss_mb":338}
+{"build":"ab","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":10.061,"cpu_s":9.99,"rss_mb":315.3}
+{"build":"c","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":0.426,"cpu_s":0.3,"rss_mb":123.9}
+{"build":"ac","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":0.418,"cpu_s":0.29,"rss_mb":132.9}
+{"build":"bc","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":0.38,"cpu_s":0.27,"rss_mb":127.4}
+{"build":"abc","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":0.381,"cpu_s":0.26,"rss_mb":127.2}
+{"build":"d","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":15.762,"cpu_s":15.78,"rss_mb":2425.3}
+{"build":"ad","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":15.684,"cpu_s":15.68,"rss_mb":2391.6}
+{"build":"bd","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":10.239,"cpu_s":10.33,"rss_mb":2940.3}
+{"build":"abd","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":10.235,"cpu_s":10.24,"rss_mb":3794.6}
+{"build":"cd","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":0.344,"cpu_s":0.22,"rss_mb":105.7}
+{"build":"acd","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":0.337,"cpu_s":0.21,"rss_mb":103.8}
+{"build":"bcd","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":0.316,"cpu_s":0.19,"rss_mb":106.4}
+{"build":"abcd","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":0.304,"cpu_s":0.19,"rss_mb":104.1}
+{"build":"base","scenario":"md:20000","round":0,"ok":true,"wall_s":17.231,"cpu_s":6.17,"rss_mb":137.1}
+{"build":"a","scenario":"md:20000","round":0,"ok":true,"wall_s":17.275,"cpu_s":3.57,"rss_mb":122.8}
+{"build":"b","scenario":"md:20000","round":0,"ok":true,"wall_s":17.237,"cpu_s":5.23,"rss_mb":141.4}
+{"build":"ab","scenario":"md:20000","round":0,"ok":true,"wall_s":17.316,"cpu_s":1.57,"rss_mb":92.3}
+{"build":"c","scenario":"md:20000","round":0,"ok":true,"wall_s":17.208,"cpu_s":5.94,"rss_mb":136.5}
+{"build":"ac","scenario":"md:20000","round":0,"ok":true,"wall_s":17.254,"cpu_s":3.52,"rss_mb":119.4}
+{"build":"bc","scenario":"md:20000","round":0,"ok":true,"wall_s":17.232,"cpu_s":5.07,"rss_mb":134.6}
+{"build":"abc","scenario":"md:20000","round":0,"ok":true,"wall_s":17.294,"cpu_s":1.49,"rss_mb":92.9}
+{"build":"d","scenario":"md:20000","round":0,"ok":true,"wall_s":17.194,"cpu_s":6.06,"rss_mb":139.6}
+{"build":"ad","scenario":"md:20000","round":0,"ok":true,"wall_s":17.253,"cpu_s":3.17,"rss_mb":125.2}
+{"build":"bd","scenario":"md:20000","round":0,"ok":true,"wall_s":17.257,"cpu_s":5.06,"rss_mb":130.1}
+{"build":"abd","scenario":"md:20000","round":0,"ok":true,"wall_s":17.289,"cpu_s":1.52,"rss_mb":90.4}
+{"build":"cd","scenario":"md:20000","round":0,"ok":true,"wall_s":17.2,"cpu_s":6.2,"rss_mb":131.2}
+{"build":"acd","scenario":"md:20000","round":0,"ok":true,"wall_s":17.263,"cpu_s":3.49,"rss_mb":123.7}
+{"build":"bcd","scenario":"md:20000","round":0,"ok":true,"wall_s":17.212,"cpu_s":5.33,"rss_mb":133.7}
+{"build":"abcd","scenario":"md:20000","round":0,"ok":true,"wall_s":17.317,"cpu_s":1.51,"rss_mb":91.3}
+{"build":"base","scenario":"md:60000","round":0,"ok":true,"wall_s":51.245,"cpu_s":24.16,"rss_mb":176.6}
+{"build":"a","scenario":"md:60000","round":0,"ok":true,"wall_s":51.628,"cpu_s":16.05,"rss_mb":156.4}
+{"build":"b","scenario":"md:60000","round":0,"ok":true,"wall_s":51.77,"cpu_s":21.05,"rss_mb":167.3}
+{"build":"ab","scenario":"md:60000","round":0,"ok":true,"wall_s":53.032,"cpu_s":4.99,"rss_mb":126.1}
+{"build":"c","scenario":"md:60000","round":0,"ok":true,"wall_s":52.484,"cpu_s":24.94,"rss_mb":167.7}
+{"build":"ac","scenario":"md:60000","round":0,"ok":true,"wall_s":52.72,"cpu_s":16.76,"rss_mb":162.6}
+{"build":"bc","scenario":"md:60000","round":0,"ok":true,"wall_s":52.382,"cpu_s":21.56,"rss_mb":167}
+{"build":"abc","scenario":"md:60000","round":0,"ok":true,"wall_s":52.757,"cpu_s":5.02,"rss_mb":133.9}
+{"build":"d","scenario":"md:60000","round":0,"ok":true,"wall_s":51.243,"cpu_s":24.19,"rss_mb":174.7}
+{"build":"ad","scenario":"md:60000","round":0,"ok":true,"wall_s":51.648,"cpu_s":16.22,"rss_mb":161.2}
+{"build":"bd","scenario":"md:60000","round":0,"ok":true,"wall_s":51.316,"cpu_s":20.79,"rss_mb":164}
+{"build":"abd","scenario":"md:60000","round":0,"ok":true,"wall_s":52.212,"cpu_s":4.79,"rss_mb":124.4}
+{"build":"cd","scenario":"md:60000","round":0,"ok":true,"wall_s":51.23,"cpu_s":24.13,"rss_mb":172.3}
+{"build":"acd","scenario":"md:60000","round":0,"ok":true,"wall_s":52.33,"cpu_s":16.54,"rss_mb":161.7}
+{"build":"bcd","scenario":"md:60000","round":0,"ok":true,"wall_s":52.401,"cpu_s":21.41,"rss_mb":164.4}
+{"build":"abcd","scenario":"md:60000","round":0,"ok":true,"wall_s":53.081,"cpu_s":4.85,"rss_mb":117.2}
+{"build":"abcd","scenario":"startup","round":1,"ok":true,"wall_s":0.03,"cpu_s":0.0266,"peak_rss_mb":41.7}
+{"build":"bcd","scenario":"startup","round":1,"ok":true,"wall_s":0.0211,"cpu_s":0.0187,"peak_rss_mb":41.7}
+{"build":"acd","scenario":"startup","round":1,"ok":true,"wall_s":0.0198,"cpu_s":0.0173,"peak_rss_mb":41.7}
+{"build":"cd","scenario":"startup","round":1,"ok":true,"wall_s":0.0192,"cpu_s":0.017,"peak_rss_mb":41.8}
+{"build":"abd","scenario":"startup","round":1,"ok":true,"wall_s":0.0197,"cpu_s":0.0175,"peak_rss_mb":41.7}
+{"build":"bd","scenario":"startup","round":1,"ok":true,"wall_s":0.0193,"cpu_s":0.0172,"peak_rss_mb":41.7}
+{"build":"ad","scenario":"startup","round":1,"ok":true,"wall_s":0.0196,"cpu_s":0.0175,"peak_rss_mb":41.7}
+{"build":"d","scenario":"startup","round":1,"ok":true,"wall_s":0.0192,"cpu_s":0.017,"peak_rss_mb":41.8}
+{"build":"abc","scenario":"startup","round":1,"ok":true,"wall_s":0.018,"cpu_s":0.016,"peak_rss_mb":41.8}
+{"build":"bc","scenario":"startup","round":1,"ok":true,"wall_s":0.0178,"cpu_s":0.0158,"peak_rss_mb":41.7}
+{"build":"ac","scenario":"startup","round":1,"ok":true,"wall_s":0.0172,"cpu_s":0.0153,"peak_rss_mb":41.7}
+{"build":"c","scenario":"startup","round":1,"ok":true,"wall_s":0.0186,"cpu_s":0.0156,"peak_rss_mb":41.7}
+{"build":"ab","scenario":"startup","round":1,"ok":true,"wall_s":0.0188,"cpu_s":0.0158,"peak_rss_mb":41.8}
+{"build":"b","scenario":"startup","round":1,"ok":true,"wall_s":0.0192,"cpu_s":0.0159,"peak_rss_mb":41.7}
+{"build":"a","scenario":"startup","round":1,"ok":true,"wall_s":0.0185,"cpu_s":0.0155,"peak_rss_mb":41.6}
+{"build":"base","scenario":"startup","round":1,"ok":true,"wall_s":0.0189,"cpu_s":0.0158,"peak_rss_mb":41.7}
+{"build":"abcd","scenario":"write:200","round":1,"ok":true,"wall_s":0.0969,"cpu_s":0.0943,"peak_rss_mb":79}
+{"build":"bcd","scenario":"write:200","round":1,"ok":true,"wall_s":0.097,"cpu_s":0.094,"peak_rss_mb":78.9}
+{"build":"acd","scenario":"write:200","round":1,"ok":true,"wall_s":0.098,"cpu_s":0.0953,"peak_rss_mb":79}
+{"build":"cd","scenario":"write:200","round":1,"ok":true,"wall_s":0.0956,"cpu_s":0.0928,"peak_rss_mb":79}
+{"build":"abd","scenario":"write:200","round":1,"ok":true,"wall_s":9.5737,"cpu_s":9.5892,"peak_rss_mb":247.5}
+{"build":"bd","scenario":"write:200","round":1,"ok":true,"wall_s":9.5104,"cpu_s":9.524,"peak_rss_mb":236.4}
+{"build":"ad","scenario":"write:200","round":1,"ok":true,"wall_s":9.5599,"cpu_s":9.5734,"peak_rss_mb":238.3}
+{"build":"d","scenario":"write:200","round":1,"ok":true,"wall_s":9.6044,"cpu_s":9.6195,"peak_rss_mb":253.6}
+{"build":"abc","scenario":"write:200","round":1,"ok":true,"wall_s":0.1001,"cpu_s":0.095,"peak_rss_mb":79.3}
+{"build":"bc","scenario":"write:200","round":1,"ok":true,"wall_s":0.1011,"cpu_s":0.0959,"peak_rss_mb":79.3}
+{"build":"ac","scenario":"write:200","round":1,"ok":true,"wall_s":0.0999,"cpu_s":0.0957,"peak_rss_mb":79.7}
+{"build":"c","scenario":"write:200","round":1,"ok":true,"wall_s":0.1029,"cpu_s":0.098,"peak_rss_mb":79.3}
+{"build":"ab","scenario":"write:200","round":1,"ok":true,"wall_s":9.635,"cpu_s":9.6502,"peak_rss_mb":273.3}
+{"build":"b","scenario":"write:200","round":1,"ok":true,"wall_s":9.6301,"cpu_s":9.6429,"peak_rss_mb":252}
+{"build":"a","scenario":"write:200","round":1,"ok":true,"wall_s":9.6471,"cpu_s":9.665,"peak_rss_mb":262.1}
+{"build":"base","scenario":"write:200","round":1,"ok":true,"wall_s":9.655,"cpu_s":9.668,"peak_rss_mb":267.9}
+{"build":"abcd","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":0.298,"cpu_s":0.18,"rss_mb":105.4}
+{"build":"bcd","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":0.297,"cpu_s":0.18,"rss_mb":105.7}
+{"build":"acd","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":0.342,"cpu_s":0.22,"rss_mb":112.4}
+{"build":"cd","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":0.346,"cpu_s":0.23,"rss_mb":111.9}
+{"build":"abd","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":10.349,"cpu_s":10.58,"rss_mb":1786.7}
+{"build":"bd","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":10.225,"cpu_s":10.28,"rss_mb":2887.1}
+{"build":"ad","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":15.67,"cpu_s":15.74,"rss_mb":3856.2}
+{"build":"d","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":15.568,"cpu_s":15.62,"rss_mb":4202.1}
+{"build":"abc","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":0.374,"cpu_s":0.26,"rss_mb":123.9}
+{"build":"bc","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":0.393,"cpu_s":0.27,"rss_mb":132.6}
+{"build":"ac","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":0.412,"cpu_s":0.3,"rss_mb":127.9}
+{"build":"c","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":0.434,"cpu_s":0.31,"rss_mb":122.1}
+{"build":"ab","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":10.044,"cpu_s":9.96,"rss_mb":326.9}
+{"build":"b","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":10.048,"cpu_s":9.95,"rss_mb":324.8}
+{"build":"a","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":15.579,"cpu_s":15.5,"rss_mb":302.4}
+{"build":"base","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":15.581,"cpu_s":15.5,"rss_mb":296.5}
+{"build":"abcd","scenario":"md:20000","round":1,"ok":true,"wall_s":17.614,"cpu_s":1.48,"rss_mb":89}
+{"build":"bcd","scenario":"md:20000","round":1,"ok":true,"wall_s":17.627,"cpu_s":5.35,"rss_mb":129.8}
+{"build":"acd","scenario":"md:20000","round":1,"ok":true,"wall_s":17.626,"cpu_s":3.57,"rss_mb":119.3}
+{"build":"cd","scenario":"md:20000","round":1,"ok":true,"wall_s":17.563,"cpu_s":6.52,"rss_mb":139.6}
+{"build":"abd","scenario":"md:20000","round":1,"ok":true,"wall_s":17.628,"cpu_s":1.55,"rss_mb":91.2}
+{"build":"bd","scenario":"md:20000","round":1,"ok":true,"wall_s":17.574,"cpu_s":5.62,"rss_mb":138.9}
+{"build":"ad","scenario":"md:20000","round":1,"ok":true,"wall_s":17.612,"cpu_s":3.48,"rss_mb":108.6}
+{"build":"d","scenario":"md:20000","round":1,"ok":true,"wall_s":17.627,"cpu_s":6.43,"rss_mb":150.9}
+{"build":"abc","scenario":"md:20000","round":1,"ok":true,"wall_s":17.663,"cpu_s":1.49,"rss_mb":94.4}
+{"build":"bc","scenario":"md:20000","round":1,"ok":true,"wall_s":17.602,"cpu_s":5.4,"rss_mb":130.6}
+{"build":"ac","scenario":"md:20000","round":1,"ok":true,"wall_s":17.578,"cpu_s":3.74,"rss_mb":121.9}
+{"build":"c","scenario":"md:20000","round":1,"ok":true,"wall_s":17.615,"cpu_s":6.5,"rss_mb":148.5}
+{"build":"ab","scenario":"md:20000","round":1,"ok":true,"wall_s":17.614,"cpu_s":1.58,"rss_mb":93.5}
+{"build":"b","scenario":"md:20000","round":1,"ok":true,"wall_s":17.585,"cpu_s":5.58,"rss_mb":141.2}
+{"build":"a","scenario":"md:20000","round":1,"ok":true,"wall_s":17.583,"cpu_s":3.52,"rss_mb":115}
+{"build":"base","scenario":"md:20000","round":1,"ok":true,"wall_s":17.589,"cpu_s":6.56,"rss_mb":147.9}
+{"build":"abcd","scenario":"md:60000","round":1,"ok":true,"wall_s":53.051,"cpu_s":4.82,"rss_mb":117.9}
+{"build":"bcd","scenario":"md:60000","round":1,"ok":true,"wall_s":52.41,"cpu_s":21.37,"rss_mb":165}
+{"build":"acd","scenario":"md:60000","round":1,"ok":true,"wall_s":52.683,"cpu_s":16.98,"rss_mb":161.3}
+{"build":"cd","scenario":"md:60000","round":1,"ok":true,"wall_s":52.432,"cpu_s":24.6,"rss_mb":166.9}
+{"build":"abd","scenario":"md:60000","round":1,"ok":true,"wall_s":53.084,"cpu_s":4.84,"rss_mb":127.8}
+{"build":"bd","scenario":"md:60000","round":1,"ok":true,"wall_s":51.338,"cpu_s":20.75,"rss_mb":169.7}
+{"build":"ad","scenario":"md:60000","round":1,"ok":true,"wall_s":51.659,"cpu_s":16.09,"rss_mb":154.3}
+{"build":"d","scenario":"md:60000","round":1,"ok":true,"wall_s":51.245,"cpu_s":24.39,"rss_mb":174.9}
+{"build":"abc","scenario":"md:60000","round":1,"ok":true,"wall_s":52.118,"cpu_s":4.78,"rss_mb":127.1}
+{"build":"bc","scenario":"md:60000","round":1,"ok":true,"wall_s":51.335,"cpu_s":20.71,"rss_mb":164.9}
+{"build":"ac","scenario":"md:60000","round":1,"ok":true,"wall_s":51.649,"cpu_s":16.27,"rss_mb":153.6}
+{"build":"c","scenario":"md:60000","round":1,"ok":true,"wall_s":52.068,"cpu_s":24.26,"rss_mb":168.4}
+{"build":"ab","scenario":"md:60000","round":1,"ok":true,"wall_s":53.037,"cpu_s":4.81,"rss_mb":124.3}
+{"build":"b","scenario":"md:60000","round":1,"ok":true,"wall_s":52.462,"cpu_s":21.05,"rss_mb":165.5}
+{"build":"a","scenario":"md:60000","round":1,"ok":true,"wall_s":52.73,"cpu_s":16.13,"rss_mb":167.5}
+{"build":"base","scenario":"md:60000","round":1,"ok":true,"wall_s":52.413,"cpu_s":24.86,"rss_mb":172.3}
+{"build":"base","scenario":"startup","round":2,"ok":true,"wall_s":0.0241,"cpu_s":0.0203,"peak_rss_mb":41.7}
+{"build":"a","scenario":"startup","round":2,"ok":true,"wall_s":0.0245,"cpu_s":0.0203,"peak_rss_mb":41.6}
+{"build":"b","scenario":"startup","round":2,"ok":true,"wall_s":0.1041,"cpu_s":0.0432,"peak_rss_mb":41.7}
+{"build":"ab","scenario":"startup","round":2,"ok":true,"wall_s":0.098,"cpu_s":0.0369,"peak_rss_mb":41.8}
+{"build":"c","scenario":"startup","round":2,"ok":true,"wall_s":0.0925,"cpu_s":0.0351,"peak_rss_mb":41.7}
+{"build":"ac","scenario":"startup","round":2,"ok":true,"wall_s":0.1155,"cpu_s":0.0361,"peak_rss_mb":41.7}
+{"build":"bc","scenario":"startup","round":2,"ok":true,"wall_s":0.1146,"cpu_s":0.0363,"peak_rss_mb":41.7}
+{"build":"abc","scenario":"startup","round":2,"ok":true,"wall_s":0.1262,"cpu_s":0.0367,"peak_rss_mb":41.8}
+{"build":"d","scenario":"startup","round":2,"ok":true,"wall_s":0.1161,"cpu_s":0.0357,"peak_rss_mb":41.8}
+{"build":"ad","scenario":"startup","round":2,"ok":true,"wall_s":0.1194,"cpu_s":0.0361,"peak_rss_mb":41.6}
+{"build":"bd","scenario":"startup","round":2,"ok":true,"wall_s":0.107,"cpu_s":0.0373,"peak_rss_mb":41.7}
+{"build":"abd","scenario":"startup","round":2,"ok":true,"wall_s":0.1181,"cpu_s":0.0373,"peak_rss_mb":41.7}
+{"build":"cd","scenario":"startup","round":2,"ok":true,"wall_s":0.1227,"cpu_s":0.0382,"peak_rss_mb":41.8}
+{"build":"acd","scenario":"startup","round":2,"ok":true,"wall_s":0.1443,"cpu_s":0.038,"peak_rss_mb":41.7}
+{"build":"bcd","scenario":"startup","round":2,"ok":true,"wall_s":0.1359,"cpu_s":0.0379,"peak_rss_mb":41.7}
+{"build":"abcd","scenario":"startup","round":2,"ok":true,"wall_s":0.1422,"cpu_s":0.0375,"peak_rss_mb":41.7}
+{"build":"base","scenario":"write:200","round":2,"ok":true,"wall_s":9.5481,"cpu_s":9.562,"peak_rss_mb":239.9}
+{"build":"a","scenario":"write:200","round":2,"ok":true,"wall_s":9.5786,"cpu_s":9.594,"peak_rss_mb":241.5}
+{"build":"b","scenario":"write:200","round":2,"ok":true,"wall_s":9.6348,"cpu_s":9.6394,"peak_rss_mb":223}
+{"build":"ab","scenario":"write:200","round":2,"ok":true,"wall_s":9.6502,"cpu_s":9.6508,"peak_rss_mb":238}
+{"build":"c","scenario":"write:200","round":2,"ok":true,"wall_s":0.1224,"cpu_s":0.1031,"peak_rss_mb":79.6}
+{"build":"ac","scenario":"write:200","round":2,"ok":true,"wall_s":0.1292,"cpu_s":0.1055,"peak_rss_mb":79.8}
+{"build":"bc","scenario":"write:200","round":2,"ok":true,"wall_s":0.1314,"cpu_s":0.1048,"peak_rss_mb":79.9}
+{"build":"abc","scenario":"write:200","round":2,"ok":true,"wall_s":0.1339,"cpu_s":0.1072,"peak_rss_mb":80.7}
+{"build":"d","scenario":"write:200","round":2,"ok":true,"wall_s":9.6922,"cpu_s":9.6848,"peak_rss_mb":263.7}
+{"build":"ad","scenario":"write:200","round":2,"ok":true,"wall_s":9.6867,"cpu_s":9.6789,"peak_rss_mb":237.7}
+{"build":"bd","scenario":"write:200","round":2,"ok":true,"wall_s":9.7015,"cpu_s":9.6952,"peak_rss_mb":223.7}
+{"build":"abd","scenario":"write:200","round":2,"ok":true,"wall_s":9.7073,"cpu_s":9.7006,"peak_rss_mb":239.2}
+{"build":"cd","scenario":"write:200","round":2,"ok":true,"wall_s":0.1329,"cpu_s":0.1063,"peak_rss_mb":78.9}
+{"build":"acd","scenario":"write:200","round":2,"ok":true,"wall_s":0.1333,"cpu_s":0.1054,"peak_rss_mb":79.1}
+{"build":"bcd","scenario":"write:200","round":2,"ok":true,"wall_s":0.1359,"cpu_s":0.1053,"peak_rss_mb":79.5}
+{"build":"abcd","scenario":"write:200","round":2,"ok":true,"wall_s":0.1323,"cpu_s":0.1053,"peak_rss_mb":79.6}
+{"build":"base","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":15.595,"cpu_s":15.53,"rss_mb":318.7}
+{"build":"a","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":15.579,"cpu_s":15.51,"rss_mb":300.9}
+{"build":"b","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":10.07,"cpu_s":10,"rss_mb":329.3}
+{"build":"ab","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":10.052,"cpu_s":9.98,"rss_mb":322.1}
+{"build":"c","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":0.417,"cpu_s":0.31,"rss_mb":127.1}
+{"build":"ac","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":0.425,"cpu_s":0.31,"rss_mb":119.9}
+{"build":"bc","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":0.389,"cpu_s":0.27,"rss_mb":127.9}
+{"build":"abc","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":0.384,"cpu_s":0.26,"rss_mb":123.6}
+{"build":"d","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":15.774,"cpu_s":15.84,"rss_mb":2769.5}
+{"build":"ad","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":15.737,"cpu_s":15.78,"rss_mb":2037.9}
+{"build":"bd","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":10.234,"cpu_s":10.32,"rss_mb":2348.5}
+{"build":"abd","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":10.247,"cpu_s":10.27,"rss_mb":2111.5}
+{"build":"cd","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":0.35,"cpu_s":0.23,"rss_mb":105.7}
+{"build":"acd","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":0.341,"cpu_s":0.22,"rss_mb":105.8}
+{"build":"bcd","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":0.304,"cpu_s":0.19,"rss_mb":105.3}
+{"build":"abcd","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":0.307,"cpu_s":0.18,"rss_mb":105.8}
+{"build":"base","scenario":"md:20000","round":2,"ok":true,"wall_s":17.627,"cpu_s":6.55,"rss_mb":144.3}
+{"build":"a","scenario":"md:20000","round":2,"ok":true,"wall_s":17.594,"cpu_s":3.57,"rss_mb":123.1}
+{"build":"b","scenario":"md:20000","round":2,"ok":true,"wall_s":17.589,"cpu_s":5.67,"rss_mb":133.9}
+{"build":"ab","scenario":"md:20000","round":2,"ok":true,"wall_s":17.679,"cpu_s":1.53,"rss_mb":89.8}
+{"build":"c","scenario":"md:20000","round":2,"ok":true,"wall_s":17.591,"cpu_s":6.42,"rss_mb":146.7}
+{"build":"ac","scenario":"md:20000","round":2,"ok":true,"wall_s":17.59,"cpu_s":3.78,"rss_mb":114}
+{"build":"bc","scenario":"md:20000","round":2,"ok":true,"wall_s":17.582,"cpu_s":5.51,"rss_mb":135.9}
+{"build":"abc","scenario":"md:20000","round":2,"ok":true,"wall_s":17.639,"cpu_s":1.53,"rss_mb":92.1}
+{"build":"d","scenario":"md:20000","round":2,"ok":true,"wall_s":17.552,"cpu_s":6.48,"rss_mb":135.4}
+{"build":"ad","scenario":"md:20000","round":2,"ok":true,"wall_s":17.603,"cpu_s":3.36,"rss_mb":115.8}
+{"build":"bd","scenario":"md:20000","round":2,"ok":true,"wall_s":17.623,"cpu_s":5.46,"rss_mb":140.8}
+{"build":"abd","scenario":"md:20000","round":2,"ok":true,"wall_s":17.633,"cpu_s":1.52,"rss_mb":90.8}
+{"build":"cd","scenario":"md:20000","round":2,"ok":true,"wall_s":17.594,"cpu_s":6.56,"rss_mb":140.2}
+{"build":"acd","scenario":"md:20000","round":2,"ok":true,"wall_s":17.609,"cpu_s":3.65,"rss_mb":117}
+{"build":"bcd","scenario":"md:20000","round":2,"ok":true,"wall_s":17.626,"cpu_s":5.34,"rss_mb":140.9}
+{"build":"abcd","scenario":"md:20000","round":2,"ok":true,"wall_s":17.62,"cpu_s":1.45,"rss_mb":90.1}
+{"build":"base","scenario":"md:60000","round":2,"ok":true,"wall_s":52.469,"cpu_s":24.19,"rss_mb":170.7}
+{"build":"a","scenario":"md:60000","round":2,"ok":true,"wall_s":52.669,"cpu_s":16.46,"rss_mb":162.9}
+{"build":"b","scenario":"md:60000","round":2,"ok":true,"wall_s":52.446,"cpu_s":21.16,"rss_mb":162.9}
+{"build":"ab","scenario":"md:60000","round":2,"ok":true,"wall_s":53.001,"cpu_s":4.74,"rss_mb":121.8}
+{"build":"c","scenario":"md:60000","round":2,"ok":true,"wall_s":52.437,"cpu_s":24.21,"rss_mb":174.6}
+{"build":"ac","scenario":"md:60000","round":2,"ok":true,"wall_s":52.696,"cpu_s":16.83,"rss_mb":152.9}
+{"build":"bc","scenario":"md:60000","round":2,"ok":true,"wall_s":52.47,"cpu_s":21.48,"rss_mb":166}
+{"build":"abc","scenario":"md:60000","round":2,"ok":true,"wall_s":53.06,"cpu_s":4.88,"rss_mb":131.5}
+{"build":"d","scenario":"md:60000","round":2,"ok":true,"wall_s":52.471,"cpu_s":24.25,"rss_mb":170.4}
+{"build":"ad","scenario":"md:60000","round":2,"ok":true,"wall_s":52.716,"cpu_s":16.49,"rss_mb":164.6}
+{"build":"bd","scenario":"md:60000","round":2,"ok":true,"wall_s":52.433,"cpu_s":21.41,"rss_mb":166.3}
+{"build":"abd","scenario":"md:60000","round":2,"ok":true,"wall_s":53.133,"cpu_s":4.73,"rss_mb":122.4}
+{"build":"cd","scenario":"md:60000","round":2,"ok":true,"wall_s":52.394,"cpu_s":24.79,"rss_mb":171.5}
+{"build":"acd","scenario":"md:60000","round":2,"ok":true,"wall_s":52.713,"cpu_s":16.27,"rss_mb":156}
+{"build":"bcd","scenario":"md:60000","round":2,"ok":true,"wall_s":52.448,"cpu_s":21.36,"rss_mb":161.9}
+{"build":"abcd","scenario":"md:60000","round":2,"ok":true,"wall_s":53.076,"cpu_s":4.77,"rss_mb":122.3}
+
+scenario     build        metric           median                min–max    vs base  n
+startup      base         wall_s            0.021            0.019–0.024             3
+startup      a            wall_s            0.019            0.018–0.025      -9.0%  3
+startup      b            wall_s            0.019            0.019–0.104      -9.0%  3
+startup      ab           wall_s            0.022            0.019–0.098       2.8%  3
+startup      c            wall_s            0.020            0.019–0.092      -3.8%  3
+startup      ac           wall_s            0.020            0.017–0.116      -7.1%  3
+startup      bc           wall_s            0.019            0.018–0.115      -9.0%  3
+startup      abc          wall_s            0.019            0.018–0.126      -9.0%  3
+startup      d            wall_s            0.019            0.019–0.116      -9.4%  3
+startup      ad           wall_s            0.020            0.019–0.119      -7.5%  3
+startup      bd           wall_s            0.019            0.019–0.107      -9.0%  3
+startup      abd          wall_s            0.020            0.018–0.118      -7.1%  3
+startup      cd           wall_s            0.019            0.019–0.123      -9.4%  3
+startup      acd          wall_s            0.020            0.019–0.144      -6.6%  3
+startup      bcd          wall_s            0.021            0.019–0.136      -0.5%  3
+startup      abcd         wall_s            0.030            0.019–0.142      41.5%  3
+startup      base         cpu_s             0.019            0.016–0.020             3
+startup      a            cpu_s             0.017            0.015–0.020      -8.0%  3
+startup      b            cpu_s             0.017            0.016–0.043      -8.0%  3
+startup      ab           cpu_s             0.018            0.016–0.037      -3.2%  3
+startup      c            cpu_s             0.017            0.016–0.035     -10.7%  3
+startup      ac           cpu_s             0.016            0.015–0.036     -12.8%  3
+startup      bc           cpu_s             0.016            0.016–0.036     -15.0%  3
+startup      abc          cpu_s             0.016            0.016–0.037     -14.4%  3
+startup      d            cpu_s             0.017            0.016–0.036      -9.1%  3
+startup      ad           cpu_s             0.018            0.016–0.036      -6.4%  3
+startup      bd           cpu_s             0.017            0.016–0.037      -8.0%  3
+startup      abd          cpu_s             0.018            0.015–0.037      -6.4%  3
+startup      cd           cpu_s             0.017            0.016–0.038      -9.1%  3
+startup      acd          cpu_s             0.017            0.016–0.038      -7.5%  3
+startup      bcd          cpu_s             0.019            0.016–0.038       0.0%  3
+startup      abcd         cpu_s             0.027            0.016–0.037      42.2%  3
+startup      base         peak_rss_mb      41.700          41.700–41.700             3
+startup      a            peak_rss_mb      41.600          41.600–41.600      -0.2%  3
+startup      b            peak_rss_mb      41.700          41.700–41.700       0.0%  3
+startup      ab           peak_rss_mb      41.800          41.800–41.800       0.2%  3
+startup      c            peak_rss_mb      41.700          41.700–41.700       0.0%  3
+startup      ac           peak_rss_mb      41.700          41.700–41.700       0.0%  3
+startup      bc           peak_rss_mb      41.700          41.700–41.700       0.0%  3
+startup      abc          peak_rss_mb      41.800          41.800–41.800       0.2%  3
+startup      d            peak_rss_mb      41.800          41.800–41.800       0.2%  3
+startup      ad           peak_rss_mb      41.700          41.600–41.700       0.0%  3
+startup      bd           peak_rss_mb      41.700          41.700–41.700       0.0%  3
+startup      abd          peak_rss_mb      41.700          41.700–41.700       0.0%  3
+startup      cd           peak_rss_mb      41.800          41.800–41.800       0.2%  3
+startup      acd          peak_rss_mb      41.700          41.700–41.700       0.0%  3
+startup      bcd          peak_rss_mb      41.700          41.700–41.700       0.0%  3
+startup      abcd         peak_rss_mb      41.700          41.700–41.700       0.0%  3
+write:200    base         wall_s            9.636            9.548–9.655             3
+write:200    a            wall_s            9.647            9.579–9.775       0.1%  3
+write:200    b            wall_s            9.635            9.630–9.727      -0.0%  3
+write:200    ab           wall_s            9.650            9.635–9.712       0.2%  3
+write:200    c            wall_s            0.103            0.101–0.122     -98.9%  3
+write:200    ac           wall_s            0.101            0.100–0.129     -98.9%  3
+write:200    bc           wall_s            0.102            0.101–0.131     -98.9%  3
+write:200    abc          wall_s            0.102            0.100–0.134     -98.9%  3
+write:200    d            wall_s            9.692            9.604–9.741       0.6%  3
+write:200    ad           wall_s            9.687            9.560–9.713       0.5%  3
+write:200    bd           wall_s            9.701            9.510–9.830       0.7%  3
+write:200    abd          wall_s            9.707            9.574–9.724       0.7%  3
+write:200    cd           wall_s            0.105            0.096–0.133     -98.9%  3
+write:200    acd          wall_s            0.104            0.098–0.133     -98.9%  3
+write:200    bcd          wall_s            0.102            0.097–0.136     -98.9%  3
+write:200    abcd         wall_s            0.103            0.097–0.132     -98.9%  3
+write:200    base         cpu_s             9.658            9.562–9.668             3
+write:200    a            cpu_s             9.665            9.594–9.792       0.1%  3
+write:200    b            cpu_s             9.643            9.639–9.745      -0.2%  3
+write:200    ab           cpu_s             9.651            9.650–9.726      -0.1%  3
+write:200    c            cpu_s             0.098            0.097–0.103     -99.0%  3
+write:200    ac           cpu_s             0.097            0.096–0.105     -99.0%  3
+write:200    bc           cpu_s             0.098            0.096–0.105     -99.0%  3
+write:200    abc          cpu_s             0.097            0.095–0.107     -99.0%  3
+write:200    d            cpu_s             9.685            9.620–9.757       0.3%  3
+write:200    ad           cpu_s             9.679            9.573–9.724       0.2%  3
+write:200    bd           cpu_s             9.695            9.524–9.794       0.4%  3
+write:200    abd          cpu_s             9.701            9.589–9.736       0.4%  3
+write:200    cd           cpu_s             0.099            0.093–0.106     -99.0%  3
+write:200    acd          cpu_s             0.098            0.095–0.105     -99.0%  3
+write:200    bcd          cpu_s             0.097            0.094–0.105     -99.0%  3
+write:200    abcd         cpu_s             0.098            0.094–0.105     -99.0%  3
+write:200    base         peak_rss_mb     244.700        239.900–267.900             3
+write:200    a            peak_rss_mb     255.000        241.500–262.100       4.2%  3
+write:200    b            peak_rss_mb     251.500        223.000–252.000       2.8%  3
+write:200    ab           peak_rss_mb     248.100        238.000–273.300       1.4%  3
+write:200    c            peak_rss_mb      79.300          79.300–79.600     -67.6%  3
+write:200    ac           peak_rss_mb      79.700          78.600–79.800     -67.4%  3
+write:200    bc           peak_rss_mb      79.800          79.300–79.900     -67.4%  3
+write:200    abc          peak_rss_mb      79.700          79.300–80.700     -67.4%  3
+write:200    d            peak_rss_mb     253.600        248.300–263.700       3.6%  3
+write:200    ad           peak_rss_mb     238.300        237.700–253.200      -2.6%  3
+write:200    bd           peak_rss_mb     236.400        223.700–240.700      -3.4%  3
+write:200    abd          peak_rss_mb     245.700        239.200–247.500       0.4%  3
+write:200    cd           peak_rss_mb      79.000          78.900–79.700     -67.7%  3
+write:200    acd          peak_rss_mb      79.100          79.000–79.400     -67.7%  3
+write:200    bcd          peak_rss_mb      79.500          78.900–80.000     -67.5%  3
+write:200    abcd         peak_rss_mb      79.600          79.000–79.900     -67.5%  3
+tuiwrite:200 base         wall_s           15.595          15.581–15.617             3
+tuiwrite:200 a            wall_s           15.579          15.579–15.659      -0.1%  3
+tuiwrite:200 b            wall_s           10.048          10.020–10.070     -35.6%  3
+tuiwrite:200 ab           wall_s           10.052          10.044–10.061     -35.5%  3
+tuiwrite:200 c            wall_s            0.426            0.417–0.434     -97.3%  3
+tuiwrite:200 ac           wall_s            0.418            0.412–0.425     -97.3%  3
+tuiwrite:200 bc           wall_s            0.389            0.380–0.393     -97.5%  3
+tuiwrite:200 abc          wall_s            0.381            0.374–0.384     -97.6%  3
+tuiwrite:200 d            wall_s           15.762          15.568–15.774       1.1%  3
+tuiwrite:200 ad           wall_s           15.684          15.670–15.737       0.6%  3
+tuiwrite:200 bd           wall_s           10.234          10.225–10.239     -34.4%  3
+tuiwrite:200 abd          wall_s           10.247          10.235–10.349     -34.3%  3
+tuiwrite:200 cd           wall_s            0.346            0.344–0.350     -97.8%  3
+tuiwrite:200 acd          wall_s            0.341            0.337–0.342     -97.8%  3
+tuiwrite:200 bcd          wall_s            0.304            0.297–0.316     -98.1%  3
+tuiwrite:200 abcd         wall_s            0.304            0.298–0.307     -98.1%  3
+tuiwrite:200 base         cpu_s            15.530          15.500–15.550             3
+tuiwrite:200 a            cpu_s            15.510          15.500–15.600      -0.1%  3
+tuiwrite:200 b            cpu_s             9.950           9.940–10.000     -35.9%  3
+tuiwrite:200 ab           cpu_s             9.980            9.960–9.990     -35.7%  3
+tuiwrite:200 c            cpu_s             0.310            0.300–0.310     -98.0%  3
+tuiwrite:200 ac           cpu_s             0.300            0.290–0.310     -98.1%  3
+tuiwrite:200 bc           cpu_s             0.270            0.270–0.270     -98.3%  3
+tuiwrite:200 abc          cpu_s             0.260            0.260–0.260     -98.3%  3
+tuiwrite:200 d            cpu_s            15.780          15.620–15.840       1.6%  3
+tuiwrite:200 ad           cpu_s            15.740          15.680–15.780       1.4%  3
+tuiwrite:200 bd           cpu_s            10.320          10.280–10.330     -33.5%  3
+tuiwrite:200 abd          cpu_s            10.270          10.240–10.580     -33.9%  3
+tuiwrite:200 cd           cpu_s             0.230            0.220–0.230     -98.5%  3
+tuiwrite:200 acd          cpu_s             0.220            0.210–0.220     -98.6%  3
+tuiwrite:200 bcd          cpu_s             0.190            0.180–0.190     -98.8%  3
+tuiwrite:200 abcd         cpu_s             0.180            0.180–0.190     -98.8%  3
+tuiwrite:200 base         rss_mb          318.700        296.500–327.400             3
+tuiwrite:200 a            rss_mb          300.900        283.900–302.400      -5.6%  3
+tuiwrite:200 b            rss_mb          329.300        324.800–338.000       3.3%  3
+tuiwrite:200 ab           rss_mb          322.100        315.300–326.900       1.1%  3
+tuiwrite:200 c            rss_mb          123.900        122.100–127.100     -61.1%  3
+tuiwrite:200 ac           rss_mb          127.900        119.900–132.900     -59.9%  3
+tuiwrite:200 bc           rss_mb          127.900        127.400–132.600     -59.9%  3
+tuiwrite:200 abc          rss_mb          123.900        123.600–127.200     -61.1%  3
+tuiwrite:200 d            rss_mb         2769.500      2425.300–4202.100     769.0%  3
+tuiwrite:200 ad           rss_mb         2391.600      2037.900–3856.200     650.4%  3
+tuiwrite:200 bd           rss_mb         2887.100      2348.500–2940.300     805.9%  3
+tuiwrite:200 abd          rss_mb         2111.500      1786.700–3794.600     562.5%  3
+tuiwrite:200 cd           rss_mb          105.700        105.700–111.900     -66.8%  3
+tuiwrite:200 acd          rss_mb          105.800        103.800–112.400     -66.8%  3
+tuiwrite:200 bcd          rss_mb          105.700        105.300–106.400     -66.8%  3
+tuiwrite:200 abcd         rss_mb          105.400        104.100–105.800     -66.9%  3
+md:20000     base         wall_s           17.589          17.231–17.627             3
+md:20000     a            wall_s           17.583          17.275–17.594      -0.0%  3
+md:20000     b            wall_s           17.585          17.237–17.589      -0.0%  3
+md:20000     ab           wall_s           17.614          17.316–17.679       0.1%  3
+md:20000     c            wall_s           17.591          17.208–17.615       0.0%  3
+md:20000     ac           wall_s           17.578          17.254–17.590      -0.1%  3
+md:20000     bc           wall_s           17.582          17.232–17.602      -0.0%  3
+md:20000     abc          wall_s           17.639          17.294–17.663       0.3%  3
+md:20000     d            wall_s           17.552          17.194–17.627      -0.2%  3
+md:20000     ad           wall_s           17.603          17.253–17.612       0.1%  3
+md:20000     bd           wall_s           17.574          17.257–17.623      -0.1%  3
+md:20000     abd          wall_s           17.628          17.289–17.633       0.2%  3
+md:20000     cd           wall_s           17.563          17.200–17.594      -0.1%  3
+md:20000     acd          wall_s           17.609          17.263–17.626       0.1%  3
+md:20000     bcd          wall_s           17.626          17.212–17.627       0.2%  3
+md:20000     abcd         wall_s           17.614          17.317–17.620       0.1%  3
+md:20000     base         cpu_s             6.550            6.170–6.560             3
+md:20000     a            cpu_s             3.570            3.520–3.570     -45.5%  3
+md:20000     b            cpu_s             5.580            5.230–5.670     -14.8%  3
+md:20000     ab           cpu_s             1.570            1.530–1.580     -76.0%  3
+md:20000     c            cpu_s             6.420            5.940–6.500      -2.0%  3
+md:20000     ac           cpu_s             3.740            3.520–3.780     -42.9%  3
+md:20000     bc           cpu_s             5.400            5.070–5.510     -17.6%  3
+md:20000     abc          cpu_s             1.490            1.490–1.530     -77.3%  3
+md:20000     d            cpu_s             6.430            6.060–6.480      -1.8%  3
+md:20000     ad           cpu_s             3.360            3.170–3.480     -48.7%  3
+md:20000     bd           cpu_s             5.460            5.060–5.620     -16.6%  3
+md:20000     abd          cpu_s             1.520            1.520–1.550     -76.8%  3
+md:20000     cd           cpu_s             6.520            6.200–6.560      -0.5%  3
+md:20000     acd          cpu_s             3.570            3.490–3.650     -45.5%  3
+md:20000     bcd          cpu_s             5.340            5.330–5.350     -18.5%  3
+md:20000     abcd         cpu_s             1.480            1.450–1.510     -77.4%  3
+md:20000     base         rss_mb          144.300        137.100–147.900             3
+md:20000     a            rss_mb          122.800        115.000–123.100     -14.9%  3
+md:20000     b            rss_mb          141.200        133.900–141.400      -2.1%  3
+md:20000     ab           rss_mb           92.300          89.800–93.500     -36.0%  3
+md:20000     c            rss_mb          146.700        136.500–148.500       1.7%  3
+md:20000     ac           rss_mb          119.400        114.000–121.900     -17.3%  3
+md:20000     bc           rss_mb          134.600        130.600–135.900      -6.7%  3
+md:20000     abc          rss_mb           92.900          92.100–94.400     -35.6%  3
+md:20000     d            rss_mb          139.600        135.400–150.900      -3.3%  3
+md:20000     ad           rss_mb          115.800        108.600–125.200     -19.8%  3
+md:20000     bd           rss_mb          138.900        130.100–140.800      -3.7%  3
+md:20000     abd          rss_mb           90.800          90.400–91.200     -37.1%  3
+md:20000     cd           rss_mb          139.600        131.200–140.200      -3.3%  3
+md:20000     acd          rss_mb          119.300        117.000–123.700     -17.3%  3
+md:20000     bcd          rss_mb          133.700        129.800–140.900      -7.3%  3
+md:20000     abcd         rss_mb           90.100          89.000–91.300     -37.6%  3
+md:60000     base         wall_s           52.413          51.245–52.469             3
+md:60000     a            wall_s           52.669          51.628–52.730       0.5%  3
+md:60000     b            wall_s           52.446          51.770–52.462       0.1%  3
+md:60000     ab           wall_s           53.032          53.001–53.037       1.2%  3
+md:60000     c            wall_s           52.437          52.068–52.484       0.0%  3
+md:60000     ac           wall_s           52.696          51.649–52.720       0.5%  3
+md:60000     bc           wall_s           52.382          51.335–52.470      -0.1%  3
+md:60000     abc          wall_s           52.757          52.118–53.060       0.7%  3
+md:60000     d            wall_s           51.245          51.243–52.471      -2.2%  3
+md:60000     ad           wall_s           51.659          51.648–52.716      -1.4%  3
+md:60000     bd           wall_s           51.338          51.316–52.433      -2.1%  3
+md:60000     abd          wall_s           53.084          52.212–53.133       1.3%  3
+md:60000     cd           wall_s           52.394          51.230–52.432      -0.0%  3
+md:60000     acd          wall_s           52.683          52.330–52.713       0.5%  3
+md:60000     bcd          wall_s           52.410          52.401–52.448      -0.0%  3
+md:60000     abcd         wall_s           53.076          53.051–53.081       1.3%  3
+md:60000     base         cpu_s            24.190          24.160–24.860             3
+md:60000     a            cpu_s            16.130          16.050–16.460     -33.3%  3
+md:60000     b            cpu_s            21.050          21.050–21.160     -13.0%  3
+md:60000     ab           cpu_s             4.810            4.740–4.990     -80.1%  3
+md:60000     c            cpu_s            24.260          24.210–24.940       0.3%  3
+md:60000     ac           cpu_s            16.760          16.270–16.830     -30.7%  3
+md:60000     bc           cpu_s            21.480          20.710–21.560     -11.2%  3
+md:60000     abc          cpu_s             4.880            4.780–5.020     -79.8%  3
+md:60000     d            cpu_s            24.250          24.190–24.390       0.2%  3
+md:60000     ad           cpu_s            16.220          16.090–16.490     -32.9%  3
+md:60000     bd           cpu_s            20.790          20.750–21.410     -14.1%  3
+md:60000     abd          cpu_s             4.790            4.730–4.840     -80.2%  3
+md:60000     cd           cpu_s            24.600          24.130–24.790       1.7%  3
+md:60000     acd          cpu_s            16.540          16.270–16.980     -31.6%  3
+md:60000     bcd          cpu_s            21.370          21.360–21.410     -11.7%  3
+md:60000     abcd         cpu_s             4.820            4.770–4.850     -80.1%  3
+md:60000     base         rss_mb          172.300        170.700–176.600             3
+md:60000     a            rss_mb          162.900        156.400–167.500      -5.5%  3
+md:60000     b            rss_mb          165.500        162.900–167.300      -3.9%  3
+md:60000     ab           rss_mb          124.300        121.800–126.100     -27.9%  3
+md:60000     c            rss_mb          168.400        167.700–174.600      -2.3%  3
+md:60000     ac           rss_mb          153.600        152.900–162.600     -10.9%  3
+md:60000     bc           rss_mb          166.000        164.900–167.000      -3.7%  3
+md:60000     abc          rss_mb          131.500        127.100–133.900     -23.7%  3
+md:60000     d            rss_mb          174.700        170.400–174.900       1.4%  3
+md:60000     ad           rss_mb          161.200        154.300–164.600      -6.4%  3
+md:60000     bd           rss_mb          166.300        164.000–169.700      -3.5%  3
+md:60000     abd          rss_mb          124.400        122.400–127.800     -27.8%  3
+md:60000     cd           rss_mb          171.500        166.900–172.300      -0.5%  3
+md:60000     acd          rss_mb          161.300        156.000–161.700      -6.4%  3
+md:60000     bcd          rss_mb          164.400        161.900–165.000      -4.6%  3
+md:60000     abcd         rss_mb          117.900        117.200–122.300     -31.6%  3

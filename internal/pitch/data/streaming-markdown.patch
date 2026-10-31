@@ -1,0 +1,2690 @@
+diff --git a/packages/coding-agent/src/modes/interactive/components/assistant-message.ts b/packages/coding-agent/src/modes/interactive/components/assistant-message.ts
+index c02e37165..a6110f817 100644
+--- a/packages/coding-agent/src/modes/interactive/components/assistant-message.ts
++++ b/packages/coding-agent/src/modes/interactive/components/assistant-message.ts
+@@ -113,6 +113,7 @@ export class AssistantMessageComponent extends Container {
+ 				this.contentContainer.addChild(
+ 					new Markdown(content.text.trim(), this.outputPad, 0, this.markdownTheme, undefined, {
+ 						transform: createMarkdownTransform("assistant", this.isStreaming, this.markdownTransformers),
++						complete: !this.isStreaming,
+ 					}),
+ 				);
+ 			} else if (content.type === "thinking") {
+@@ -158,6 +159,7 @@ export class AssistantMessageComponent extends Container {
+ 									this.isStreaming,
+ 									this.markdownTransformers,
+ 								),
++								complete: !this.isStreaming,
+ 							},
+ 						);
+ 				this.contentContainer.addChild(
+diff --git a/packages/coding-agent/test/streaming-markdown-render.test.ts b/packages/coding-agent/test/streaming-markdown-render.test.ts
+new file mode 100644
+index 000000000..59d828988
+--- /dev/null
++++ b/packages/coding-agent/test/streaming-markdown-render.test.ts
+@@ -0,0 +1,358 @@
++import type { AssistantMessage } from "@earendil-works/pi-ai";
++import { type Component, Container, Text } from "@earendil-works/pi-tui";
++import { afterEach, beforeAll, describe, expect, test } from "vitest";
++import { setMarkdownCachingForTest, setMarkdownFastPathsForTest } from "../../tui/src/components/markdown.ts";
++import { AssistantMessageComponent } from "../src/modes/interactive/components/assistant-message.ts";
++import { UserMessageComponent } from "../src/modes/interactive/components/user-message.ts";
++import { initTheme } from "../src/modes/interactive/theme/theme.ts";
++
++// A reply that streams in is rendered again for each chunk, from what was rendered for the chunk before: the lexed blocks
++// it has in common with the shorter text, their lines, and the transcript's lines before it. At every step, what the
++// transcript renders to must be what rendering everything from nothing gives.
++
++const SECTION = `## Section {n}: what the function does
++
++The \`parse()\` function reads **one token at a time** and keeps a *small* stack; see [the grammar](https://example.com/g/{n}).
++It handles these cases:
++
++- plain text, with \`inline code\` and a long line that has to be wrapped by the terminal because it does not fit in its width at all
++- nested lists:
++  1. first, with a number {n}
++  2. second, with ~~strikethrough~~ and unicode: naïve café 日本語 😀
++
++\`\`\`ts
++export function parse{n}(input: string): Node[] {
++	const out: Node[] = [];
++	for (let i = 0; i < input.length; i++) {
++		if (input.charCodeAt(i) === 0x5b) out.push({ kind: "open", at: i });
++	}
++	return out;
++}
++\`\`\`
++
++| column | value | note |
++|---|---|---|
++| a{n} | 1 | first |
++| b{n} | 22 | second, longer |
++
++> A quote that closes the section, number {n}.
++
++`;
++
++const DOCUMENTS: Record<string, string> = {
++	sections: [1, 2, 3].map((n) => SECTION.replaceAll("{n}", String(n))).join(""),
++	everything: `# Title
++
++Intro paragraph with **bold**, *italic*, \`code\`, ~~gone~~ and a [link](https://example.com).
++A second line of the same paragraph, long enough to be wrapped at every width this test renders at, and then some more.
++
++Setext heading
++==============
++
++- item one
++- item two
++  continued lazily
++  - nested item
++    1. deeper, numbered
++    2. and another
++
++- loose item after a blank line
++
++1. first
++2. second
++   \`\`\`js
++   const inList = 1;
++   \`\`\`
++3. third
++
++- [ ] task open
++- [x] task done
++
++> quote line one
++lazy continuation
++> > nested quote
++> - list in quote
++
++\`\`\`python
++def g():
++    return "~~~ inside"
++\`\`\`
++
++| a | b |
++|---|:-:|
++| 1 | 2 |
++| a cell with a long text that wraps | 4 |
++
++***
++
++An autolink https://example.org/x?y=1 and <mailto:a@b.c>, then a hard break
++and the end.
++`,
++	unclosedFence: "Before the code:\n\n```sh\nls -la\necho one\necho two\n\n\nstill code\n``",
++	listGrowth: "Steps:\n\n1. Install\n2. Configure\n3\n\n4. Run\n\nDone.\n\n- a\n- b\n  - c\n    - d\n\nend",
++	tabsAndWide:
++		"a\tb\n\n-\tx\ty\n\n```\n\tcode\twith\ttabs\n```\n\n| 列 | 值 |\n|---|---|\n| 一 | 二 |\n\n😀 wide 漢字 text\n",
++	headings: "# a\n## b\n### c\n\n#### d\ntext\n# e\n\nparagraph\n---\n\n* * *\n",
++};
++
++const THINKING = "Let me think about **this**: first the list,\n\n- one\n- two\n\nthen `code`.";
++
++function assistantMessage(text: string, thinking?: string): AssistantMessage {
++	return {
++		role: "assistant",
++		content: [...(thinking === undefined ? [] : [{ type: "thinking" as const, thinking }]), { type: "text", text }],
++		api: "openai-responses",
++		provider: "openai",
++		model: "gpt-4o-mini",
++		usage: {
++			input: 0,
++			output: 0,
++			cacheRead: 0,
++			cacheWrite: 0,
++			totalTokens: 0,
++			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
++		},
++		stopReason: "stop",
++		timestamp: 0,
++	};
++}
++
++function random(seed: number): () => number {
++	let state = seed >>> 0 || 1;
++	return () => {
++		state = (Math.imul(state ^ (state >>> 15), 2246822507) + 0x9e3779b9) >>> 0;
++		return state / 4294967296;
++	};
++}
++
++/** A transcript as the interactive mode has it: a question, an earlier answer, the reply streaming in, and a line after. */
++function transcript(earlier: AssistantMessage, reply: AssistantMessageComponent): Container {
++	const container = new Container();
++	const children: Component[] = [
++		new UserMessageComponent("a question"),
++		new AssistantMessageComponent(earlier),
++		new UserMessageComponent("another question"),
++		reply,
++		new Text("after", 1, 0),
++	];
++	for (const child of children) container.addChild(child);
++	return container;
++}
++
++/** What `message` renders to in such a transcript when nothing is kept from earlier renders. */
++function renderFresh(
++	earlier: AssistantMessage,
++	message: AssistantMessage,
++	streaming: boolean,
++	width: number,
++): string[] {
++	setMarkdownCachingForTest(false);
++	try {
++		const reply = new AssistantMessageComponent();
++		reply.updateContent(message, streaming);
++		return transcript(earlier, reply).render(width);
++	} finally {
++		setMarkdownCachingForTest(true);
++	}
++}
++
++/**
++ * Streams `text` (and `thinking` before it) into a transcript in chunks of `sizes()` characters, rendering it at
++ * `widths()` after each, and compares every render with one from nothing.
++ */
++function streamAndCompare(text: string, sizes: () => number, widths: () => number, thinking?: string): void {
++	// Text of its own: nothing kept from another test is taken up.
++	const document = `<!-- ${Math.random()} -->\n\n${text}`;
++	const earlier = assistantMessage(`Earlier answer with a list:\n\n- x\n- y\n\n${Math.random()}`);
++	const reply = new AssistantMessageComponent();
++	const container = transcript(earlier, reply);
++	let steps = 0;
++	const check = (message: AssistantMessage, streaming: boolean, width: number, at: string): void => {
++		reply.updateContent(message, streaming);
++		const lines = container.render(width);
++		const fresh = renderFresh(earlier, message, streaming, width);
++		if (JSON.stringify(lines) !== JSON.stringify(fresh)) {
++			expect(lines, `${at}, width ${width}`).toEqual(fresh);
++		}
++		steps++;
++	};
++	const thinkingText = thinking ?? "";
++	const total = thinkingText.length + document.length;
++	for (let length = 1; ; length = Math.min(total, length + sizes())) {
++		const message =
++			length <= thinkingText.length && thinking !== undefined
++				? assistantMessage("", thinkingText.slice(0, length))
++				: assistantMessage(document.slice(0, length - thinkingText.length), thinking);
++		check(
++			message,
++			true,
++			widths(),
++			`streaming, ${length} characters: ${JSON.stringify(document.slice(0, length).slice(-40))}`,
++		);
++		if (length >= total) break;
++	}
++	check(assistantMessage(document, thinking), false, widths(), "complete");
++	expect(steps).toBeGreaterThan(1);
++}
++
++describe("a streaming reply renders as it does from nothing", () => {
++	beforeAll(() => {
++		initTheme("dark");
++	});
++	afterEach(() => {
++		setMarkdownCachingForTest(true);
++		setMarkdownFastPathsForTest(true);
++	});
++
++	for (const [name, text] of Object.entries(DOCUMENTS)) {
++		for (const width of [24, 80, 160]) {
++			test(`${name} at width ${width}, in chunks of 1 to 40 characters`, () => {
++				const next = random(name.length * 1000 + width);
++				streamAndCompare(
++					text,
++					() => 1 + Math.floor(next() * 40),
++					() => width,
++				);
++			});
++		}
++		test(`${name}, one character at a time`, () => {
++			streamAndCompare(
++				text,
++				() => 1,
++				() => 72,
++			);
++		});
++		test(`${name}, at a different width from one chunk to the next`, () => {
++			const next = random(name.length + 7);
++			const widths = [30, 30, 30, 101, 101, 57];
++			streamAndCompare(
++				text,
++				() => 1 + Math.floor(next() * 24),
++				() => widths[Math.floor(next() * widths.length)]!,
++			);
++		});
++	}
++
++	test("with thinking before the text", () => {
++		const next = random(42);
++		streamAndCompare(
++			DOCUMENTS.everything!,
++			() => 1 + Math.floor(next() * 16),
++			() => 64,
++			THINKING,
++		);
++	});
++
++	test("chunks of 24 characters, as bench/long_answer.py streams them", () => {
++		streamAndCompare(
++			[1, 2, 3, 4, 5, 6, 7, 8].map((n) => SECTION.replaceAll("{n}", String(n))).join(""),
++			() => 24,
++			() => 160,
++		);
++	});
++});
++
++// Pieces of Markdown that end blocks, continue them or change what the block before them is (a "2" that becomes an item of
++// the list before it, a setext underline, a table's delimiter row, lazy lines, unclosed fences), put together at random.
++const PIECES = [
++	"- item {w}\n",
++	"  - nested {w}\n",
++	"    1. deeper {w}\n",
++	"1. one {w}\n",
++	"2",
++	"2. two\n",
++	"3)\n",
++	"   lazy {w}\n",
++	"lazy {w}\n",
++	"Text {w} with **bold**, *it*, `code` and [a link](https://example.com/{w}).\n",
++	"A long line of text {w} that has to be wrapped at the narrower widths this test renders the reply at.\n",
++	"\n",
++	"\n\n",
++	"```ts\nconst {w} = 1;\nlet b = `x`;\n```\n",
++	"```\nunclosed {w}\n",
++	"``",
++	"~~~\ntilde {w}\n~~~\n",
++	"> quote {w}\n",
++	"> > deep {w}\n",
++	"| a | b |\n",
++	"|---|:-:|\n",
++	"| {w} | 2 |\n",
++	"# Heading {w}\n",
++	"### Small {w}\n",
++	"Setext {w}\n",
++	"===\n",
++	"---\n",
++	"***\n",
++	"    indented code {w}\n",
++	"<div>\nhtml {w}\n</div>\n",
++	"<!-- note {w} -->\n",
++	"$$\nx^{w}\n$$\n",
++	"\\[ y_{w} \\]\n",
++	"- [ ] task {w}\n",
++	"\t- tab {w}\n",
++	"1. a\n   ```\n   code {w}\n   ```\n",
++	"Term with trailing spaces  \n",
++	"[ref {w}]\n",
++	"  ---  \n",
++	"   =\n",
++	"\u00a0\n",
++	"  \t \n",
++	"under {w}\r\n--\r\n",
++	"a\u2028b {w}\n",
++];
++
++/** Streams `text` into a reply component in chunks of `sizes` characters and returns what it renders to after each. */
++function streamedRenders(text: string, sizes: number[], width: number): string[] {
++	// Nothing lexed for an earlier render is taken up: the sources kept (lexMarkdown()) are pushed out by others.
++	for (let i = 0; i < 16; i++)
++		new AssistantMessageComponent(assistantMessage(`flush ${i} ${Math.random()}`)).render(width);
++	const reply = new AssistantMessageComponent();
++	const renders: string[] = [];
++	let step = 0;
++	for (let length = 1; ; length = Math.min(text.length, length + sizes[step++ % sizes.length]!)) {
++		reply.updateContent(assistantMessage(text.slice(0, length)), true);
++		renders.push(JSON.stringify(reply.render(width)));
++		if (length >= text.length) break;
++	}
++	reply.updateContent(assistantMessage(text), false);
++	renders.push(JSON.stringify(reply.render(width)));
++	return renders;
++}
++
++describe("keeping the settled blocks of a streaming reply renders what lexing its last two blocks again renders", () => {
++	beforeAll(() => {
++		initTheme("dark");
++	});
++	afterEach(() => {
++		setMarkdownFastPathsForTest(true);
++	});
++
++	for (let seed = 1; seed <= 40; seed++) {
++		test(`random document ${seed}`, () => {
++			const next = random(seed * 7919);
++			for (let documentIndex = 0; documentIndex < 10; documentIndex++) {
++				let text = "";
++				const pieces = 8 + Math.floor(next() * 24);
++				for (let i = 0; i < pieces; i++) {
++					text += PIECES[Math.floor(next() * PIECES.length)]!.replaceAll("{w}", String(Math.floor(next() * 1000)));
++				}
++				const sizes = Array.from({ length: 64 }, () =>
++					next() < 0.3 ? 1 : 1 + Math.floor(next() * (next() < 0.5 ? 8 : 40)),
++				);
++				const width = [20, 47, 160][Math.floor(next() * 3)]!;
++				setMarkdownFastPathsForTest(false);
++				const before = streamedRenders(text, sizes, width);
++				setMarkdownFastPathsForTest(true);
++				const after = streamedRenders(text, sizes, width);
++				for (let i = 0; i < before.length; i++) {
++					if (after[i] !== before[i]) {
++						expect(JSON.parse(after[i]!), `${JSON.stringify(text)}, step ${i}, width ${width}`).toEqual(
++							JSON.parse(before[i]!),
++						);
++					}
++				}
++				expect(after.length).toBe(before.length);
++			}
++		});
++	}
++});
+diff --git a/packages/tui/src/components/box.ts b/packages/tui/src/components/box.ts
+index 185c78c89..88a31ed77 100644
+--- a/packages/tui/src/components/box.ts
++++ b/packages/tui/src/components/box.ts
+@@ -1,4 +1,12 @@
+-import { type Component, dispatchMouseEvent, type TuiMouseDispatchResult, type TuiMouseEvent } from "../tui.ts";
++import {
++	type Component,
++	dispatchMouseEvent,
++	markStableRender,
++	type RenderedChildren,
++	renderChildren,
++	type TuiMouseDispatchResult,
++	type TuiMouseEvent,
++} from "../tui.ts";
+ import { flattenLines, visibleWidth } from "../utils.ts";
+ 
+ type RenderCache = {
+@@ -19,7 +27,8 @@ export class Box implements Component {
+ 
+ 	// Cache for rendered output
+ 	private cache?: RenderCache;
+-	private mouseLayout?: { width: number; children: Array<{ component: Component; height: number }> };
++	private rendered?: RenderedChildren;
++	private readonly emptyLines: string[] = [];
+ 
+ 	constructor(paddingX = 1, paddingY = 1, bgFn?: (text: string) => string) {
+ 		this.paddingX = paddingX;
+@@ -51,23 +60,14 @@ export class Box implements Component {
+ 	}
+ 
+ 	setPaddingX(paddingX: number): void {
++		if (this.paddingX === paddingX) return;
+ 		this.paddingX = paddingX;
+ 		this.invalidateCache();
+ 	}
+ 
+ 	private invalidateCache(): void {
+ 		this.cache = undefined;
+-	}
+-
+-	private matchCache(width: number, childLines: string[], bgSample: string | undefined): boolean {
+-		const cache = this.cache;
+-		return (
+-			!!cache &&
+-			cache.width === width &&
+-			cache.bgSample === bgSample &&
+-			cache.childLines.length === childLines.length &&
+-			cache.childLines.every((line, i) => line === childLines[i])
+-		);
++		this.rendered = undefined;
+ 	}
+ 
+ 	invalidate(): void {
+@@ -83,12 +83,13 @@ export class Box implements Component {
+ 		const contentX = event.x - this.paddingX;
+ 		if (contentY < 0 || contentX < 0 || contentX >= contentWidth) return undefined;
+ 
+-		const mouseChildren =
+-			this.mouseLayout?.width === contentWidth
+-				? this.mouseLayout.children
+-				: this.children.map((component) => ({ component, height: component.render(contentWidth).length }));
++		// The children as last drawn, at their drawn heights.
++		const rendered = this.rendered?.width === contentWidth ? this.rendered : undefined;
++		const children = rendered?.children ?? this.children;
+ 		let childY = 0;
+-		for (const { component: child, height: childHeight } of mouseChildren) {
++		for (let i = 0; i < children.length; i++) {
++			const child = children[i]!;
++			const childHeight = rendered ? rendered.heights[i]! : child.render(contentWidth).length;
+ 			if (contentY >= childY && contentY < childY + childHeight) {
+ 				return dispatchMouseEvent(child, {
+ 					...event,
+@@ -105,7 +106,7 @@ export class Box implements Component {
+ 
+ 	render(width: number): string[] {
+ 		if (this.children.length === 0) {
+-			return [];
++			return this.emptyLines;
+ 		}
+ 
+ 		const contentWidth = Math.max(1, width - this.paddingX * 2);
+@@ -114,45 +115,53 @@ export class Box implements Component {
+ 		// Render all children. Keep the child lines unpadded: children usually return the same string
+ 		// objects every frame, so the cache check below is a cheap identity comparison per line.
+ 		// Padding here would create new strings that must be compared character by character.
+-		const childLines: string[] = [];
+-		const mouseChildren: Array<{ component: Component; height: number }> = [];
+-		for (const child of this.children) {
+-			const lines = child.render(contentWidth);
+-			mouseChildren.push({ component: child, height: lines.length });
+-			for (const line of lines) {
+-				childLines.push(line);
+-			}
+-		}
+-		this.mouseLayout = { width: contentWidth, children: mouseChildren };
++		const rendered = renderChildren(this.children, contentWidth, this.rendered);
++		this.rendered = rendered;
++		const childLines = rendered.lines;
+ 
+ 		if (childLines.length === 0) {
+-			return [];
++			return this.emptyLines;
+ 		}
+ 
+ 		// Check if bgFn output changed by sampling
+ 		const bgSample = this.bgFn ? this.bgFn("test") : undefined;
+ 
+-		// Check cache validity
+-		if (this.matchCache(width, childLines, bgSample)) {
+-			return this.cache!.lines;
++		// What was rendered at this width and background: still good for the child lines that are the same.
++		const cache =
++			this.cache && this.cache.width === width && this.cache.bgSample === bgSample ? this.cache : undefined;
++		if (cache?.childLines === childLines) {
++			return cache.lines;
+ 		}
+ 
+ 		// Apply background and padding
+ 		const result: string[] = [];
++		let reused = cache !== undefined && cache.childLines.length === childLines.length;
+ 
+ 		// Top padding
+ 		for (let i = 0; i < this.paddingY; i++) {
+-			result.push(this.applyBg("", width));
++			result.push(cache ? cache.lines[i]! : this.applyBg("", width));
+ 		}
+ 
+ 		// Content
+-		for (const line of childLines) {
+-			result.push(this.applyBg(leftPad + line, width));
++		for (let i = 0; i < childLines.length; i++) {
++			const line = childLines[i]!;
++			if (cache !== undefined && i < cache.childLines.length && cache.childLines[i] === line) {
++				result.push(cache.lines[this.paddingY + i]!);
++			} else {
++				reused = false;
++				result.push(this.applyBg(leftPad + line, width));
++			}
+ 		}
+ 
+ 		// Bottom padding
+ 		for (let i = 0; i < this.paddingY; i++) {
+-			result.push(this.applyBg("", width));
++			result.push(cache ? cache.lines[cache.lines.length - this.paddingY + i]! : this.applyBg("", width));
++		}
++
++		// Every line is what it was: keep the array, so the parent sees this box unchanged.
++		if (reused) {
++			cache!.childLines = childLines;
++			return cache!.lines;
+ 		}
+ 
+ 		// Update cache
+@@ -170,3 +179,5 @@ export class Box implements Component {
+ 		return this.bgFn ? this.bgFn(padded) : padded;
+ 	}
+ }
++
++markStableRender(Box);
+diff --git a/packages/tui/src/components/image.ts b/packages/tui/src/components/image.ts
+index e96244226..9a0917720 100644
+--- a/packages/tui/src/components/image.ts
++++ b/packages/tui/src/components/image.ts
+@@ -8,7 +8,7 @@ import {
+ 	imageFallback,
+ 	renderImage,
+ } from "../terminal-image.ts";
+-import type { Component } from "../tui.ts";
++import { type Component, markStableRender } from "../tui.ts";
+ import { truncateToWidth } from "../utils.ts";
+ 
+ /**
+@@ -165,3 +165,5 @@ export class Image implements Component {
+ 		return lines;
+ 	}
+ }
++
++markStableRender(Image);
+diff --git a/packages/tui/src/components/markdown.ts b/packages/tui/src/components/markdown.ts
+index aa2166277..69f47aea9 100644
+--- a/packages/tui/src/components/markdown.ts
++++ b/packages/tui/src/components/markdown.ts
+@@ -1,8 +1,9 @@
+-import { Marked, type Token, Tokenizer, type TokenizerExtension, type Tokens } from "marked";
++import { Lexer, Marked, type Token, Tokenizer, type TokenizerExtension, type Tokens } from "marked";
+ import markedCjkFriendly from "marked-cjk-friendly";
+ import { renderLatex } from "../latex.ts";
++import { invalidateRenderedMarkdown, renderedMarkdownGeneration } from "../rendered-markdown.ts";
+ import { getCapabilities, hyperlink, isImageLine } from "../terminal-image.ts";
+-import type { Component } from "../tui.ts";
++import { type Component, markStableRender } from "../tui.ts";
+ import { applyBackgroundToLine, flattenLines, visibleWidth, wrapTextWithAnsi } from "../utils.ts";
+ 
+ const STRICT_STRIKETHROUGH_REGEX = /^(~~)(?=[^\s~])((?:\\.|[^\\])*?(?:\\.|[^\s~\\]))\1(?=[^~]|$)/;
+@@ -179,7 +180,8 @@ function trimPartialClosingFences(tokens: readonly Token[]): void {
+ 	// Trim streamed partial closing fences so code blocks do not shrink/flicker
+ 	// when the final fence character arrives. See https://github.com/earendil-works/pi/issues/5825.
+ 	const marker = /^(`{3,}|~{3,})/.exec(token.raw)?.[1];
+-	const lastLine = token.raw.split("\n").pop();
++	// (The text after the last line break: the whole of a code block's raw text is not split into lines for it.)
++	const lastLine = token.raw.slice(token.raw.lastIndexOf("\n") + 1);
+ 	if (!marker || !lastLine || lastLine.length >= marker.length || lastLine !== marker[0]?.repeat(lastLine.length)) {
+ 		return;
+ 	}
+@@ -196,6 +198,426 @@ markdownParser.use({
+ 	extensions: [...LATEX_MARKDOWN_EXTENSIONS],
+ });
+ 
++/** What inlineTokens() made of a text, and the lexer's state after it. */
++interface LexedInline {
++	tokens: Token[];
++	inLink: boolean;
++	inRawBlock: boolean;
++	linkEmitted: boolean;
++}
++
++/**
++ * The inline tokens of the texts lexed by the last lex and by this one so far, by the lexer's state before them (the bits
++ * of inlineFlags()). While a reply streams in, the blocks it ends with are lexed again for each chunk, and all their texts
++ * but the one that grew (a list's items, a table's cells, a block lexed again unchanged) are texts lexed the time before.
++ */
++let lexedInlines = new Map<number, Map<string, LexedInline>>();
++let nextLexedInlines = new Map<number, Map<string, LexedInline>>();
++
++function inlineFlags(state: Lexer["state"]): number {
++	return (state.inLink ? 1 : 0) | (state.inRawBlock ? 2 : 0) | (state.linkEmitted ? 4 : 0);
++}
++
++/**
++ * marked's lexer, taking the inline tokens of a text from the last lex when it lexed the same text from the same state.
++ * What inlineTokens() makes of a text depends on the text, on the lexer's state before it (inLink, inRawBlock, linkEmitted;
++ * it leaves them changed for the next text), and on the link definitions of the document, which only a text with a "["
++ * can refer to. A text with a "[" in a document with link definitions is lexed as marked lexes it, and so are the texts
++ * lexed inside a text (an emphasis's, a link's) and those given tokens to add to (a task's checkbox).
++ * The tokens are shared by the token lists they are in: nothing changes inline tokens after lexing (trimPartialClosingFences()
++ * changes code blocks only).
++ */
++class InlineMemoLexer extends Lexer {
++	private inlineDepth = 0;
++
++	override lex(src: string): ReturnType<Lexer["lex"]> {
++		try {
++			return super.lex(src);
++		} finally {
++			lexedInlines = nextLexedInlines;
++			nextLexedInlines = new Map();
++		}
++	}
++
++	override inlineTokens(src: string, tokens: Token[] = []): Token[] {
++		if (
++			this.inlineDepth > 0 ||
++			tokens.length > 0 ||
++			(src.includes("[") && Object.keys(this.tokens.links ?? {}).length > 0)
++		) {
++			this.inlineDepth++;
++			try {
++				return super.inlineTokens(src, tokens);
++			} finally {
++				this.inlineDepth--;
++			}
++		}
++		const state = this.state;
++		const flags = inlineFlags(state);
++		let next = nextLexedInlines.get(flags);
++		if (next === undefined) {
++			next = new Map();
++			nextLexedInlines.set(flags, next);
++		}
++		let lexed = next.get(src) ?? lexedInlines.get(flags)?.get(src);
++		if (lexed === undefined) {
++			this.inlineDepth++;
++			try {
++				super.inlineTokens(src, tokens);
++			} finally {
++				this.inlineDepth--;
++			}
++			lexed = {
++				tokens: tokens.slice(),
++				inLink: state.inLink,
++				inRawBlock: state.inRawBlock,
++				linkEmitted: state.linkEmitted,
++			};
++		} else {
++			for (const token of lexed.tokens) tokens.push(token);
++			state.inLink = lexed.inLink;
++			state.inRawBlock = lexed.inRawBlock;
++			state.linkEmitted = lexed.linkEmitted;
++		}
++		next.set(src, lexed);
++		return tokens;
++	}
++}
++
++let memos = true;
++
++/** marked's lexer() for Pi's Markdown: InlineMemoLexer, or marked's own lexer with the memos off. */
++function lexTokens(source: string): Token[] {
++	return memos && markdownCaching
++		? new InlineMemoLexer(markdownParser.defaults).lex(source)
++		: markdownParser.lexer(source);
++}
++
++interface LexedMarkdown {
++	source: string;
++	tokens: Token[];
++	/** Whether lexing can go on from these tokens when text is added to the source. */
++	resumable: boolean;
++	/** Whether the tokens were lexed from those of a shorter source (lexAddedMarkdown()), not from all of this one. */
++	pieced: boolean;
++}
++
++/** The sources lexed last, most recent last: a message that is streaming in is lexed again each time it grows. */
++const lexedMarkdown: LexedMarkdown[] = [];
++const LEXED_MARKDOWN_KEPT = 8;
++
++/**
++ * For tokens lexed from those of a shorter source (lexAddedMarkdown()): those tokens, and how many leading tokens the two
++ * have in common (the same objects). Held weakly: the shorter source's tokens are not needed once these are rendered.
++ */
++const lexedFrom = new WeakMap<Token[], { tokens: WeakRef<Token[]>; shared: number }>();
++
++function hasLinkDefinitions(tokens: Token[]): boolean {
++	const links = (tokens as Partial<{ links: Record<string, unknown> }>).links;
++	return links !== undefined && Object.keys(links).length > 0;
++}
++
++/**
++ * A copy of `text` that shares no memory with the string it was cut from. (Engines make a part of a string, and a part of
++ * a concatenation with it, out of the string's own memory; what JSON.parse() returns is a new string, the same text
++ * whatever is in it.)
++ */
++function ownString(text: string): string {
++	return JSON.parse(JSON.stringify(text)) as string;
++}
++
++/** Whether two tokens are the same in every field, in every token in them. */
++function sameTokens(a: unknown, b: unknown): boolean {
++	if (a === b) return true;
++	if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) return false;
++	if (Array.isArray(a)) {
++		if (!Array.isArray(b) || a.length !== b.length) return false;
++		for (let i = 0; i < a.length; i++) if (!sameTokens(a[i], b[i])) return false;
++		return true;
++	}
++	if (Array.isArray(b)) return false;
++	const aFields = a as Record<string, unknown>;
++	const bFields = b as Record<string, unknown>;
++	const keys = Object.keys(aFields);
++	if (keys.length !== Object.keys(bFields).length) return false;
++	for (const key of keys) {
++		if (!Object.hasOwn(bFields, key) || !sameTokens(aFields[key], bFields[key])) return false;
++	}
++	return true;
++}
++
++let fastPaths = true;
++
++/** Block types that marked tries before a paragraph or a setext heading: what they are is known from their first line. */
++const SELF_STARTING_BLOCKS = new Set(["code", "heading", "hr", "list", "blockquote", "table", "html"]);
++
++/**
++ * Whether the block at `before` ends where it does whatever text is added after the block at `last` (the last of
++ * `tokens`, with only blank lines between the two): when `last` is past its first line that is not blank, that line is
++ * known, and a block that starts as SELF_STARTING_BLOCKS do ends at the first line it cannot take. Not a paragraph: a
++ * setext underline lines later can make a heading of it and of the lines after it that an extension's block (`$$`) took.
++ */
++function lastBlockSettlesOneBefore(tokens: readonly Token[], before: number, last: number): boolean {
++	if (!fastPaths || before < 0 || !SELF_STARTING_BLOCKS.has(tokens[before]!.type)) return false;
++	// (A block's raw text can begin with lines of spaces.)
++	const raw = tokens[last]!.raw;
++	const text = raw.search(/\S/);
++	return text >= 0 && raw.includes("\n", text);
++}
++
++/**
++ * The tokens of `source`, which is `previous.source` with text added at its end. Where a top-level block ends depends on the
++ * line that follows it and on nothing after that line. The last block may still be on its first line ("2" turning into "2."
++ * makes it an item of the list before it), so the block before it is not settled either: the blocks before those two are
++ * what they were, and the text from the last two on is lexed. Once the last block is past that line, the block before it
++ * is settled too when lastBlockSettlesOneBefore() says so, and only the last block is lexed.
++ * Undefined when that would not give what lexing all of it gives: link definitions change how links before them read.
++ */
++function lexAddedMarkdown(previous: LexedMarkdown, source: string): Token[] | undefined {
++	let last = previous.tokens.length;
++	let lastBlock = -1;
++	for (let blocks = 0; blocks < 2; blocks++) {
++		last--;
++		while (last >= 0 && previous.tokens[last].type === "space") {
++			last--;
++		}
++		if (blocks === 1 && lastBlock >= 0 && lastBlockSettlesOneBefore(previous.tokens, last, lastBlock)) {
++			last = lastBlock;
++		}
++		if (blocks === 0) lastBlock = last;
++	}
++	if (last <= 0) {
++		return undefined;
++	}
++	// (The tokens of a resumable source add up to it: where the kept ones end is counted from the end, over the last few.)
++	let offset = previous.source.length;
++	for (let i = last; i < previous.tokens.length; i++) {
++		offset -= previous.tokens[i].raw.length;
++	}
++	// The text of a token is a part of the string that was lexed, and keeps all of that string in memory. Lexing the end
++	// of `source` as a part of it would leave every block of a long message holding the whole message as it was when
++	// the block was lexed, megabytes for each answer: the end is lexed as a string of its own.
++	const added = lexTokens(ownString(source.slice(offset)));
++	if (hasLinkDefinitions(added)) {
++		return undefined;
++	}
++	const tokens = previous.tokens.slice(0, last);
++	let length = offset;
++	// A block lexed again to what it was lexed to before (while a reply streams in, all of them but the last, which grows)
++	// is the token it was lexed to before: the lines rendered for that one are kept with it (renderBlock()), and a block
++	// such as a list or a code block is not rendered and highlighted again for each chunk added after it. The same text
++	// can be lexed to a token with other contents (a paragraph whose lines were added to it one by one keeps their
++	// indentation in one case and not in the other), so the tokens are compared in full. The last token is always the
++	// new one: trimPartialClosingFences() may change it.
++	let shared = last;
++	for (let i = 0; i < added.length; i++) {
++		let token = added[i]!;
++		const before = previous.tokens[last + i];
++		if (
++			fastPaths &&
++			shared === last + i &&
++			i < added.length - 1 &&
++			before !== undefined &&
++			before.raw === token.raw &&
++			sameTokens(before, token)
++		) {
++			token = before;
++			shared++;
++		}
++		tokens.push(token);
++		length += token.raw.length;
++	}
++	// (As in lexMarkdown(): the next time, each token has to begin where the ones before it add up to.)
++	if (length !== source.length) {
++		return undefined;
++	}
++	lexedFrom.set(tokens, { tokens: new WeakRef(previous.tokens), shared });
++	return tokens;
++}
++
++/**
++ * Lexes Markdown, reusing what was lexed before when `source` is a source lexed earlier or one with text added at its end
++ * (a message streaming in), so that the cost of a new chunk does not grow with the length of the message.
++ * A `complete` source (one that will not grow any more) is lexed in full instead of from a shorter one's tokens: lexing in
++ * pieces can split a block that a full lex keeps whole ("2. Install" after a paragraph line, or `$$` math across blank
++ * lines), and the tokens kept for a source are what it renders to from then on.
++ */
++function lexMarkdown(source: string, complete = false): Token[] {
++	if (!markdownCaching) {
++		const tokens = markdownParser.lexer(source);
++		trimPartialClosingFences(tokens);
++		return tokens;
++	}
++	let previous = -1;
++	for (let i = lexedMarkdown.length - 1; i >= 0; i--) {
++		const entry = lexedMarkdown[i];
++		if (entry.source === source) {
++			lexedMarkdown.splice(i, 1);
++			if (complete && entry.pieced) {
++				break;
++			}
++			lexedMarkdown.push(entry);
++			return entry.tokens;
++		}
++		if (
++			!complete &&
++			entry.resumable &&
++			source.length > entry.source.length &&
++			(previous < 0 || entry.source.length > lexedMarkdown[previous].source.length) &&
++			source.startsWith(entry.source)
++		) {
++			previous = i;
++		}
++	}
++
++	let tokens = previous >= 0 ? lexAddedMarkdown(lexedMarkdown[previous], source) : undefined;
++	const pieced = tokens !== undefined;
++	let resumable = pieced;
++	if (!tokens) {
++		tokens = lexTokens(source);
++		if (complete) {
++			// The text will not be lexed again: what its texts lexed to is not kept (up to ten times its size).
++			lexedInlines = new Map();
++		}
++		let length = 0;
++		for (const token of tokens) {
++			length += token.raw.length;
++		}
++		// (The lexer rewrites line endings: only when the tokens add up to the source is it known where each begins.)
++		resumable = !hasLinkDefinitions(tokens) && length === source.length;
++	}
++	trimPartialClosingFences(tokens);
++
++	if (previous >= 0) {
++		// The shorter source is not coming back.
++		lexedMarkdown.splice(previous, 1);
++	}
++	lexedMarkdown.push({ source, tokens, resumable, pieced });
++	if (lexedMarkdown.length > LEXED_MARKDOWN_KEPT) {
++		lexedMarkdown.shift();
++	}
++	return tokens;
++}
++
++/** Texts whose tabs were replaced last, most recent last, and what they became. */
++const textsWithoutTabs: Array<{ text: string; replaced: string }> = [];
++const TEXTS_WITHOUT_TABS_KEPT = 4;
++
++/**
++ * `text` with each tab replaced by three spaces. A message that is streaming in is rendered again each time it grows: what
++ * was replaced in it the last time is kept, and only the text added since is gone through.
++ */
++function replaceTabs(text: string): string {
++	if (!text.includes("\t")) {
++		return text;
++	}
++	if (!markdownCaching) {
++		return text.replace(/\t/g, "   ");
++	}
++	let replaced: string | undefined;
++	for (let i = textsWithoutTabs.length - 1; i >= 0 && replaced === undefined; i--) {
++		const entry = textsWithoutTabs[i];
++		if (text.length >= entry.text.length && text.startsWith(entry.text)) {
++			replaced =
++				text.length === entry.text.length
++					? entry.replaced
++					: entry.replaced + text.slice(entry.text.length).replace(/\t/g, "   ");
++			textsWithoutTabs.splice(i, 1);
++		}
++	}
++	replaced ??= text.replace(/\t/g, "   ");
++	textsWithoutTabs.push({ text, replaced });
++	if (textsWithoutTabs.length > TEXTS_WITHOUT_TABS_KEPT) {
++		textsWithoutTabs.shift();
++	}
++	return replaced;
++}
++
++/** Everything a block's lines depend on besides its token and the type of the token after it. */
++interface RenderSettings {
++	generation: number;
++	width: number;
++	paddingX: number;
++	theme: MarkdownTheme;
++	color: DefaultTextStyle["color"];
++	bgColor: DefaultTextStyle["bgColor"];
++	bold: boolean | undefined;
++	italic: boolean | undefined;
++	strikethrough: boolean | undefined;
++	underline: boolean | undefined;
++	preserveOrderedListMarkers: boolean | undefined;
++	preserveBackslashEscapes: boolean | undefined;
++	renderLatex: boolean | undefined;
++	capabilities: ReturnType<typeof getCapabilities>;
++}
++
++function sameSettings(a: RenderSettings, b: RenderSettings): boolean {
++	return (
++		a === b ||
++		(a.generation === b.generation &&
++			a.width === b.width &&
++			a.paddingX === b.paddingX &&
++			a.theme === b.theme &&
++			a.color === b.color &&
++			a.bgColor === b.bgColor &&
++			a.bold === b.bold &&
++			a.italic === b.italic &&
++			a.strikethrough === b.strikethrough &&
++			a.underline === b.underline &&
++			a.preserveOrderedListMarkers === b.preserveOrderedListMarkers &&
++			a.preserveBackslashEscapes === b.preserveBackslashEscapes &&
++			a.renderLatex === b.renderLatex &&
++			a.capabilities === b.capabilities)
++	);
++}
++
++/** What a top-level block was rendered to, and everything that went into it besides the token. */
++interface RenderedBlock {
++	settings: RenderSettings;
++	nextTokenType: string | undefined;
++	lines: string[];
++}
++
++const renderedBlocks = new WeakMap<Token, RenderedBlock>();
++
++/** What the top-level tokens of a source were rendered to: the lines of all the blocks, and where each block ends. */
++interface RenderedTokens {
++	settings: RenderSettings;
++	lines: string[];
++	/** `ends[i]`: the number of lines of the blocks up to and including block `i`. */
++	ends: number[];
++}
++
++const renderedTokens = new WeakMap<Token[], RenderedTokens>();
++
++let markdownCaching = true;
++
++/** For tests: with caching off, every render lexes and renders all of its text, taking and keeping nothing. */
++export function setMarkdownCachingForTest(enabled: boolean): void {
++	markdownCaching = enabled;
++}
++
++/**
++ * For tests: with this off, a source with text added is lexed again from its last two blocks always, and every block
++ * lexed again is a new token (lexAddedMarkdown()), as before either was kept.
++ */
++export function setMarkdownFastPathsForTest(enabled: boolean): void {
++	fastPaths = enabled;
++}
++
++/**
++ * For tests: with this off, inline texts are lexed by marked's own lexer each time (InlineMemoLexer), and lines are
++ * wrapped each time they are rendered (Markdown.wrapLine()).
++ */
++export function setMarkdownMemosForTest(enabled: boolean): void {
++	memos = enabled;
++}
++
++/** For tests: lexes as render() does. */
++export function lexMarkdownForTest(source: string, complete = false): Token[] {
++	return lexMarkdown(source, complete);
++}
++
+ /**
+  * Default text styling for markdown content.
+  * Applied to all text unless overridden by markdown formatting.
+@@ -248,6 +670,11 @@ export interface MarkdownOptions {
+ 	transform?: (markdown: string, availableWidth: number) => string;
+ 	/** Render supported LaTeX math expressions as Unicode text (default: true). */
+ 	renderLatex?: boolean;
++	/**
++	 * The text will not grow any more (a message that has finished streaming): it is lexed in full, not from the tokens of
++	 * the shorter text it was streamed as.
++	 */
++	complete?: boolean;
+ }
+ 
+ interface InlineStyleContext {
+@@ -272,6 +699,13 @@ export class Markdown implements Component {
+ 	// about ten times the size of its source, and every message of a long transcript keeps a Markdown component. The
+ 	// tokens survive a burst of re-renders, such as a theme preview, and are collected afterwards.
+ 	private cachedTokens?: WeakRef<{ source: string; tokens: Token[] }>;
++	/**
++	 * Lines wrapped by the last render that rendered a block, by width (wrapLine()), and those wrapped by this render so
++	 * far. While a reply streams in, the block it ends with is rendered again for each chunk, and all its lines but the
++	 * last few are the lines it had the time before.
++	 */
++	private wraps = new Map<number, Map<string, readonly string[]>>();
++	private nextWraps = new Map<number, Map<string, readonly string[]>>();
+ 
+ 	constructor(
+ 		text: string,
+@@ -291,13 +725,146 @@ export class Markdown implements Component {
+ 
+ 	setText(text: string): void {
+ 		this.text = text;
+-		this.invalidate();
++		this.cachedText = undefined;
++		this.cachedWidth = undefined;
++		this.cachedLines = undefined;
+ 	}
+ 
+ 	invalidate(): void {
+ 		this.cachedText = undefined;
+ 		this.cachedWidth = undefined;
+ 		this.cachedLines = undefined;
++		// What the theme's functions give may have changed: nothing rendered with them is good any more.
++		invalidateRenderedMarkdown();
++	}
++
++	/** Everything the lines of a block rendered at `width` depend on besides its token and the next token's type. */
++	private renderSettings(width: number): RenderSettings {
++		const style = this.defaultTextStyle;
++		return {
++			generation: renderedMarkdownGeneration(),
++			width,
++			paddingX: this.paddingX,
++			theme: this.theme,
++			color: style?.color,
++			bgColor: style?.bgColor,
++			bold: style?.bold,
++			italic: style?.italic,
++			strikethrough: style?.strikethrough,
++			underline: style?.underline,
++			preserveOrderedListMarkers: this.options.preserveOrderedListMarkers,
++			preserveBackslashEscapes: this.options.preserveBackslashEscapes,
++			renderLatex: this.options.renderLatex,
++			capabilities: getCapabilities(),
++		};
++	}
++
++	/**
++	 * wrapTextWithAnsi(line, width), from the lines wrapped by the render before this one when `line` is one of them
++	 * (wraps). The result is shared: not to be modified.
++	 */
++	private wrapLine(line: string, width: number): readonly string[] {
++		if (!markdownCaching || !memos) {
++			return wrapTextWithAnsi(line, width);
++		}
++		let next = this.nextWraps.get(width);
++		if (next === undefined) {
++			next = new Map();
++			this.nextWraps.set(width, next);
++		}
++		const wrapped = next.get(line) ?? this.wraps.get(width)?.get(line) ?? wrapTextWithAnsi(line, width);
++		next.set(line, wrapped);
++		return wrapped;
++	}
++
++	/**
++	 * The lines of one top-level block: rendered, wrapped, with margins and background. Kept with the token, which stays the
++	 * same object while the text before the last blocks of a message stays the same (lexMarkdown()).
++	 */
++	private renderBlock(
++		token: Token,
++		nextTokenType: string | undefined,
++		settings: RenderSettings,
++		contentWidth: number,
++	): string[] {
++		const known = markdownCaching ? renderedBlocks.get(token) : undefined;
++		if (known && known.nextTokenType === nextTokenType && sameSettings(known.settings, settings)) {
++			return known.lines;
++		}
++
++		const width = settings.width;
++		const leftMargin = " ".repeat(this.paddingX);
++		const rightMargin = " ".repeat(this.paddingX);
++		const bgFn = this.defaultTextStyle?.bgColor;
++		const lines: string[] = [];
++		const add = (line: string) => {
++			if (isImageLine(line)) {
++				lines.push(line);
++				return;
++			}
++			const lineWithMargins = leftMargin + line + rightMargin;
++			if (bgFn) {
++				lines.push(applyBackgroundToLine(lineWithMargins, width, bgFn));
++			} else {
++				// No background - just pad to width
++				const visibleLen = visibleWidth(lineWithMargins);
++				const paddingNeeded = Math.max(0, width - visibleLen);
++				lines.push(lineWithMargins + " ".repeat(paddingNeeded));
++			}
++		};
++		for (const line of this.renderToken(token, contentWidth, nextTokenType)) {
++			// Wrap lines (NO padding, NO background yet)
++			if (isImageLine(line)) {
++				add(line);
++			} else {
++				for (const wrappedLine of this.wrapLine(line, contentWidth)) {
++					add(wrappedLine);
++				}
++			}
++		}
++		flattenLines(lines);
++		if (markdownCaching) {
++			renderedBlocks.set(token, { settings, nextTokenType, lines });
++		}
++		return lines;
++	}
++
++	/**
++	 * The lines of all the top-level blocks of `tokens`, joined. Tokens lexed from those of a shorter source (a message
++	 * streaming in) take the lines of the blocks they have in common with it from what that source rendered to, so that the
++	 * cost of a new chunk does not grow with the length of the message: only the blocks lexed again are gone through.
++	 * The result is shared: not to be modified.
++	 */
++	private renderTokens(tokens: Token[], settings: RenderSettings, contentWidth: number): string[] {
++		const known = renderedTokens.get(tokens);
++		if (known && sameSettings(known.settings, settings)) {
++			return known.lines;
++		}
++		let lines: string[] = [];
++		let ends: number[] = [];
++		let reused = 0;
++		const from = lexedFrom.get(tokens);
++		const fromTokens = from?.tokens.deref();
++		const fromRendered = fromTokens ? renderedTokens.get(fromTokens) : undefined;
++		if (from && fromTokens && fromRendered && sameSettings(fromRendered.settings, settings)) {
++			reused = from.shared;
++			// (The lines of a block depend on the type of the block after it.)
++			if (reused > 0 && tokens[reused]?.type !== fromTokens[reused]?.type) {
++				reused--;
++			}
++			if (reused > 0) {
++				lines = fromRendered.lines.slice(0, fromRendered.ends[reused - 1]);
++				ends = fromRendered.ends.slice(0, reused);
++			}
++		}
++		for (let i = reused; i < tokens.length; i++) {
++			for (const line of this.renderBlock(tokens[i], tokens[i + 1]?.type, settings, contentWidth)) {
++				lines.push(line);
++			}
++			ends.push(lines.length);
++		}
++		renderedTokens.set(tokens, { settings, lines, ends });
++		return lines;
+ 	}
+ 
+ 	render(width: number): string[] {
+@@ -311,7 +878,7 @@ export class Markdown implements Component {
+ 		const text = this.options.transform?.(this.text, contentWidth) ?? this.text;
+ 
+ 		// Don't render anything if there's no actual text
+-		if (!text || text.trim() === "") {
++		if (!text || !/\S/.test(text)) {
+ 			const result: string[] = [];
+ 			// Update cache
+ 			this.cachedText = this.text;
+@@ -321,62 +888,29 @@ export class Markdown implements Component {
+ 		}
+ 
+ 		// Replace tabs with 3 spaces for consistent rendering
+-		const normalizedText = text.replace(/\t/g, "   ");
++		const normalizedText = replaceTabs(text);
+ 
+ 		// Parse markdown to HTML-like tokens
+ 		const cached = this.cachedTokens?.deref();
+ 		let tokens = cached?.source === normalizedText ? cached.tokens : undefined;
+ 		if (!tokens) {
+-			tokens = markdownParser.lexer(normalizedText);
+-			trimPartialClosingFences(tokens);
++			tokens = lexMarkdown(normalizedText, this.options.complete);
+ 			this.cachedTokens = new WeakRef({ source: normalizedText, tokens });
+ 		}
+ 
+-		// Convert tokens to styled terminal output
+-		const renderedLines: string[] = [];
+-
+-		for (let i = 0; i < tokens.length; i++) {
+-			const token = tokens[i];
+-			const nextToken = tokens[i + 1];
+-			const tokenLines = this.renderToken(token, contentWidth, nextToken?.type);
+-			for (const tokenLine of tokenLines) {
+-				renderedLines.push(tokenLine);
+-			}
+-		}
+-
+-		// Wrap lines (NO padding, NO background yet)
+-		const wrappedLines: string[] = [];
+-		for (const line of renderedLines) {
+-			if (isImageLine(line)) {
+-				wrappedLines.push(line);
+-			} else {
+-				for (const wrappedLine of wrapTextWithAnsi(line, contentWidth)) {
+-					wrappedLines.push(wrappedLine);
+-				}
+-			}
+-		}
+-
+-		// Add margins and background to each wrapped line
+-		const leftMargin = " ".repeat(this.paddingX);
+-		const rightMargin = " ".repeat(this.paddingX);
++		// Convert tokens to styled terminal output, wrapped, with margins and background: block by block, each from what it
++		// was rendered to the last time when nothing it depends on has changed.
+ 		const bgFn = this.defaultTextStyle?.bgColor;
+-		const contentLines: string[] = [];
+-
+-		for (const line of wrappedLines) {
+-			if (isImageLine(line)) {
+-				contentLines.push(line);
+-				continue;
+-			}
+-
+-			const lineWithMargins = leftMargin + line + rightMargin;
+-
+-			if (bgFn) {
+-				contentLines.push(applyBackgroundToLine(lineWithMargins, width, bgFn));
+-			} else {
+-				// No background - just pad to width
+-				const visibleLen = visibleWidth(lineWithMargins);
+-				const paddingNeeded = Math.max(0, width - visibleLen);
+-				contentLines.push(lineWithMargins + " ".repeat(paddingNeeded));
++		const settings = this.renderSettings(width);
++		let contentLines: string[];
++		if (markdownCaching) {
++			contentLines = this.renderTokens(tokens, settings, contentWidth);
++		} else {
++			contentLines = [];
++			for (let i = 0; i < tokens.length; i++) {
++				for (const line of this.renderBlock(tokens[i], tokens[i + 1]?.type, settings, contentWidth)) {
++					contentLines.push(line);
++				}
+ 			}
+ 		}
+ 
+@@ -389,8 +923,15 @@ export class Markdown implements Component {
+ 		}
+ 
+ 		// Combine top padding, content, and bottom padding
++		// (The lines of the blocks are flat already: renderBlock().)
++		flattenLines(emptyLines);
+ 		const result = emptyLines.concat(contentLines, emptyLines);
+-		flattenLines(result);
++
++		// The wrapped lines kept are those of this render's blocks (a render that rendered none keeps the last ones).
++		if (this.nextWraps.size > 0) {
++			this.wraps = this.nextWraps;
++			this.nextWraps = new Map();
++		}
+ 
+ 		// Update cache
+ 		this.cachedText = this.text;
+@@ -623,7 +1164,7 @@ export class Markdown implements Component {
+ 
+ 				for (const quoteLine of renderedQuoteLines) {
+ 					const styledLine = applyQuoteStyle(quoteLine);
+-					const wrappedLines = wrapTextWithAnsi(styledLine, quoteContentWidth);
++					const wrappedLines = this.wrapLine(styledLine, quoteContentWidth);
+ 					for (const wrappedLine of wrappedLines) {
+ 						lines.push(this.theme.quoteBorder("│ ") + wrappedLine);
+ 					}
+@@ -817,7 +1358,7 @@ export class Markdown implements Component {
+ 
+ 				const itemLines = this.renderToken(itemToken, itemWidth, undefined, styleContext);
+ 				for (const line of itemLines) {
+-					for (const wrappedLine of wrapTextWithAnsi(line, itemWidth)) {
++					for (const wrappedLine of this.wrapLine(line, itemWidth)) {
+ 						const linePrefix = renderedAnyLine ? continuationPrefix : firstPrefix;
+ 						lines.push(linePrefix + wrappedLine);
+ 						renderedAnyLine = true;
+@@ -1045,3 +1586,5 @@ export class Markdown implements Component {
+ 		return lines;
+ 	}
+ }
++
++markStableRender(Markdown);
+diff --git a/packages/tui/src/components/mouse-region.ts b/packages/tui/src/components/mouse-region.ts
+index a77ded0c1..05afdc88a 100644
+--- a/packages/tui/src/components/mouse-region.ts
++++ b/packages/tui/src/components/mouse-region.ts
+@@ -1,6 +1,9 @@
+ import {
+ 	type Component,
+ 	dispatchMouseEvent,
++	isStableRender,
++	markStableRender,
++	renderSharedLines,
+ 	type TuiMouseDispatchResult,
+ 	type TuiMouseEvent,
+ 	type TuiMouseEventResult,
+@@ -12,6 +15,8 @@ export type MouseRegionHandler = (event: TuiMouseEvent) => TuiMouseEventResult |
+ export class MouseRegion implements Component {
+ 	private readonly child: Component;
+ 	private readonly onMouse: MouseRegionHandler;
++	/** A copy of the lines of a child that does not keep its lines (isStableRender()), kept while they are the same. */
++	private copiedLines?: string[];
+ 
+ 	constructor(child: Component, onMouse: MouseRegionHandler) {
+ 		this.child = child;
+@@ -19,7 +24,14 @@ export class MouseRegion implements Component {
+ 	}
+ 
+ 	render(width: number): string[] {
+-		return this.child.render(width);
++		const lines = renderSharedLines(this.child, width);
++		if (isStableRender(this.child)) return lines;
++		const copied = this.copiedLines;
++		if (copied !== undefined && copied.length === lines.length && copied.every((line, i) => line === lines[i])) {
++			return copied;
++		}
++		this.copiedLines = lines.slice();
++		return this.copiedLines;
+ 	}
+ 
+ 	handleMouse(event: TuiMouseEvent): TuiMouseDispatchResult | TuiMouseEventResult | undefined {
+@@ -28,6 +40,9 @@ export class MouseRegion implements Component {
+ 	}
+ 
+ 	invalidate(): void {
++		this.copiedLines = undefined;
+ 		this.child.invalidate();
+ 	}
+ }
++
++markStableRender(MouseRegion);
+diff --git a/packages/tui/src/components/spacer.ts b/packages/tui/src/components/spacer.ts
+index 7abe1551c..c85eb0fb3 100644
+--- a/packages/tui/src/components/spacer.ts
++++ b/packages/tui/src/components/spacer.ts
+@@ -1,10 +1,13 @@
+-import type { Component } from "../tui.ts";
++import { type Component, markStableRender } from "../tui.ts";
+ 
+ /**
+  * Spacer component that renders empty lines
+  */
+ export class Spacer implements Component {
+ 	private lines: number;
++	/** The lines rendered, kept while their number is the same: every frame renders every spacer of the transcript. */
++	private renderedLines: string[] = [];
++	private renderedCount = 0;
+ 
+ 	constructor(lines: number = 1) {
+ 		this.lines = lines;
+@@ -19,10 +22,16 @@ export class Spacer implements Component {
+ 	}
+ 
+ 	render(_width: number): string[] {
+-		const result: string[] = [];
+-		for (let i = 0; i < this.lines; i++) {
+-			result.push("");
++		if (this.renderedCount !== this.lines) {
++			const result: string[] = [];
++			for (let i = 0; i < this.lines; i++) {
++				result.push("");
++			}
++			this.renderedLines = result;
++			this.renderedCount = this.lines;
+ 		}
+-		return result;
++		return this.renderedLines;
+ 	}
+ }
++
++markStableRender(Spacer);
+diff --git a/packages/tui/src/components/text.ts b/packages/tui/src/components/text.ts
+index 024748912..285cc1f19 100644
+--- a/packages/tui/src/components/text.ts
++++ b/packages/tui/src/components/text.ts
+@@ -1,4 +1,4 @@
+-import type { Component } from "../tui.ts";
++import { type Component, markStableRender } from "../tui.ts";
+ import { applyBackgroundToLine, flattenLines, visibleWidth, wrapTextWithAnsi } from "../utils.ts";
+ 
+ /**
+@@ -111,3 +111,5 @@ export class Text implements Component {
+ 		return result.length > 0 ? result : [""];
+ 	}
+ }
++
++markStableRender(Text);
+diff --git a/packages/tui/src/index.ts b/packages/tui/src/index.ts
+index eb962609f..81655bc7b 100644
+--- a/packages/tui/src/index.ts
++++ b/packages/tui/src/index.ts
+@@ -113,6 +113,7 @@ export { getNativeClipboard, type NativeClipboard } from "./native-platform.ts";
+ export { oklabToOkhslLightness } from "./oklab.ts";
+ // Program status reporting (OSC 7501)
+ export { formatProgramStatus, type ProgramStatus } from "./program-status.ts";
++export { invalidateRenderedMarkdown } from "./rendered-markdown.ts";
+ // Input buffering for batch splitting
+ export { StdinBuffer, type StdinBufferEventMap, type StdinBufferOptions } from "./stdin-buffer.ts";
+ // Terminal interface and implementations
+@@ -161,7 +162,9 @@ export {
+ 	compositeTuiLine,
+ 	type Focusable,
+ 	isFocusable,
++	isStableRender,
+ 	isViewportTUI,
++	markStableRender,
+ 	type OverlayAnchor,
+ 	type OverlayBounds,
+ 	type OverlayHandle,
+@@ -169,6 +172,7 @@ export {
+ 	type OverlayOptions,
+ 	type OverlayUnfocusOptions,
+ 	renderFakeCursor,
++	renderSharedLines,
+ 	type SizeValue,
+ 	type TUI,
+ 	type TuiInputListener,
+diff --git a/packages/tui/src/layout.ts b/packages/tui/src/layout.ts
+index 897c51de2..a46e85ec1 100644
+--- a/packages/tui/src/layout.ts
++++ b/packages/tui/src/layout.ts
+@@ -2,7 +2,7 @@ import type { ScrollView } from "./components/scroll-view.ts";
+ import { allocateStackSizes, visibleStackEntries } from "./components/stack.ts";
+ import { getLayoutNode } from "./layout-node.ts";
+ import { cropKittyImageLine, getKittyImageMetadata, isImageLine } from "./terminal-image.ts";
+-import { type Component, CURSOR_MARKER, compositeTuiLine } from "./tui.ts";
++import { type Component, CURSOR_MARKER, compositeTuiLine, renderSharedLines } from "./tui.ts";
+ import {
+ 	extractAnsiCode,
+ 	getActiveBackgroundAnsi,
+@@ -74,7 +74,8 @@ function renderCached(context: LayoutContext, component: Component, width: numbe
+ 	}
+ 	let lines = widths.get(safeWidth);
+ 	if (!lines) {
+-		lines = component.render(safeWidth);
++		// (Shared lines: layout only reads them.)
++		lines = renderSharedLines(component, safeWidth);
+ 		widths.set(safeWidth, lines);
+ 	}
+ 	return lines;
+diff --git a/packages/tui/src/rendered-markdown.ts b/packages/tui/src/rendered-markdown.ts
+new file mode 100644
+index 000000000..016ba9084
+--- /dev/null
++++ b/packages/tui/src/rendered-markdown.ts
+@@ -0,0 +1,14 @@
++// What Markdown blocks were rendered to is kept from one render to the next (components/markdown.ts). A theme's functions may
++// give something else from one call to the next (a theme that follows a setting); whoever changes what they give invalidates
++// the components, and with them what is kept: everything kept belongs to a generation, and invalidating begins a new one.
++
++let generation = 0;
++
++export function renderedMarkdownGeneration(): number {
++	return generation;
++}
++
++/** Forgets what Markdown blocks were rendered to. */
++export function invalidateRenderedMarkdown(): void {
++	generation++;
++}
+diff --git a/packages/tui/src/tui-alt-screen.ts b/packages/tui/src/tui-alt-screen.ts
+index 5e6d76864..8ee800d23 100644
+--- a/packages/tui/src/tui-alt-screen.ts
++++ b/packages/tui/src/tui-alt-screen.ts
+@@ -260,7 +260,8 @@ export class TuiAltScreen extends TuiBase implements ViewportTUI {
+ 	) {
+ 		super(terminal, showHardwareCursor, logDirectory);
+ 		this.implicitDocument = {
+-			render: (width) => super.render(width),
++			// (Shared lines: only the layout reads them.)
++			render: (width) => super.renderShared(width),
+ 			handleMouse: (event) => super.handleMouse(event),
+ 			invalidate: () => {
+ 				for (const child of this.children) child.invalidate();
+diff --git a/packages/tui/src/tui.ts b/packages/tui/src/tui.ts
+index d888940e9..e6d53a617 100644
+--- a/packages/tui/src/tui.ts
++++ b/packages/tui/src/tui.ts
+@@ -4,6 +4,7 @@
+ 
+ import { performance } from "node:perf_hooks";
+ import { isKeyRelease, matchesKey } from "./keys.ts";
++import { invalidateRenderedMarkdown } from "./rendered-markdown.ts";
+ import type { Terminal } from "./terminal.ts";
+ import {
+ 	parseOscColorResponse,
+@@ -352,12 +353,135 @@ type ActiveOverlayFocusRestoreState = EligibleOverlayFocusRestoreState | Blocked
+ type OverlayFocusRestoreState = { status: "inactive" } | ActiveOverlayFocusRestoreState;
+ type OverlayFocusRestorePolicy = "clear" | "preserve";
+ 
++/** render() functions whose component keeps its lines: see markStableRender(). */
++const stableRenders = new WeakSet<Component["render"]>();
++
++/**
++ * Declares that the components of a class keep their lines: their render() returns the same array again only while
++ * their lines are unchanged, and never modifies an array it returned. Containers then take an unchanged array as
++ * unchanged lines and a new array as changed lines instead of comparing them line by line, which keeps a frame from
++ * costing time in proportion to the whole transcript. (A new array with the same lines is taken as changed: the lines
++ * after it are joined again, and what is drawn is the same.) A subclass that overrides render() is not covered: it
++ * declares this itself if it keeps its lines. Components that do not declare it render exactly as before; their lines
++ * are compared.
++ */
++export function markStableRender(componentClass: { prototype: Component }): void {
++	stableRenders.add(componentClass.prototype.render);
++}
++
++/**
++ * Whether `component` keeps its lines (markStableRender()). A Container that does not override render() does:
++ * renderSharedLines() takes its lines from renderShared().
++ */
++export function isStableRender(component: Component): boolean {
++	return (
++		(component instanceof Container && component.render === Container.prototype.render) ||
++		stableRenders.has(component.render)
++	);
++}
++
++/**
++ * A component's lines, without the copy Container.render() makes: Container.renderShared() for a Container that does
++ * not override render(). The caller must not modify them.
++ */
++export function renderSharedLines(component: Component, width: number): string[] {
++	return component instanceof Container && component.render === Container.prototype.render
++		? component.renderShared(width)
++		: component.render(width);
++}
++
++/** What a list of children rendered to, joined (renderChildren()). */
++export interface RenderedChildren {
++	readonly width: number;
++	readonly children: readonly Component[];
++	/** The array each child returned. */
++	readonly arrays: readonly string[][];
++	readonly heights: readonly number[];
++	/** All the children's lines. Shared: not to be modified. */
++	readonly lines: string[];
++}
++
++/**
++ * Renders `children` at `width` and joins their lines, starting from what they rendered to the frame before:
++ * `previous` itself when no child's lines changed, otherwise new lines that keep the unchanged leading children's
++ * lines. A child's lines are unchanged when it is the same child and either keeps its lines (isStableRender()) and
++ * returned the same array, or does not keep its lines and returned the lines joined the frame before. The second check
++ * covers any component, including one that modifies its array in place. A child that keeps its lines and returned a new
++ * array is taken as changed without comparing its lines: while a reply streams in, that is the message growing, and
++ * comparing it line by line (at each level of containers it is in) would take time in proportion to its length every
++ * frame.
++ */
++export function renderChildren(
++	children: readonly Component[],
++	width: number,
++	previous: RenderedChildren | undefined,
++): RenderedChildren {
++	const count = children.length;
++	const before = previous?.width === width ? previous : undefined;
++	let index = 0;
++	let offset = 0;
++	let changedLines: string[] | undefined;
++	if (before !== undefined) {
++		for (; index < count; index++) {
++			const child = children[index]!;
++			const lines = renderSharedLines(child, width);
++			if (
++				index >= before.children.length ||
++				before.children[index] !== child ||
++				!sameLines(child, lines, before, index, offset)
++			) {
++				changedLines = lines;
++				break;
++			}
++			offset += lines.length;
++		}
++		if (index === count && count === before.children.length) return before;
++	}
++	const arrays: string[][] = new Array(count);
++	const heights: number[] = new Array(count);
++	for (let i = 0; i < index; i++) {
++		arrays[i] = before!.arrays[i]!;
++		heights[i] = before!.heights[i]!;
++	}
++	const first = index;
++	for (; index < count; index++) {
++		const lines = changedLines ?? renderSharedLines(children[index]!, width);
++		changedLines = undefined;
++		arrays[index] = lines;
++		heights[index] = lines.length;
++	}
++	// (concat() copies the lines in bulk, which a loop that pushes them one by one takes several times as long to do; in
++	// groups of arrays, as a call takes a bounded number of arguments.)
++	let joined = before !== undefined && offset > 0 ? before.lines.slice(0, offset) : [];
++	for (let i = first; i < count; i += 1024) {
++		joined = joined.concat(...arrays.slice(i, Math.min(count, i + 1024)));
++	}
++	return { width, children: children.slice(), arrays, heights, lines: joined };
++}
++
++function sameLines(
++	child: Component,
++	lines: string[],
++	previous: RenderedChildren,
++	index: number,
++	offset: number,
++): boolean {
++	if (isStableRender(child)) return lines === previous.arrays[index];
++	const height = previous.heights[index]!;
++	if (lines.length !== height) return false;
++	const joined = previous.lines;
++	for (let i = 0; i < height; i++) {
++		if (lines[i] !== joined[offset + i]) return false;
++	}
++	return true;
++}
++
+ /**
+  * Container - a component that contains other components
+  */
+ export class Container implements Component {
+ 	children: Component[] = [];
+-	private mouseLayout?: { width: number; children: Array<{ component: Component; height: number }> };
++	private rendered?: RenderedChildren;
+ 
+ 	addChild(component: Component): void {
+ 		this.children.push(component);
+@@ -375,6 +499,7 @@ export class Container implements Component {
+ 	}
+ 
+ 	invalidate(): void {
++		this.rendered = undefined;
+ 		for (const child of this.children) {
+ 			child.invalidate?.();
+ 		}
+@@ -382,12 +507,13 @@ export class Container implements Component {
+ 
+ 	handleMouse(event: TuiMouseEvent): TuiMouseDispatchResult | undefined {
+ 		if (event.y < 0 || event.y >= event.height) return undefined;
+-		const mouseChildren =
+-			this.mouseLayout?.width === event.width
+-				? this.mouseLayout.children
+-				: this.children.map((component) => ({ component, height: component.render(event.width).length }));
++		// The children as last drawn, at their drawn heights.
++		const rendered = this.rendered?.width === event.width ? this.rendered : undefined;
++		const children = rendered?.children ?? this.children;
+ 		let childY = 0;
+-		for (const { component: child, height: childHeight } of mouseChildren) {
++		for (let i = 0; i < children.length; i++) {
++			const child = children[i]!;
++			const childHeight = rendered ? rendered.heights[i]! : child.render(event.width).length;
+ 			if (event.y >= childY && event.y < childY + childHeight) {
+ 				const result = dispatchMouseEvent(child, {
+ 					...event,
+@@ -402,18 +528,18 @@ export class Container implements Component {
+ 		return undefined;
+ 	}
+ 
++	/**
++	 * The children's lines, kept from one call to the next: the same array while no child's lines changed. The caller
++	 * must not modify it; render() returns a copy. A subclass that adds to the children's lines overrides this, not
++	 * render(), and keeps the same contract: it returns the same array again only when its lines are unchanged.
++	 */
++	renderShared(width: number): string[] {
++		this.rendered = renderChildren(this.children, width, this.rendered);
++		return this.rendered.lines;
++	}
++
+ 	render(width: number): string[] {
+-		const lines: string[] = [];
+-		const mouseChildren: Array<{ component: Component; height: number }> = [];
+-		for (const child of this.children) {
+-			const childLines = child.render(width);
+-			mouseChildren.push({ component: child, height: childLines.length });
+-			for (const line of childLines) {
+-				lines.push(line);
+-			}
+-		}
+-		this.mouseLayout = { width, children: mouseChildren };
+-		return lines;
++		return this.renderShared(width).slice();
+ 	}
+ }
+ 
+@@ -943,6 +1069,8 @@ export abstract class TuiBase extends Container implements TUI {
+ 	}
+ 
+ 	override invalidate(): void {
++		// (Also when no Markdown component is mounted to be told: what was rendered before may be taken up by a later one.)
++		invalidateRenderedMarkdown();
+ 		for (const root of this.getMountedRoots()) root.invalidate();
+ 		for (const overlay of this.overlayStack) overlay.component.invalidate();
+ 	}
+diff --git a/packages/tui/src/utils.ts b/packages/tui/src/utils.ts
+index 272366899..58a72efcc 100644
+--- a/packages/tui/src/utils.ts
++++ b/packages/tui/src/utils.ts
+@@ -902,21 +902,27 @@ export function wrapTextWithAnsi(text: string, width: number): string[] {
+ 		return [""];
+ 	}
+ 
++	// One line (what Markdown and most components wrap): no ANSI state to carry over to a line after it.
++	if (text.indexOf("\n") === -1 && text.indexOf("\r") === -1) {
++		return wrapSingleLine(text, width);
++	}
++
+ 	// Handle newlines by processing each line separately
+ 	// Track ANSI state across lines so styles carry over after literal newlines
+ 	const inputLines = text.split(/\r\n|\r|\n/);
+ 	const result: string[] = [];
+ 	const tracker = new AnsiCodeTracker();
+ 
+-	for (const inputLine of inputLines) {
++	for (let index = 0; index < inputLines.length; index++) {
++		const inputLine = inputLines[index]!;
+ 		// Prepend active ANSI codes from previous lines (except for first line)
+ 		const prefix = result.length > 0 ? tracker.getActiveCodes() : "";
+ 		const wrappedLines = wrapSingleLine(prefix + inputLine, width);
+ 		for (const wrappedLine of wrappedLines) {
+ 			result.push(wrappedLine);
+ 		}
+-		// Update tracker with codes from this line for next iteration
+-		updateTrackerFromText(inputLine, tracker);
++		// Update tracker with codes from this line for the next one (the last line has none after it)
++		if (index < inputLines.length - 1) updateTrackerFromText(inputLine, tracker);
+ 	}
+ 
+ 	return result.length > 0 ? result : [""];
+diff --git a/packages/tui/test/markdown-incremental-lex.test.ts b/packages/tui/test/markdown-incremental-lex.test.ts
+new file mode 100644
+index 000000000..9c079fa63
+--- /dev/null
++++ b/packages/tui/test/markdown-incremental-lex.test.ts
+@@ -0,0 +1,370 @@
++import assert from "node:assert";
++import { describe, it } from "node:test";
++import {
++	lexMarkdownForTest,
++	Markdown,
++	setMarkdownCachingForTest,
++	setMarkdownFastPathsForTest,
++} from "../src/components/markdown.ts";
++import { defaultMarkdownTheme } from "./test-themes.ts";
++
++// A message that streams in is lexed again each time it grows, from the last block on. The tokens must be what lexing all of
++// it gives, at every length it passes through.
++
++const DOCUMENTS: Record<string, string> = {
++	everything: `# Title
++
++Intro paragraph with **bold**, *italic*, \`code\`, ~~gone~~ and a [link](https://example.com).
++A second line of the same paragraph.
++
++Setext heading
++==============
++
++Another one
++-----------
++
++- item one
++- item two
++  continued lazily
++  - nested item
++    1. deeper, numbered
++
++- loose item after a blank line
++
++1. first
++2. second
++   \`\`\`js
++   const inList = 1;
++   \`\`\`
++3. third
++
++- [ ] task open
++- [x] task done
++
++> quote line one
++lazy continuation
++> > nested quote
++> - list in quote
++
++\`\`\`ts
++export function f(a: number): number {
++	return a + 1; // \`not a fence\`
++}
++\`\`\`
++
++~~~python
++def g():
++    return "~~~ inside"
++~~~
++
++    indented code
++    second line
++
++Paragraph right before a table
++| a | b |
++|---|:-:|
++| 1 | 2 |
++| 3 | 4 |
++
++text | that | looks like a table
++but is not
++
++<div align="center">
++html block
++</div>
++
++***
++
++Line with trailing spaces  
++hard break, and a backslash\\
++break. An autolink https://example.org/x?y=1 and <mailto:a@b.c>.
++
++$$
++E = mc^2
++$$
++
++Inline math $a^2 + b^2$ and \\(x_1\\), then \\[ y = 2x \\] at the end.
++
++![image](https://example.com/i.png "title")
++
++Final paragraph.
++`,
++	crlf: "one\r\ntwo\r\n\r\n- a\r\n- b\r\n\r\n```\r\ncode\r\n```\r\nend",
++	lonecr: "one\rtwo\r\rthree",
++	tabs: "a\tb\t\n\n-\tx\ty\n\n```\n\tcode\twith\ttabs\n\t\n```\n\n\ttab-indented\n\n|\ta\t|\tb\t|\n|---|---|\n|\t1\t|\t2\t|\n\nend\t",
++	references: `A [ref][one] before its definition, and [another].
++
++Some text in between.
++
++[one]: https://example.com/one
++[another]: https://example.com/two "Two"
++
++After the definitions: [ref][one] again.
++`,
++	fences: "start\n\n```\nunclosed code\nwith `` two ticks\n``",
++	fenceInList: "- item\n  ```sh\n  ls\n  ``",
++	blanks: "a\n\n\n\nb\n\n   \n\nc\n \n",
++	onlyList: "- a\n- b\n\n- c\n\n  para in c\n- d",
++	listThenBlank: "- a\n- b\n\n\n- c\n\nnot a list\n\n1. x\n\n2. y",
++	headingsOnly: "# a\n## b\n### c\n\n#### d\ntext\n# e",
++	unicode: "naïve café — 日本語 😀\n\n- 🇮🇳 flag\n- zero\u200bwidth\n\n| 列 | 值 |\n|---|---|\n| 一 | 二 |\n",
++	pendingMath: "Compute:\n\n\\[\nx = \\frac{1}{2}\n",
++	hrAndSetext: "para\n---\n\npara\n\n---\n\n* * *\ntext\n===",
++	htmlInline: "a <b>bold</b> <!-- comment --> b\n\n<details>\n<summary>s</summary>\n\nbody\n\n</details>\n\nafter",
++};
++
++function random(seed: number): () => number {
++	let state = seed >>> 0 || 1;
++	return () => {
++		state = (Math.imul(state ^ (state >>> 15), 2246822507) + 0x9e3779b9) >>> 0;
++		return state / 4294967296;
++	};
++}
++
++function streamAndCompare(name: string, text: string, sizes: () => number): void {
++	// A prefix of its own, so that nothing kept from another test is taken up.
++	const document = `<!-- ${name} ${Math.random()} -->\n\n${text}`;
++	for (let length = Math.min(30, document.length); ; length = Math.min(document.length, length + sizes())) {
++		const source = document.slice(0, length);
++		const incremental = JSON.stringify(lexMarkdownForTest(source));
++		// As a message is rendered while it streams in: a new component each time, at the width of the terminal.
++		const rendered = new Markdown(source, 1, 0, defaultMarkdownTheme).render(72);
++		setMarkdownCachingForTest(false);
++		const fresh = JSON.stringify(lexMarkdownForTest(source));
++		const renderedFresh = new Markdown(source, 1, 0, defaultMarkdownTheme).render(72);
++		setMarkdownCachingForTest(true);
++		if (incremental !== fresh) {
++			assert.strictEqual(
++				incremental,
++				fresh,
++				`${name}: tokens differ at length ${length}: ${JSON.stringify(source.slice(-60))}`,
++			);
++		}
++		assert.deepStrictEqual(rendered, renderedFresh, `${name}: rendered lines differ at length ${length}`);
++		if (length >= document.length) {
++			break;
++		}
++	}
++}
++
++describe("Markdown lexing of a growing source", () => {
++	for (const [name, text] of Object.entries(DOCUMENTS)) {
++		it(`${name}: one character at a time`, () => {
++			streamAndCompare(name, text, () => 1);
++		});
++		it(`${name}: chunks of random sizes`, () => {
++			for (let seed = 1; seed <= 5; seed++) {
++				const next = random(seed);
++				streamAndCompare(`${name}#${seed}`, text, () => 1 + Math.floor(next() * 40));
++			}
++		});
++	}
++
++	it("random documents made of blocks in random order", () => {
++		const blocks = Object.values(DOCUMENTS)
++			.join("\n\n")
++			.split(/\n{2,}/)
++			.filter((block) => block.trim());
++		for (let seed = 1; seed <= 40; seed++) {
++			const next = random(seed * 7919);
++			let text = "";
++			for (let i = 0; i < 25; i++) {
++				text += blocks[Math.floor(next() * blocks.length)] + (next() < 0.8 ? "\n\n" : "\n");
++			}
++			streamAndCompare(`random#${seed}`, text, seed % 4 === 0 ? () => 1 : () => 1 + Math.floor(next() * 60));
++		}
++	});
++
++	it("every kind of block after every kind of block, one character at a time", () => {
++		const before = [
++			"- a\n- b",
++			"1. x\n2. y",
++			"1. x",
++			"- a\n\n  more of a",
++			"> quoted\n> more",
++			"a paragraph\nof two lines",
++			"```js\ncode\n```",
++			"    indented code",
++			"| a | b |\n|---|---|\n| 1 | 2 |",
++			"## heading",
++			"<div>\nhtml\n</div>",
++			"---",
++			"$$\nx^2\n$$",
++			"- [ ] task",
++		];
++		const between = ["\n", "\n\n", "\n\n\n", "\n \n"];
++		const after = [
++			"2. y\nz",
++			"3. y",
++			"- z\n\n- w",
++			"* z",
++			"+ p",
++			"> q\nlazy",
++			"    code\n    more",
++			"  indented text",
++			"===",
++			"---",
++			"***",
++			"| c | d |\n|---|---|\n| 3 | 4 |",
++			"| c | d |",
++			"```\nfenced\n```\nend",
++			"~~~",
++			"plain text\n===",
++			"1) x",
++			"# h",
++			"<b>x</b>",
++			"\\[ x \\]",
++			"$$ y $$",
++			"[label]: https://example.com\n\n[label]",
++			"- [x] done",
++			"10. ten",
++			"-",
++			"2.",
++		];
++		for (const first of before) {
++			for (const gap of between) {
++				for (const second of after) {
++					streamAndCompare(
++						JSON.stringify([first, gap, second]),
++						`start\n\n${first}${gap}${second}\n\nend`,
++						() => 1,
++					);
++				}
++			}
++		}
++	});
++
++	// Lexed in pieces while it streams, these split a block that a full lex keeps whole. A message that has finished
++	// streaming is rendered as a full lex gives it.
++	it("a complete source is lexed in full, not from the tokens it streamed as", () => {
++		const documents = [
++			"Intro.\n\nStep one is done.\n2. Install deps\n- run npm i\n\nDone.",
++			"Intro.\n\nTotal:\n\n$$\nsum\n\nof all\n\nparts = 3\n$$\n",
++		];
++		for (const text of documents) {
++			const document = `<!-- complete ${Math.random()} -->\n\n${text}`;
++			for (let length = 1; length < document.length; length++) {
++				lexMarkdownForTest(document.slice(0, length));
++			}
++			lexMarkdownForTest(document);
++			setMarkdownCachingForTest(false);
++			const fresh = JSON.stringify(lexMarkdownForTest(document));
++			const renderedFresh = new Markdown(document, 1, 0, defaultMarkdownTheme).render(72);
++			setMarkdownCachingForTest(true);
++			assert.strictEqual(JSON.stringify(lexMarkdownForTest(document, true)), fresh);
++			assert.deepStrictEqual(
++				new Markdown(document, 1, 0, defaultMarkdownTheme, undefined, { complete: true }).render(72),
++				renderedFresh,
++			);
++		}
++	});
++
++	it("the blocks before the last two are not lexed again", () => {
++		const paragraphs = Array.from({ length: 30 }, (_, i) => `Paragraph ${i} of a long answer.`);
++		let source = `<!-- reuse ${Math.random()} -->`;
++		let previous = lexMarkdownForTest(source);
++		let reused = 0;
++		for (const paragraph of paragraphs) {
++			source += `\n\n${paragraph}`;
++			const tokens = lexMarkdownForTest(source);
++			// All but the last two blocks (and the blank lines between them) are the token objects of the time before.
++			for (let i = 0; i < previous.length - 4; i++) {
++				assert.strictEqual(tokens[i], previous[i]);
++				reused++;
++			}
++			previous = tokens;
++		}
++		assert.ok(reused > 500, `only ${reused} tokens were reused`);
++	});
++
++	it("a block that the last one settles, or that lexes to the same token again, is the token from before", () => {
++		for (const fastPaths of [true, false]) {
++			setMarkdownFastPathsForTest(fastPaths);
++			try {
++				// A list, then a paragraph that grows past its first line: the list is not lexed again. A code block, then
++				// a paragraph on its first line: the code block is lexed again, to the same token.
++				const cases = [
++					{ head: "- one\n- two\n\nA paragraph", grow: [" that grows", "\nand a second line", " that grows too"] },
++					{ head: "```ts\nconst a = 1;\n```\nA paragraph", grow: [" that", " grows", " on its first line"] },
++				];
++				for (const { head, grow } of cases) {
++					let source = `<!-- settled ${Math.random()} -->\n\n${head}`;
++					let previous = lexMarkdownForTest(source);
++					const block = previous[2]!;
++					assert.ok(block.type === "list" || block.type === "code");
++					const lines = new Markdown(source, 1, 0, defaultMarkdownTheme).render(60);
++					for (const text of grow) {
++						source += text;
++						const tokens = lexMarkdownForTest(source);
++						assert.strictEqual(
++							tokens[2] === previous[2],
++							fastPaths,
++							`${JSON.stringify(source)}: ${tokens[2]!.type}`,
++						);
++						previous = tokens;
++					}
++					const grown = new Markdown(source, 1, 0, defaultMarkdownTheme).render(60);
++					// (The block's lines come first, after the comment's.)
++					assert.deepStrictEqual(grown.slice(0, 4), lines.slice(0, 4));
++				}
++			} finally {
++				setMarkdownFastPathsForTest(true);
++			}
++		}
++	});
++
++	it("a source that is not the earlier one with text added is lexed whole", () => {
++		const first = lexMarkdownForTest("# replaced\n\nfirst version of the paragraph\n\ntail");
++		const source = "# replaced\n\nanother version\n\ntail";
++		const second = lexMarkdownForTest(source);
++		assert.notStrictEqual(first, second);
++		setMarkdownCachingForTest(false);
++		const fresh = lexMarkdownForTest(source);
++		setMarkdownCachingForTest(true);
++		assert.strictEqual(JSON.stringify(second), JSON.stringify(fresh));
++		// The same source again: the same tokens.
++		assert.strictEqual(lexMarkdownForTest(source), second);
++	});
++
++	it("blocks are rendered again for another width, style or theme, and after invalidate()", () => {
++		const source = `<!-- styles ${Math.random()} -->\n\n# Heading\n\nSome *text* that is long enough to be wrapped when the width is small.\n\n- a\n- b\n\nlast`;
++		const cold = (render: () => string[]) => {
++			setMarkdownCachingForTest(false);
++			const lines = render();
++			setMarkdownCachingForTest(true);
++			return lines;
++		};
++		const upper = { ...defaultMarkdownTheme, heading: (text: string) => `<<${text.toUpperCase()}>>` };
++		const renders: Array<() => string[]> = [
++			() => new Markdown(source, 1, 0, defaultMarkdownTheme).render(72),
++			() => new Markdown(source, 1, 0, defaultMarkdownTheme).render(30),
++			() => new Markdown(source, 3, 1, defaultMarkdownTheme).render(72),
++			() => new Markdown(source, 1, 0, upper).render(72),
++			() =>
++				new Markdown(source, 1, 0, defaultMarkdownTheme, { italic: true, color: (text) => `{${text}}` }).render(72),
++			() => new Markdown(source, 1, 0, defaultMarkdownTheme, { bgColor: (text) => `[${text}]` }).render(72),
++			() =>
++				new Markdown(source, 1, 0, defaultMarkdownTheme, undefined, { preserveOrderedListMarkers: true }).render(
++					72,
++				),
++		];
++		// Each after each of the others, so that what one left behind is there for the next to take wrongly.
++		for (const first of renders) {
++			for (const second of renders) {
++				first();
++				assert.deepStrictEqual(second(), cold(second));
++			}
++		}
++
++		// A theme whose functions change what they give: invalidate() is how a component is told.
++		let mark = "a";
++		const changing = { ...defaultMarkdownTheme, heading: (text: string) => `${mark}:${text}` };
++		const component = new Markdown(source, 1, 0, changing);
++		const before = component.render(72).join("\n");
++		mark = "b";
++		component.invalidate();
++		const after = new Markdown(source, 1, 0, changing).render(72).join("\n");
++		assert.ok(before.includes("a:") && !before.includes("b:"));
++		assert.ok(after.includes("b:") && !after.includes("a:"));
++	});
++});
+diff --git a/packages/tui/test/markdown-render-memo.test.ts b/packages/tui/test/markdown-render-memo.test.ts
+new file mode 100644
+index 000000000..f7c66e66c
+--- /dev/null
++++ b/packages/tui/test/markdown-render-memo.test.ts
+@@ -0,0 +1,249 @@
++import assert from "node:assert";
++import { describe, it } from "node:test";
++import { Chalk } from "chalk";
++import {
++	lexMarkdownForTest,
++	Markdown,
++	type MarkdownTheme,
++	setMarkdownCachingForTest,
++	setMarkdownMemosForTest,
++} from "../src/components/markdown.ts";
++import { wrapTextWithAnsi } from "../src/utils.ts";
++import { defaultMarkdownTheme } from "./test-themes.ts";
++
++// A reply that streams in is lexed and rendered again for each chunk. Its Markdown component keeps the lines it wrapped the
++// time before, and the lexer keeps the inline tokens of the texts it lexed the time before (with the lexer's state before
++// and after each). What it renders must be what rendering from nothing gives (no caches, marked's own lexer), and what it
++// lexes must be what marked lexes.
++
++const chalk = new Chalk({ level: 3 });
++
++/** The default theme, with code highlighted into many colored spans per line as Pi's is. */
++const highlightingTheme: MarkdownTheme = {
++	...defaultMarkdownTheme,
++	highlightCode: (code) =>
++		code.split("\n").map((line) => line.replace(/\w+|[^\w\s]+/g, (word) => chalk.hex("#a0c0e0").bold(word))),
++};
++
++function random(seed: number): () => number {
++	let state = seed >>> 0 || 1;
++	return () => {
++		state = (Math.imul(state ^ (state >>> 15), 2246822507) + 0x9e3779b9) >>> 0;
++		return state / 4294967296;
++	};
++}
++
++// Pieces that change how the inline texts after them lex (a raw HTML <a> or <pre> left open, a link, link definitions),
++// texts that repeat (list items, table cells), and lines long enough to be wrapped.
++const PIECES = [
++	"- item {w}\n",
++	"- item {w} with [a link](https://example.com/{w}) and **bold**\n",
++	"  - nested {w}\n",
++	"1. one {w}\n",
++	"2. two\n",
++	"lazy {w}\n",
++	"Text {w} with **bold**, *it*, `code`, ~~del~~ and [a link](https://example.com/{w}).\n",
++	"A long line of text {w} that has to be wrapped at the narrower widths this test renders the reply at, twice over.\n",
++	"\n",
++	"\n\n",
++	"```ts\nconst {w} = 1; // a comment that is long enough to be wrapped at a narrow width\nlet b = `x`;\n```\n",
++	"```\nunclosed {w}\n",
++	"> quote {w} with a [link](https://example.com)\n",
++	"| a | b |\n",
++	"|---|:-:|\n",
++	"| {w} | [x](https://x.y) |\n",
++	"| same | cell |\n",
++	"# Heading {w}\n",
++	"Setext {w}\n",
++	"===\n",
++	'<a href="https://example.com">open link {w} ',
++	"</a> closed\n",
++	"<pre>raw {w} ",
++	"</pre>\n",
++	"<b>bold {w}</b> inline html\n",
++	"[ref {w}]\n",
++	"[ref 1] and [ref 2][ref 1] again\n",
++	"[ref 1]: https://example.com/one\n",
++	'[ref 2]: https://example.com/two "Two"\n',
++	"![image {w}](https://example.com/i.png)\n",
++	"[outer [inner](https://a.b) text](https://c.d)\n",
++	"*[emphasized link](https://e.f)* and https://auto.link/{w}\n",
++	"- [ ] task {w}\n",
++	"- [x] done {w}\n\n",
++	"$x^{w}$ and \\(y\\)\n",
++	"trailing spaces  \n",
++	"日本語のテキスト {w} 😀 naïve\n",
++];
++
++function randomDocument(next: () => number): string {
++	let text = "";
++	const pieces = 8 + Math.floor(next() * 30);
++	for (let i = 0; i < pieces; i++) {
++		text += PIECES[Math.floor(next() * PIECES.length)]!.replaceAll("{w}", String(Math.floor(next() * 50)));
++	}
++	return text;
++}
++
++/** What `source` renders to and lexes to with nothing kept: no caches, marked's own lexer. */
++function fresh(source: string, width: number, theme: MarkdownTheme) {
++	setMarkdownCachingForTest(false);
++	try {
++		return {
++			lines: new Markdown(source, 1, 0, theme).render(width),
++			tokens: JSON.stringify(lexMarkdownForTest(source)),
++		};
++	} finally {
++		setMarkdownCachingForTest(true);
++	}
++}
++
++/**
++ * Streams `text` into one Markdown component in chunks of `sizes`, and returns what it renders to and the tokens it renders
++ * from after each chunk, then once complete.
++ */
++function streamedRenders(
++	text: string,
++	sizes: readonly number[],
++	widths: readonly number[],
++	theme: MarkdownTheme,
++): string[] {
++	const width = widths[0]!;
++	// Nothing lexed for an earlier render is taken up: the sources kept (lexMarkdown()) are pushed out by others.
++	for (let i = 0; i < 16; i++) new Markdown(`flush ${i} ${Math.random()}`, 1, 0, theme).render(width);
++	const component = new Markdown("", 1, 0, theme);
++	const renders: string[] = [];
++	let step = 0;
++	for (let length = 1; ; length = Math.min(text.length, length + sizes[step++ % sizes.length]!)) {
++		const source = text.slice(0, length);
++		component.setText(source);
++		renders.push(JSON.stringify(component.render(widths[step % widths.length]!)));
++		renders.push(JSON.stringify(lexMarkdownForTest(source)));
++		if (length >= text.length) break;
++	}
++	const complete = new Markdown(text, 1, 0, theme, undefined, { complete: true });
++	renders.push(JSON.stringify(complete.render(width)));
++	renders.push(JSON.stringify(lexMarkdownForTest(text, true)));
++	return renders;
++}
++
++/** What streaming `text` renders and lexes with the memos must be what it renders and lexes without them. */
++function streamAndCompare(
++	text: string,
++	sizes: readonly number[],
++	widths: readonly number[],
++	theme: MarkdownTheme,
++	label: string,
++): void {
++	setMarkdownMemosForTest(false);
++	let before: string[];
++	try {
++		before = streamedRenders(text, sizes, widths, theme);
++	} finally {
++		setMarkdownMemosForTest(true);
++	}
++	const after = streamedRenders(text, sizes, widths, theme);
++	assert.strictEqual(after.length, before.length, label);
++	for (let i = 0; i < before.length; i++) {
++		if (after[i] !== before[i]) {
++			const what = i % 2 === 0 ? "lines" : "tokens";
++			assert.deepStrictEqual(JSON.parse(after[i]!), JSON.parse(before[i]!), `${label}: ${what}, step ${i >> 1}`);
++		}
++	}
++}
++
++describe("Markdown wrap and inline memos", () => {
++	for (let seed = 1; seed <= 30; seed++) {
++		it(`random document ${seed}, streamed into one component`, () => {
++			const next = random(seed * 7919);
++			for (let index = 0; index < 8; index++) {
++				const text = randomDocument(next);
++				const width = [20, 47, 160][Math.floor(next() * 3)]!;
++				// (A third of the documents are drawn at another width every few chunks, as when the terminal is resized.)
++				const widths = next() < 0.33 ? [width, width, width, 33, 33, 90] : [width];
++				const theme = next() < 0.5 ? highlightingTheme : defaultMarkdownTheme;
++				const sizes = Array.from({ length: 64 }, () =>
++					next() < 0.3 ? 1 : 1 + Math.floor(next() * (next() < 0.5 ? 8 : 40)),
++				);
++				streamAndCompare(text, sizes, widths, theme, `seed ${seed}, document ${index}, widths ${widths.join(",")}`);
++			}
++		});
++	}
++
++	it("lexes the same texts in documents with and without link definitions", () => {
++		// The same inline texts, one after the other in documents whose link definitions differ: a text with a "[" is
++		// lexed again in a document with definitions, and what the last lex kept is not taken for it.
++		const texts = [
++			"See [ref 1] and [ref 2][ref 1].\n\n- [ref 1]\n- plain item\n",
++			"See [ref 1] and [ref 2][ref 1].\n\n- [ref 1]\n- plain item\n\n[ref 1]: https://example.com/one\n",
++			"See [ref 1] and [ref 2][ref 1].\n\n- [ref 1]\n- plain item\n",
++			"[ref 1]: https://example.com/one\n\nSee [ref 1] and [ref 2][ref 1].\n\n- [ref 1]\n- plain item\n",
++		];
++		for (const [index, text] of texts.entries()) {
++			for (const width of [30, 80]) {
++				const source = `${text}\n<!-- ${index} ${width} -->`;
++				assert.deepStrictEqual(
++					new Markdown(source, 1, 0, defaultMarkdownTheme).render(width),
++					fresh(source, width, defaultMarkdownTheme).lines,
++					`text ${index}, width ${width}`,
++				);
++				assert.strictEqual(
++					JSON.stringify(lexMarkdownForTest(source)),
++					fresh(source, width, defaultMarkdownTheme).tokens,
++				);
++			}
++		}
++	});
++
++	it("carries the lexer's state from one text to the next as marked does", () => {
++		// An <a> or <pre> left open changes how the texts after it lex (inLink: no autolinks; inRawBlock: escaped text), and
++		// a link sets linkEmitted: the same texts are lexed after each, and again, twice.
++		const tail = "\n\nhttps://example.com/x and *em*\n\n- https://example.org item\n- *same*\n";
++		for (const head of ['<a href="u">open', "<pre>open", "[a link](https://l.k)", "plain", "<a href='u'>x</a>"]) {
++			for (let round = 0; round < 2; round++) {
++				const source = `${head}${tail}<!-- ${round} -->`;
++				assert.strictEqual(
++					JSON.stringify(lexMarkdownForTest(source)),
++					fresh(source, 80, defaultMarkdownTheme).tokens,
++					head,
++				);
++			}
++		}
++	});
++
++	it("lexes as marked does with the memos off", () => {
++		setMarkdownMemosForTest(false);
++		try {
++			const source = "Text with *em* and [a](https://b.c)\n\n- one\n- two\n";
++			assert.strictEqual(JSON.stringify(lexMarkdownForTest(source)), fresh(source, 80, defaultMarkdownTheme).tokens);
++		} finally {
++			setMarkdownMemosForTest(true);
++		}
++	});
++
++	it("wraps a line of its own as the line followed by a line break", () => {
++		// wrapTextWithAnsi() wraps a text without line breaks without splitting it into lines: what it gives is what it
++		// gives for the same line followed by another.
++		const next = random(5);
++		const styles = [
++			(text: string) => chalk.bold(text),
++			(text: string) => chalk.red.underline(text),
++			(text: string) => chalk.bgBlue(text),
++			(text: string) => `\x1b]8;;https://x.y\x07${text}\x1b]8;;\x07`,
++			(text: string) => text,
++		];
++		const words = ["a", "word", "longer-word", "日本語", "😀", "  ", "supercalifragilisticexpialidocious", "\t"];
++		for (let i = 0; i < 2000; i++) {
++			let line = "";
++			const count = Math.floor(next() * 30);
++			for (let w = 0; w < count; w++) {
++				const word = words[Math.floor(next() * words.length)]!;
++				line += `${styles[Math.floor(next() * styles.length)]!(word)} `;
++			}
++			const width = 1 + Math.floor(next() * 60);
++			const single = wrapTextWithAnsi(line, width);
++			const withBreak = wrapTextWithAnsi(`${line}\n`, width);
++			assert.deepStrictEqual(single, withBreak.slice(0, single.length), JSON.stringify({ line, width }));
++			assert.strictEqual(withBreak.length, single.length + 1);
++		}
++	});
++});
+diff --git a/packages/tui/test/render-memo.test.ts b/packages/tui/test/render-memo.test.ts
+new file mode 100644
+index 000000000..8fe661a30
+--- /dev/null
++++ b/packages/tui/test/render-memo.test.ts
+@@ -0,0 +1,294 @@
++import assert from "node:assert";
++import { describe, it } from "node:test";
++import { Box } from "../src/components/box.ts";
++import { MouseRegion } from "../src/components/mouse-region.ts";
++import { Spacer } from "../src/components/spacer.ts";
++import { Text } from "../src/components/text.ts";
++import {
++	type Component,
++	Container,
++	isStableRender,
++	markStableRender,
++	renderSharedLines,
++	type TuiMouseEvent,
++	type TuiMouseEventResult,
++} from "../src/tui.ts";
++
++/** A component that returns new arrays (not declared stable). */
++class Lines implements Component {
++	lines: string[];
++	constructor(...lines: string[]) {
++		this.lines = lines;
++	}
++	render(): string[] {
++		return [...this.lines];
++	}
++	invalidate(): void {}
++}
++
++/** An extension-style component that keeps one array and modifies it in place. */
++class InPlace implements Component {
++	private readonly lines: string[] = [];
++	text = "a";
++	count = 1;
++	render(): string[] {
++		this.lines.length = 0;
++		for (let i = 0; i < this.count; i++) this.lines.push(`${this.text}${i}`);
++		return this.lines;
++	}
++	invalidate(): void {}
++}
++
++/** Declared stable, and keeps that promise: a new array whenever its lines change. */
++class Stable implements Component {
++	private lines: string[];
++	constructor(...lines: string[]) {
++		this.lines = lines;
++	}
++	set(...lines: string[]): void {
++		this.lines = lines;
++	}
++	render(): string[] {
++		return this.lines;
++	}
++	invalidate(): void {}
++}
++markStableRender(Stable);
++
++class Clickable implements Component {
++	clicks: number[] = [];
++	private readonly lines: string[];
++	constructor(...lines: string[]) {
++		this.lines = lines;
++	}
++	render(): string[] {
++		return this.lines;
++	}
++	handleMouse(event: TuiMouseEvent): TuiMouseEventResult {
++		this.clicks.push(event.y);
++		return { handled: true };
++	}
++	invalidate(): void {}
++}
++
++function mouse(y: number, width = 20, height = 100): TuiMouseEvent {
++	return {
++		type: "click",
++		button: "left",
++		x: 0,
++		y,
++		screenX: 0,
++		screenY: y,
++		width,
++		height,
++		shift: false,
++		alt: false,
++		ctrl: false,
++	};
++}
++
++/** What a container of these children renders to, from nothing. */
++function fresh(children: Component[], width = 20): string[] {
++	const container = new Container();
++	for (const child of children) container.addChild(child);
++	return container.render(width);
++}
++
++describe("Container keeps its lines", () => {
++	it("renders the same lines twice, sharing them only through renderShared()", () => {
++		const container = new Container();
++		container.addChild(new Text("hello", 0, 0));
++		container.addChild(new Spacer(1));
++		container.addChild(new Lines("x", "y"));
++		const first = container.renderShared(20);
++		const second = container.renderShared(20);
++		assert.strictEqual(second, first, "unchanged children: the same array");
++		const copy = container.render(20);
++		assert.notStrictEqual(copy, first, "render() returns a copy");
++		assert.deepStrictEqual(copy, first);
++		copy.push("modified by a caller");
++		assert.deepStrictEqual(container.render(20), first, "a caller modifying render()'s array changes nothing");
++		assert.ok(isStableRender(container));
++		assert.strictEqual(renderSharedLines(container, 20), first);
++	});
++
++	it("adds and removes children at the start, middle and end", () => {
++		const a = new Text("a", 0, 0);
++		const b = new Lines("b1", "b2");
++		const c = new Stable("c");
++		const d = new Spacer(2);
++		const container = new Container();
++		for (const child of [a, b, c]) container.addChild(child);
++		container.renderShared(20);
++
++		container.children.splice(1, 0, d);
++		assert.deepStrictEqual(container.render(20), fresh([a, d, b, c]));
++		container.addChild(new Text("end", 0, 0));
++		assert.deepStrictEqual(container.render(20), fresh([a, d, b, c, new Text("end", 0, 0)]));
++		container.removeChild(d);
++		assert.deepStrictEqual(container.render(20), fresh([a, b, c, new Text("end", 0, 0)]));
++		container.children.pop();
++		assert.deepStrictEqual(container.render(20), fresh([a, b, c]));
++		container.children.shift();
++		assert.deepStrictEqual(container.render(20), fresh([b, c]));
++		container.children = [c, b];
++		assert.deepStrictEqual(container.render(20), fresh([c, b]));
++		container.clear();
++		assert.deepStrictEqual(container.render(20), []);
++	});
++
++	it("sees a changed child in the middle and keeps the lines before it", () => {
++		const before = new Text("before", 0, 0);
++		const middle = new Stable("m1");
++		const after = new Lines("after");
++		const container = new Container();
++		for (const child of [before, middle, after]) container.addChild(child);
++		const first = container.renderShared(20);
++		middle.set("m1", "m2");
++		const second = container.renderShared(20);
++		assert.notStrictEqual(second, first);
++		assert.deepStrictEqual(second, fresh([before, middle, after]));
++		assert.strictEqual(second[0], first[0]);
++	});
++
++	it("renders an extension component that modifies its array in place", () => {
++		const component = new InPlace();
++		const container = new Container();
++		container.addChild(new Text("top", 0, 0));
++		container.addChild(component);
++		container.addChild(new Text("bottom", 0, 0));
++		const outer = new Container();
++		outer.addChild(container);
++		assert.deepStrictEqual(outer.render(20), ["top".padEnd(20), "a0", "bottom".padEnd(20)]);
++		component.text = "b";
++		assert.deepStrictEqual(outer.render(20)[1], "b0");
++		component.count = 3;
++		assert.deepStrictEqual(outer.render(20).slice(1, 4), ["b0", "b1", "b2"]);
++		component.count = 0;
++		assert.strictEqual(outer.render(20).length, 2);
++		assert.ok(!isStableRender(component));
++	});
++
++	it("does not trust a subclass of a stable component that overrides render()", () => {
++		class Mutating extends Text {
++			private readonly kept: string[] = [];
++			label = "one";
++			override render(): string[] {
++				this.kept.length = 0;
++				this.kept.push(this.label);
++				return this.kept;
++			}
++		}
++		const component = new Mutating();
++		assert.ok(isStableRender(new Text("x")));
++		assert.ok(!isStableRender(component));
++		const container = new Container();
++		container.addChild(component);
++		assert.deepStrictEqual(container.render(10), ["one"]);
++		component.label = "two";
++		assert.deepStrictEqual(container.render(10), ["two"]);
++	});
++
++	it("re-renders at a new width", () => {
++		const container = new Container();
++		container.addChild(new Text("one two three four", 0, 0));
++		const wide = container.render(40);
++		const narrow = container.render(8);
++		assert.notDeepStrictEqual(narrow, wide);
++		assert.deepStrictEqual(container.render(8), fresh([new Text("one two three four", 0, 0)], 8));
++		assert.deepStrictEqual(container.render(40), wide);
++	});
++
++	it("hit-tests children at the heights last drawn, after children change", () => {
++		const first = new Clickable("1a", "1b");
++		const second = new Clickable("2a");
++		const container = new Container();
++		container.addChild(first);
++		container.addChild(second);
++		container.render(20);
++		container.handleMouse(mouse(2));
++		assert.deepStrictEqual(second.clicks, [0]);
++
++		const inserted = new Clickable("ia", "ib", "ic");
++		container.children.splice(1, 0, inserted);
++		container.render(20);
++		container.handleMouse(mouse(2));
++		container.handleMouse(mouse(5));
++		assert.deepStrictEqual(inserted.clicks, [0]);
++		assert.deepStrictEqual(second.clicks, [0, 0]);
++
++		container.removeChild(first);
++		container.render(20);
++		container.handleMouse(mouse(0));
++		assert.deepStrictEqual(inserted.clicks, [0, 0]);
++	});
++});
++
++describe("Box keeps its lines", () => {
++	it("returns the same array while its children are unchanged, and pads changes", () => {
++		const text = new Text("hello", 0, 0);
++		const box = new Box(1, 1, (line) => `<${line}>`);
++		box.addChild(text);
++		box.addChild(new Lines("x"));
++		const first = box.render(12);
++		assert.strictEqual(box.render(12), first);
++		text.setText("changed");
++		const second = box.render(12);
++		assert.notStrictEqual(second, first);
++		const expected = new Box(1, 1, (line) => `<${line}>`);
++		expected.addChild(new Text("changed", 0, 0));
++		expected.addChild(new Lines("x"));
++		assert.deepStrictEqual(second, expected.render(12));
++		assert.ok(isStableRender(box));
++	});
++
++	it("follows an in-place change of an extension child and a new background", () => {
++		const child = new InPlace();
++		const box = new Box(0, 0);
++		box.addChild(child);
++		assert.deepStrictEqual(box.render(4), ["a0  "]);
++		child.text = "z";
++		assert.deepStrictEqual(box.render(4), ["z0  "]);
++		box.setBgFn((line) => `[${line}]`);
++		assert.deepStrictEqual(box.render(4), ["[z0  ]"]);
++	});
++
++	it("hit-tests children after they change", () => {
++		const first = new Clickable("1");
++		const second = new Clickable("2");
++		const box = new Box(0, 0);
++		box.addChild(first);
++		box.addChild(second);
++		box.render(10);
++		box.handleMouse(mouse(1, 10));
++		assert.deepStrictEqual(second.clicks, [0]);
++		box.removeChild(first);
++		box.render(10);
++		box.handleMouse(mouse(0, 10));
++		assert.deepStrictEqual(second.clicks, [0, 0]);
++	});
++});
++
++describe("Spacer and MouseRegion keep their lines", () => {
++	it("Spacer returns the same array until its line count changes", () => {
++		const spacer = new Spacer(2);
++		const lines = spacer.render(10);
++		assert.deepStrictEqual(lines, ["", ""]);
++		assert.strictEqual(spacer.render(30), lines);
++		spacer.setLines(3);
++		assert.deepStrictEqual(spacer.render(10), ["", "", ""]);
++	});
++
++	it("MouseRegion passes a stable child's lines through and copies an extension child's", () => {
++		const text = new Text("hi", 0, 0);
++		const region = new MouseRegion(text, () => undefined);
++		assert.strictEqual(region.render(5), text.render(5));
++		const child = new InPlace();
++		const extensionRegion = new MouseRegion(child, () => undefined);
++		const first = extensionRegion.render(5);
++		assert.strictEqual(extensionRegion.render(5), first, "same lines: the same copy");
++		child.text = "q";
++		assert.deepStrictEqual(extensionRegion.render(5), ["q0"]);
++		assert.deepStrictEqual(first, ["a0"], "the earlier copy is not modified");
++	});
++});

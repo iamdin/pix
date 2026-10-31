@@ -1,0 +1,7 @@
+.work/
+.cache/
+dist/
+pitch-dist/
+bin/
+internal/pitch/runtime-data/
+dist-release/

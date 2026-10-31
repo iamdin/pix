@@ -1,0 +1,114 @@
+{"build":"all-new","scenario":"startup","round":-1,"ok":true,"wall_s":0.0192,"cpu_s":0.016,"peak_rss_mb":41.7}
+{"build":"md-new","scenario":"startup","round":-1,"ok":true,"wall_s":0.0903,"cpu_s":0.0358,"peak_rss_mb":41.7}
+{"build":"all-old","scenario":"startup","round":-1,"ok":true,"wall_s":0.0875,"cpu_s":0.0357,"peak_rss_mb":41.7}
+{"build":"md-old","scenario":"startup","round":-1,"ok":true,"wall_s":0.1157,"cpu_s":0.0358,"peak_rss_mb":41.6}
+{"build":"all-new","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":0.319,"cpu_s":0.18,"rss_mb":106.1}
+{"build":"md-new","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":15.736,"cpu_s":15.67,"rss_mb":301.8}
+{"build":"all-old","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":0.289,"cpu_s":0.17,"rss_mb":105.1}
+{"build":"md-old","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":15.757,"cpu_s":15.66,"rss_mb":288.3}
+{"build":"all-new","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.284,"cpu_s":1.43,"rss_mb":94.5}
+{"build":"md-new","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.244,"cpu_s":3.28,"rss_mb":126.5}
+{"build":"all-old","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.285,"cpu_s":1.52,"rss_mb":93.6}
+{"build":"md-old","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.256,"cpu_s":3.55,"rss_mb":122.5}
+{"build":"all-new","scenario":"md:60000","round":-1,"ok":true,"wall_s":52.181,"cpu_s":4.76,"rss_mb":154.6}
+{"build":"md-new","scenario":"md:60000","round":-1,"ok":true,"wall_s":51.584,"cpu_s":15.77,"rss_mb":232.9}
+{"build":"all-old","scenario":"md:60000","round":-1,"ok":true,"wall_s":52.235,"cpu_s":4.66,"rss_mb":137.8}
+{"build":"md-old","scenario":"md:60000","round":-1,"ok":true,"wall_s":51.601,"cpu_s":15.48,"rss_mb":156.2}
+{"build":"md-old","scenario":"startup","round":0,"ok":true,"wall_s":0.0284,"cpu_s":0.0238,"peak_rss_mb":41.6}
+{"build":"all-old","scenario":"startup","round":0,"ok":true,"wall_s":0.0201,"cpu_s":0.0178,"peak_rss_mb":41.7}
+{"build":"md-new","scenario":"startup","round":0,"ok":true,"wall_s":0.0193,"cpu_s":0.0163,"peak_rss_mb":41.7}
+{"build":"all-new","scenario":"startup","round":0,"ok":true,"wall_s":0.0204,"cpu_s":0.0173,"peak_rss_mb":41.7}
+{"build":"md-old","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":15.253,"cpu_s":15.2,"rss_mb":303.9}
+{"build":"all-old","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":0.297,"cpu_s":0.18,"rss_mb":106.4}
+{"build":"md-new","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":15.352,"cpu_s":15.29,"rss_mb":299.6}
+{"build":"all-new","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":0.296,"cpu_s":0.18,"rss_mb":104.4}
+{"build":"md-old","scenario":"md:20000","round":0,"ok":true,"wall_s":17.565,"cpu_s":3.65,"rss_mb":121.5}
+{"build":"all-old","scenario":"md:20000","round":0,"ok":true,"wall_s":17.61,"cpu_s":1.53,"rss_mb":92.6}
+{"build":"md-new","scenario":"md:20000","round":0,"ok":true,"wall_s":17.593,"cpu_s":3.38,"rss_mb":127.1}
+{"build":"all-new","scenario":"md:20000","round":0,"ok":true,"wall_s":17.621,"cpu_s":1.49,"rss_mb":95.6}
+{"build":"md-old","scenario":"md:60000","round":0,"ok":true,"wall_s":52.698,"cpu_s":16.98,"rss_mb":157.8}
+{"build":"all-old","scenario":"md:60000","round":0,"ok":true,"wall_s":52.994,"cpu_s":4.69,"rss_mb":133.1}
+{"build":"md-new","scenario":"md:60000","round":0,"ok":true,"wall_s":52.708,"cpu_s":16.78,"rss_mb":230.9}
+{"build":"all-new","scenario":"md:60000","round":0,"ok":true,"wall_s":53.087,"cpu_s":4.75,"rss_mb":156.9}
+{"build":"all-new","scenario":"startup","round":1,"ok":true,"wall_s":0.0323,"cpu_s":0.0268,"peak_rss_mb":41.7}
+{"build":"md-new","scenario":"startup","round":1,"ok":true,"wall_s":0.0217,"cpu_s":0.0186,"peak_rss_mb":41.7}
+{"build":"all-old","scenario":"startup","round":1,"ok":true,"wall_s":0.0194,"cpu_s":0.0172,"peak_rss_mb":41.7}
+{"build":"md-old","scenario":"startup","round":1,"ok":true,"wall_s":0.0202,"cpu_s":0.017,"peak_rss_mb":41.6}
+{"build":"all-new","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":0.301,"cpu_s":0.17,"rss_mb":104.7}
+{"build":"md-new","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":15.169,"cpu_s":15.11,"rss_mb":299.1}
+{"build":"all-old","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":0.295,"cpu_s":0.18,"rss_mb":106.8}
+{"build":"md-old","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":15.32,"cpu_s":15.27,"rss_mb":337.3}
+{"build":"all-new","scenario":"md:20000","round":1,"ok":true,"wall_s":17.619,"cpu_s":1.48,"rss_mb":94.4}
+{"build":"md-new","scenario":"md:20000","round":1,"ok":true,"wall_s":17.591,"cpu_s":3.57,"rss_mb":127.1}
+{"build":"all-old","scenario":"md:20000","round":1,"ok":true,"wall_s":17.632,"cpu_s":1.5,"rss_mb":91.6}
+{"build":"md-old","scenario":"md:20000","round":1,"ok":true,"wall_s":17.586,"cpu_s":3.7,"rss_mb":123.2}
+{"build":"all-new","scenario":"md:60000","round":1,"ok":true,"wall_s":53.044,"cpu_s":4.7,"rss_mb":170.3}
+{"build":"md-new","scenario":"md:60000","round":1,"ok":true,"wall_s":52.729,"cpu_s":16.46,"rss_mb":225.2}
+{"build":"all-old","scenario":"md:60000","round":1,"ok":true,"wall_s":53.1,"cpu_s":4.8,"rss_mb":124.4}
+{"build":"md-old","scenario":"md:60000","round":1,"ok":true,"wall_s":52.718,"cpu_s":16.62,"rss_mb":164.7}
+{"build":"md-old","scenario":"startup","round":2,"ok":true,"wall_s":0.0269,"cpu_s":0.0223,"peak_rss_mb":41.6}
+{"build":"all-old","scenario":"startup","round":2,"ok":true,"wall_s":0.0203,"cpu_s":0.0179,"peak_rss_mb":41.7}
+{"build":"md-new","scenario":"startup","round":2,"ok":true,"wall_s":0.0201,"cpu_s":0.0173,"peak_rss_mb":41.7}
+{"build":"all-new","scenario":"startup","round":2,"ok":true,"wall_s":0.0208,"cpu_s":0.0172,"peak_rss_mb":41.7}
+{"build":"md-old","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":15.228,"cpu_s":15.15,"rss_mb":318.8}
+{"build":"all-old","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":0.298,"cpu_s":0.18,"rss_mb":103.5}
+{"build":"md-new","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":15.713,"cpu_s":15.64,"rss_mb":318.3}
+{"build":"all-new","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":0.3,"cpu_s":0.18,"rss_mb":105.5}
+{"build":"md-old","scenario":"md:20000","round":2,"ok":true,"wall_s":17.595,"cpu_s":3.6,"rss_mb":117.6}
+{"build":"all-old","scenario":"md:20000","round":2,"ok":true,"wall_s":17.62,"cpu_s":1.47,"rss_mb":90.3}
+{"build":"md-new","scenario":"md:20000","round":2,"ok":true,"wall_s":17.583,"cpu_s":3.51,"rss_mb":127.3}
+{"build":"all-new","scenario":"md:20000","round":2,"ok":true,"wall_s":17.607,"cpu_s":1.44,"rss_mb":95.7}
+{"build":"md-old","scenario":"md:60000","round":2,"ok":true,"wall_s":52.744,"cpu_s":16.16,"rss_mb":162.9}
+{"build":"all-old","scenario":"md:60000","round":2,"ok":true,"wall_s":53.147,"cpu_s":4.81,"rss_mb":123.6}
+{"build":"md-new","scenario":"md:60000","round":2,"ok":true,"wall_s":52.666,"cpu_s":16.64,"rss_mb":220.9}
+{"build":"all-new","scenario":"md:60000","round":2,"ok":true,"wall_s":53.083,"cpu_s":4.82,"rss_mb":151.5}
+
+scenario     build        metric           median                min–max  vs md-old  n
+startup      md-old       wall_s            0.027            0.020–0.028             3
+startup      all-old      wall_s            0.020            0.019–0.020     -25.3%  3
+startup      md-new       wall_s            0.020            0.019–0.022     -25.3%  3
+startup      all-new      wall_s            0.021            0.020–0.032     -22.7%  3
+startup      md-old       cpu_s             0.022            0.017–0.024             3
+startup      all-old      cpu_s             0.018            0.017–0.018     -20.2%  3
+startup      md-new       cpu_s             0.017            0.016–0.019     -22.4%  3
+startup      all-new      cpu_s             0.017            0.017–0.027     -22.4%  3
+startup      md-old       peak_rss_mb      41.600          41.600–41.600             3
+startup      all-old      peak_rss_mb      41.700          41.700–41.700       0.2%  3
+startup      md-new       peak_rss_mb      41.700          41.700–41.700       0.2%  3
+startup      all-new      peak_rss_mb      41.700          41.700–41.700       0.2%  3
+tuiwrite:200 md-old       wall_s           15.253          15.228–15.320             3
+tuiwrite:200 all-old      wall_s            0.297            0.295–0.298     -98.1%  3
+tuiwrite:200 md-new       wall_s           15.352          15.169–15.713       0.6%  3
+tuiwrite:200 all-new      wall_s            0.300            0.296–0.301     -98.0%  3
+tuiwrite:200 md-old       cpu_s            15.200          15.150–15.270             3
+tuiwrite:200 all-old      cpu_s             0.180            0.180–0.180     -98.8%  3
+tuiwrite:200 md-new       cpu_s            15.290          15.110–15.640       0.6%  3
+tuiwrite:200 all-new      cpu_s             0.180            0.170–0.180     -98.8%  3
+tuiwrite:200 md-old       rss_mb          318.800        303.900–337.300             3
+tuiwrite:200 all-old      rss_mb          106.400        103.500–106.800     -66.6%  3
+tuiwrite:200 md-new       rss_mb          299.600        299.100–318.300      -6.0%  3
+tuiwrite:200 all-new      rss_mb          104.700        104.400–105.500     -67.2%  3
+md:20000     md-old       wall_s           17.586          17.565–17.595             3
+md:20000     all-old      wall_s           17.620          17.610–17.632       0.2%  3
+md:20000     md-new       wall_s           17.591          17.583–17.593       0.0%  3
+md:20000     all-new      wall_s           17.619          17.607–17.621       0.2%  3
+md:20000     md-old       cpu_s             3.650            3.600–3.700             3
+md:20000     all-old      cpu_s             1.500            1.470–1.530     -58.9%  3
+md:20000     md-new       cpu_s             3.510            3.380–3.570      -3.8%  3
+md:20000     all-new      cpu_s             1.480            1.440–1.490     -59.5%  3
+md:20000     md-old       rss_mb          121.500        117.600–123.200             3
+md:20000     all-old      rss_mb           91.600          90.300–92.600     -24.6%  3
+md:20000     md-new       rss_mb          127.100        127.100–127.300       4.6%  3
+md:20000     all-new      rss_mb           95.600          94.400–95.700     -21.3%  3
+md:60000     md-old       wall_s           52.718          52.698–52.744             3
+md:60000     all-old      wall_s           53.100          52.994–53.147       0.7%  3
+md:60000     md-new       wall_s           52.708          52.666–52.729      -0.0%  3
+md:60000     all-new      wall_s           53.083          53.044–53.087       0.7%  3
+md:60000     md-old       cpu_s            16.620          16.160–16.980             3
+md:60000     all-old      cpu_s             4.800            4.690–4.810     -71.1%  3
+md:60000     md-new       cpu_s            16.640          16.460–16.780       0.1%  3
+md:60000     all-new      cpu_s             4.750            4.700–4.820     -71.4%  3
+md:60000     md-old       rss_mb          162.900        157.800–164.700             3
+md:60000     all-old      rss_mb          124.400        123.600–133.100     -23.6%  3
+md:60000     md-new       rss_mb          225.200        220.900–230.900      38.2%  3
+md:60000     all-new      rss_mb          156.900        151.500–170.300      -3.7%  3

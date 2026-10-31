@@ -1,0 +1,21 @@
+
+scenario     build        metric           median                min–max    vs base  n
+startup      base         wall_s            0.149            0.129–0.155             5
+startup      001          wall_s            0.131            0.129–0.159     -12.5%  5
+startup      base         cpu_s             0.343            0.313–0.348             5
+startup      001          cpu_s             0.315            0.292–0.359      -8.1%  5
+startup      base         peak_rss_mb      85.300          84.700–85.700             5
+startup      001          peak_rss_mb      85.700          85.300–87.000       0.5%  5
+write:50     base         wall_s            0.903            0.887–0.919             5
+write:50     001          wall_s            0.889            0.886–0.902      -1.5%  5
+write:50     base         cpu_s             1.475            1.456–1.506             5
+write:50     001          cpu_s             1.448            1.414–1.484      -1.8%  5
+write:50     base         peak_rss_mb     219.900        214.300–225.300             5
+write:50     001          peak_rss_mb     216.900        211.500–222.700      -1.4%  5
+md:20000     base         wall_s           17.674          17.612–17.680             5
+md:20000     001          wall_s           17.667          17.648–17.680      -0.0%  5
+md:20000     base         cpu_s             8.320            8.090–8.430             5
+md:20000     001          cpu_s             5.470            5.230–5.580     -34.3%  5
+md:20000     base         rss_mb          306.800        270.300–309.900             5
+md:20000     001          rss_mb          217.600        213.400–230.600     -29.1%  5
+GATE: PASS
