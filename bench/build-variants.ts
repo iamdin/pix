@@ -4,7 +4,7 @@
  *   bun bench/build-variants.ts --repo /abs/pi --out /abs/dir base= md=streaming-markdown no-hl=all-highlight-cache
  *   bun bench/build-variants.ts --repo /abs/pi --out /abs/dir --combos
  *
- * A patch is a commit `perf(<name>): ...` between --tag and --branch on the fork (defaults v1.4.0 and patch-v1.4.0;
+ * A patch is a commit `perf(<name>): ...` between --tag and --branch on the fork (defaults v1.4.0 and pitch-v1.4.0;
  * the branch must be at the commit pinned in sources.lock.json). A variant keeps some patches: pitch builds the branch with the reverse diff of every
  * other patch passed as --patch. Each argument is variant=patches: a comma list of patch names, `all`, or
  * `all-name,...` (every patch but those). Empty = no patches. --combos builds every subset, named by its patches joined
@@ -20,7 +20,7 @@ const { values: args, positionals } = util.parseArgs({
 	options: {
 		repo: { type: "string" },
 		tag: { type: "string", default: "v1.4.0" },
-		branch: { type: "string", default: "patch-v1.4.0" },
+		branch: { type: "string", default: "pitch-v1.4.0" },
 		out: { type: "string" },
 		combos: { type: "boolean" },
 	},

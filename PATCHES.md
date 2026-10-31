@@ -2,7 +2,7 @@
 
 ## pitch 的补丁
 
-pitch 构建的 Pi 是它的 fork：[getpie-dev/pi](https://github.com/getpie-dev/pi) 的 `patch-<tag>` 分支，即上游发布 tag 加上每个补丁一个提交，按 commit 固定在 `internal/pitch/data/sources.lock.json`。每个 Pi 版本一个分支，旧分支保留不删，旧版 pitch 锁定的 commit 才一直能拉到。仓库里不维护补丁文件。
+pitch 构建的 Pi 是它的 fork：[getpie-dev/pi](https://github.com/getpie-dev/pi) 的 `pitch-<tag>` 分支，即上游发布 tag 加上每个补丁一个提交，按 commit 固定在 `internal/pitch/data/sources.lock.json`。仓库里不维护补丁文件。
 
 每个补丁是一种优化方法，说明在 `docs/pi-perf/<name>/SPEC.md`：方法、不变量、测试、性能关卡、何时放弃。SPEC 是权威，提交是它在某个 tag 上的实现。Pi 发新版时把分支 rebase 到新 tag，按 SPEC 逐个检查、跑测试和性能关卡，见 `.agents/skills/pi-perf-upgrade/SKILL.md`。
 
@@ -10,7 +10,7 @@ pitch 构建的 Pi 是它的 fork：[getpie-dev/pi](https://github.com/getpie-de
 
 ## 使用自己的补丁
 
-1. 基于 `getpie-dev/pi` 的 `patch-<tag>` 分支（`sources.lock.json` 里的 commit）制作补丁。
+1. 基于 `getpie-dev/pi` 的 `pitch-<tag>` 分支（`sources.lock.json` 里的 commit）制作补丁。
 2. 使用标准 Git diff，带 `a/`、`b/` 路径。包含新增文件时要让 Git 识别这些文件，例如对自己新增的文件执行 `git add -N path`。
 3. `pitch build --patch first.patch --patch second.patch --out NEW`；顺序就是应用顺序。带空格的路径使用 shell 引号。
 4. 这时 Pi 在本机准备，需要 Git、Node 24+ 和 npm；pitch 的补丁测试不再运行（你的补丁可能改到它们），自己的测试自行运行。
