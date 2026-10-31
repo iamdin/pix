@@ -186,7 +186,7 @@ func buildInstalled(ctx context.Context, name string, stdout io.Writer) error {
 	if err := in.prune(stdout); err != nil {
 		return err
 	}
-	fmt.Fprintln(stdout, "\nRun `pitch pi` to use it; everything after pi goes to Pi (`pitch pi -c`).")
+	fmt.Fprintln(stdout, "Done. Run `pitch pi`; everything after pi goes to Pi.")
 	if in.Name != "" {
 		if path, _ := exec.LookPath(in.Name); path != in.command() {
 			if err := addToPath(in, stdout); err != nil {
@@ -194,9 +194,6 @@ func buildInstalled(ctx context.Context, name string, stdout io.Writer) error {
 			}
 		}
 		fmt.Fprintf(stdout, "`%s` runs it too.\n", in.Name)
-	}
-	if in.Stock != "" {
-		fmt.Fprintf(stdout, "The original Pi stays at %s: `pitch off` makes `pitch pi` run it, `pitch on` switches back.\n", in.Stock)
 	}
 	return nil
 }
@@ -224,9 +221,9 @@ func addToPath(in *installation, stdout io.Writer) error {
 		return nil
 	}
 	if rc != "" && isTerminal(os.Stdin) {
-		fmt.Fprintf(stdout, "Put %s first on PATH in %s? [Y/n] ", dir, rc)
+		fmt.Fprintf(stdout, "Put %s first on PATH in %s? [y/N] ", dir, rc)
 		answer, _ := bufio.NewReader(os.Stdin).ReadString('\n')
-		if answer = strings.ToLower(strings.TrimSpace(answer)); answer == "" || strings.HasPrefix(answer, "y") {
+		if answer = strings.ToLower(strings.TrimSpace(answer)); strings.HasPrefix(answer, "y") {
 			f, err := os.OpenFile(rc, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
 				return err

@@ -123,8 +123,7 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 		return err
 	}
 	defer log.Close()
-	fmt.Fprintf(stdout, "Experimental official AOT.\nWork: %s\n", stage)
-	fmt.Fprintf(stdout, "Verify compiler %s and Pi %s\n", pins.Bun.Revision, pins.Pi.Tag)
+	fmt.Fprintf(stdout, "Building Pi %s, a few minutes (log: %s)\n", pins.Pi.Tag, filepath.Join(stage, "build.log"))
 	bun, err := getRuntime(r, opts.Cache, pins.Bun)
 	if err != nil {
 		return err
@@ -180,7 +179,6 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err = download(ctx, "https://pi.dev/api/models/revisions/"+pins.ModelCatalog+"?types=chat,image,classifier", catalogPath, strings.TrimPrefix(pins.ModelCatalog, "sha256-")); err != nil {
 		return err
 	}
-	fmt.Fprintln(stdout, "Install locked dependencies and build Pi offline")
 	for _, command := range [][]string{{"npm", "ci", "--ignore-scripts", "--no-audit", "--no-fund"}, {"node", "packages/ai/scripts/hydrate-model-catalog.ts", catalogPath}, {"npm", "run", "build:offline"}} {
 		if err = r.command(source, log, command[0], command[1:]...); err != nil {
 			return err
@@ -204,8 +202,12 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err != nil {
 		return err
 	}
-	for _, extension := range extensions {
-		fmt.Fprintf(stdout, "Compile and auto-load %s: %s\n", extension.Source, extension.Entry)
+	if len(extensions) > 0 {
+		names := make([]string, len(extensions))
+		for i, extension := range extensions {
+			names[i] = extension.Name
+		}
+		fmt.Fprintf(stdout, "Plugins: %s\n", strings.Join(names, ", "))
 	}
 	if err = os.MkdirAll(filepath.Dir(opts.Out), 0755); err != nil {
 		return err
@@ -248,7 +250,6 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 			args = append(args, "--asset="+asset)
 		}
 	}
-	fmt.Fprintln(stdout, "Compile Pi and selected extensions to machine code")
 	if err = r.command(source, log, bun, args...); err != nil {
 		return err
 	}
@@ -297,7 +298,6 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 			}
 		}
 	}
-	fmt.Fprintln(stdout, "Verify signature, version, help and isolated RPC startup")
 	if err = r.command("", log, "codesign", "--verify", "--strict", executable); err != nil {
 		return err
 	}
@@ -333,7 +333,6 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err = Verify(opts.Out); err != nil {
 		return err
 	}
-	fmt.Fprintf(stdout, "Built experimental Pi: %s\n", executable)
 	return nil
 }
 

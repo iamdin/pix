@@ -112,7 +112,11 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer) error
 		if *name != "" {
 			return fmt.Errorf("--name installs the build `pitch pi` runs; it does not go with --out")
 		}
-		return Build(ctx, opts, stdout)
+		if err := Build(ctx, opts, stdout); err != nil {
+			return err
+		}
+		fmt.Fprintf(stdout, "Built %s\n", filepath.Join(opts.Out, "pi"))
+		return nil
 	case "status", "off", "on", "uninstall":
 		if len(args) != 1 {
 			return fmt.Errorf("usage: pitch %s", args[0])
