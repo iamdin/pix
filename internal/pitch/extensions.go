@@ -54,8 +54,8 @@ func entrySource(pi string, extensions []Extension) string {
 	out.WriteString("if (['install','remove','uninstall','update'].includes(args[0] ?? '')) {\n console.error('This custom build does not manage installations: use your installed Pi, then rebuild with pitch.');\n process.exit(2);\n}\nsetupCli();\n")
 	// --no-extensions keeps Pi from loading the user's packages again from disk; it also drops Pi's built-in extensions
 	// (packages/coding-agent/src/extensions/index.ts), so load those back by name.
-	// Pi reads a subcommand (list, config, mcp) only as the first argument.
-	out.WriteString("await main(['list', 'config', 'mcp'].includes(args[0] ?? '') ? args : ['--no-extensions', ")
+	// Pi reads a subcommand (list, config, auth, mcp) only as the first argument.
+	out.WriteString("await main(['list', 'config', 'auth', 'mcp'].includes(args[0] ?? '') ? args : ['--no-extensions', ")
 	for _, name := range []string{"llama.cpp", "codemode", "tool-search", "mcp"} {
 		fmt.Fprintf(&out, "'-e', 'builtin:%s', ", name)
 	}

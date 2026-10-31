@@ -17,7 +17,7 @@ curl -fsSL "$base/$asset.sha256" -o "$tmp/pitch.sha256"
 
 mkdir -p "$dir"
 install -m 755 "$tmp/pitch" "$dir/pitch"
-echo "Installed pitch $("$dir/pitch" --version) to $dir/pitch"
+echo "Installed $("$dir/pitch" --version | head -n 1) to $dir/pitch"
 
 case ":$PATH:" in
 *":$dir:"*) ;;
@@ -26,4 +26,4 @@ esac
 for tool in git node npm; do
 	command -v "$tool" >/dev/null || echo "Note: pitch build needs $tool (Node 24+)"
 done
-echo "Next: pitch install (builds your Pi with its packages, a few minutes)"
+echo "Next: pitch build (builds your Pi with its packages, a few minutes), then pitch"

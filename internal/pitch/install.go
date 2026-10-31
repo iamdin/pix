@@ -12,21 +12,24 @@ import (
 	"reflect"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
-// An installation lives in ~/.pitch (PITCH_HOME):
+// `pitch build` without --out builds Pi with the user's packages into ~/.pitch (PITCH_HOME), and `pitch` runs it:
 //
-//	config.json         the command name and the original Pi it falls back to
-//	bin/<name>          the command: a shell script that runs current/pi or the original Pi
-//	versions/<id>/      builds; the newest two (and current) are kept for rollback
+//	config.json         the original Pi to fall back to, and the optional extra command name
+//	versions/<id>/      builds: the current one and the one before (sessions may still run it)
 //	current             symlink to the version in use
 //	off                 present while `pitch off` is in effect
+//	bin/<name>          optional command (for example `pi`) that runs `pitch run`
 type installation struct {
-	Home  string `json:"-"`
-	Name  string `json:"name"`
-	Stock string `json:"stock"`
+	Home string `json:"-"`
+	// Extra command for the build, if the user asked for one.
+	Name  string `json:"name,omitempty"`
+	Stock string `json:"stock,omitempty"`
 	// package.json of the original Pi, to compare its version with the build's.
 	StockPackage string `json:"stock_package,omitempty"`
 	// Shell startup file pitch added its PATH line to, if any.
@@ -37,6 +40,9 @@ type installation struct {
 var buildFunc = Build
 
 const pathMarker = "# added by pitch"
+
+// Pi's own commands that manage packages or Pi itself; the original Pi runs them.
+var manageCommands = []string{"install", "remove", "uninstall", "update", "config"}
 
 func pitchHome() (string, error) {
 	if home := os.Getenv("PITCH_HOME"); home != "" {
@@ -70,7 +76,13 @@ func loadInstallation() (*installation, error) {
 	return in, json.Unmarshal(data, in)
 }
 
-func (in *installation) installed() bool { return in.Name != "" }
+func requireInstalled() (*installation, error) {
+	in, err := loadInstallation()
+	if err == nil && in.current() == "" {
+		err = fmt.Errorf("no build yet; run `pitch build`")
+	}
+	return in, err
+}
 
 func (in *installation) command() string { return filepath.Join(in.Home, "bin", in.Name) }
 
@@ -82,7 +94,15 @@ func (in *installation) save() error {
 	return os.WriteFile(filepath.Join(in.Home, "config.json"), append(data, '\n'), 0644)
 }
 
-// findStock finds the original Pi: the first `pi` on PATH that is not pitch's command.
+func (in *installation) current() string {
+	target, _ := os.Readlink(filepath.Join(in.Home, "current"))
+	if target == "" {
+		return ""
+	}
+	return filepath.Base(target)
+}
+
+// findStock finds the original Pi: the first `pi` on PATH that is not pitch's command, and its package.json.
 func findStock(skip string) (string, string) {
 	for _, dir := range filepath.SplitList(os.Getenv("PATH")) {
 		path := filepath.Join(dir, "pi")
@@ -92,7 +112,7 @@ func findStock(skip string) (string, string) {
 		if info, err := os.Stat(path); err != nil || info.IsDir() || info.Mode().Perm()&0111 == 0 {
 			continue
 		}
-		// npm, Bun and Pi's own release keep package.json at most a few directories above the resolved entry.
+		// npm, Bun and Pi's own release keep package.json a few directories above the resolved entry.
 		pkg := ""
 		if real, err := filepath.EvalSymlinks(path); err == nil {
 			for up := filepath.Dir(real); pkg == "" && up != filepath.Dir(up); up = filepath.Dir(up) {
@@ -111,104 +131,28 @@ func isTerminal(f *os.File) bool {
 	return err == nil && info.Mode()&os.ModeCharDevice != 0
 }
 
-func ask(stdin *bufio.Reader, stdout io.Writer, question, fallback string) string {
-	fmt.Fprint(stdout, question)
-	line, _ := stdin.ReadString('\n')
-	if line = strings.TrimSpace(line); line != "" {
-		return line
-	}
-	return fallback
-}
-
 var validName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
 
-func install(ctx context.Context, name string, stdout io.Writer) error {
+// buildInstalled builds Pi with the packages in the user's Pi settings and makes it what `pitch` runs.
+func buildInstalled(ctx context.Context, name string, stdout io.Writer) error {
 	in, err := loadInstallation()
 	if err != nil {
 		return err
 	}
-	interactive := isTerminal(os.Stdin) && isTerminal(os.Stdout)
-	stdin := bufio.NewReader(os.Stdin)
-	if name == "" {
-		name = in.Name
-	}
-	if name == "" && interactive {
-		name = ask(stdin, stdout, "Command name for the pitch build [pi] (pi replaces your Pi; the original stays and `pitch off` switches back): ", "pi")
-	}
-	if name == "" {
-		name = "pi"
-	}
-	if !validName.MatchString(name) {
+	if name != "" && !validName.MatchString(name) {
 		return fmt.Errorf("invalid command name %q", name)
 	}
-	if in.installed() && name != in.Name {
+	if name != "" && in.Name != "" && name != in.Name {
 		if err := os.Remove(in.command()); err != nil && !os.IsNotExist(err) {
 			return err
 		}
 	}
-	in.Name = name
+	if name != "" {
+		in.Name = name
+	}
 	in.Stock, in.StockPackage = findStock(filepath.Join(in.Home, "bin"))
-	if in.Stock == "" {
-		return fmt.Errorf("Pi is not installed: pitch builds your Pi with its packages, so install Pi first (https://pi.dev)")
-	}
-	if err := deploy(ctx, in, stdout); err != nil {
+	if err := os.MkdirAll(filepath.Join(in.Home, "versions"), 0755); err != nil {
 		return err
-	}
-	if path, _ := exec.LookPath(name); path != in.command() {
-		if err := addToPath(in, stdin, stdout, interactive); err != nil {
-			return err
-		}
-	}
-	fmt.Fprintf(stdout, "\n`%s` now runs the pitch build. The original Pi stays at %s: `pitch off` switches to it, `pitch on` back.\n", name, in.Stock)
-	fmt.Fprintln(stdout, "`pitch update` rebuilds after Pi packages change; `pitch status` shows what is installed.")
-	return nil
-}
-
-// addToPath puts ~/.pitch/bin first on PATH, in the shell startup file if the user agrees.
-func addToPath(in *installation, stdin *bufio.Reader, stdout io.Writer, interactive bool) error {
-	dir := filepath.Join(in.Home, "bin")
-	line := fmt.Sprintf("export PATH=\"%s:$PATH\" %s", dir, pathMarker)
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return err
-	}
-	rc := ""
-	switch filepath.Base(os.Getenv("SHELL")) {
-	case "zsh":
-		rc = filepath.Join(home, ".zshrc")
-	case "bash":
-		rc = filepath.Join(home, ".bash_profile")
-	case "fish":
-		rc = filepath.Join(home, ".config", "fish", "config.fish")
-		line = fmt.Sprintf("fish_add_path --prepend %q %s", dir, pathMarker)
-	}
-	if data, err := os.ReadFile(rc); err == nil && strings.Contains(string(data), pathMarker) {
-		fmt.Fprintf(stdout, "%s already puts %s first on PATH; open a new terminal.\n", rc, dir)
-		return nil
-	}
-	if rc != "" && interactive && strings.HasPrefix(strings.ToLower(ask(stdin, stdout, fmt.Sprintf("Put %s first on PATH in %s? [Y/n] ", dir, rc), "y")), "y") {
-		f, err := os.OpenFile(rc, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		if _, err := fmt.Fprintf(f, "\n%s\n", line); err != nil {
-			return err
-		}
-		in.RCFile = rc
-		fmt.Fprintf(stdout, "Added to %s; open a new terminal (or run: %s).\n", rc, strings.TrimSuffix(line, " "+pathMarker))
-		return in.save()
-	}
-	fmt.Fprintf(stdout, "Add this to your shell startup file to use the pitch build:\n  %s\n", strings.TrimSuffix(line, " "+pathMarker))
-	return nil
-}
-
-// deploy builds a new version from the current Pi settings and switches to it.
-func deploy(ctx context.Context, in *installation, stdout io.Writer) error {
-	for _, dir := range []string{"bin", "versions"} {
-		if err := os.MkdirAll(filepath.Join(in.Home, dir), 0755); err != nil {
-			return err
-		}
 	}
 	opts := Options{Features: defaultFeatures, Out: filepath.Join(in.Home, "versions", time.Now().Format("20060102-150405.000"))}
 	cache, err := os.UserCacheDir()
@@ -231,13 +175,73 @@ func deploy(ctx context.Context, in *installation, stdout io.Writer) error {
 	if err := in.switchTo(filepath.Base(opts.Out)); err != nil {
 		return err
 	}
-	if err := writeCommand(in); err != nil {
-		return err
+	if in.Name != "" {
+		if err := writeCommand(in); err != nil {
+			return err
+		}
 	}
 	if err := in.save(); err != nil {
 		return err
 	}
-	return in.prune(stdout)
+	if err := in.prune(stdout); err != nil {
+		return err
+	}
+	fmt.Fprintln(stdout, "\nRun `pitch` to use it (with Pi's options: `pitch -c`, `pitch run <args>`).")
+	if in.Name != "" {
+		if path, _ := exec.LookPath(in.Name); path != in.command() {
+			if err := addToPath(in, stdout); err != nil {
+				return err
+			}
+		}
+		fmt.Fprintf(stdout, "`%s` runs it too.\n", in.Name)
+	}
+	if in.Stock != "" {
+		fmt.Fprintf(stdout, "The original Pi stays at %s: `pitch off` makes `pitch` run it, `pitch on` switches back.\n", in.Stock)
+	}
+	return nil
+}
+
+// addToPath puts ~/.pitch/bin first on PATH, in the shell startup file if the user agrees.
+func addToPath(in *installation, stdout io.Writer) error {
+	dir := filepath.Join(in.Home, "bin")
+	line := fmt.Sprintf("export PATH=\"%s:$PATH\" %s", dir, pathMarker)
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+	rc := ""
+	switch filepath.Base(os.Getenv("SHELL")) {
+	case "zsh":
+		rc = filepath.Join(home, ".zshrc")
+	case "bash":
+		rc = filepath.Join(home, ".bash_profile")
+	case "fish":
+		rc = filepath.Join(home, ".config", "fish", "config.fish")
+		line = fmt.Sprintf("fish_add_path --prepend %q %s", dir, pathMarker)
+	}
+	if data, err := os.ReadFile(rc); err == nil && strings.Contains(string(data), pathMarker) {
+		fmt.Fprintf(stdout, "%s already puts %s first on PATH; open a new terminal.\n", rc, dir)
+		return nil
+	}
+	if rc != "" && isTerminal(os.Stdin) {
+		fmt.Fprintf(stdout, "Put %s first on PATH in %s? [Y/n] ", dir, rc)
+		answer, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+		if answer = strings.ToLower(strings.TrimSpace(answer)); answer == "" || strings.HasPrefix(answer, "y") {
+			f, err := os.OpenFile(rc, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			if _, err := fmt.Fprintf(f, "\n%s\n", line); err != nil {
+				return err
+			}
+			in.RCFile = rc
+			fmt.Fprintf(stdout, "Added to %s; open a new terminal.\n", rc)
+			return in.save()
+		}
+	}
+	fmt.Fprintf(stdout, "Add this to your shell startup file:\n  %s\n", strings.TrimSuffix(line, " "+pathMarker))
+	return nil
 }
 
 // settingsPackages returns the packages declared in Pi settings, or nil without any.
@@ -273,12 +277,7 @@ func (in *installation) versions() ([]string, error) {
 	return ids, nil
 }
 
-func (in *installation) current() string {
-	target, _ := os.Readlink(filepath.Join(in.Home, "current"))
-	return filepath.Base(target)
-}
-
-// switchTo points current at a version, atomically, so running sessions and new launches never see a gap.
+// switchTo points current at a version, atomically.
 func (in *installation) switchTo(id string) error {
 	link := filepath.Join(in.Home, "current")
 	tmp := link + ".new"
@@ -289,33 +288,39 @@ func (in *installation) switchTo(id string) error {
 	return os.Rename(tmp, link)
 }
 
-// prune keeps the current version and the newest other one (for rollback), with their build work directories.
+// prune keeps the current version and the newest other one, which sessions started before the switch may still run,
+// and removes the rest with their build work directories.
 func (in *installation) prune(stdout io.Writer) error {
 	ids, err := in.versions()
 	if err != nil {
 		return err
 	}
 	current := in.current()
-	kept := 0
+	previous := false
 	for i := len(ids) - 1; i >= 0; i-- {
-		if ids[i] == current || kept < 1 {
-			if ids[i] != current {
-				kept++
-			}
+		if ids[i] == current {
 			continue
 		}
-		dir := filepath.Join(in.Home, "versions", ids[i])
-		if work := buildWork(dir); work != "" {
-			if err := os.RemoveAll(work); err != nil {
-				return err
-			}
+		if !previous {
+			previous = true
+			continue
 		}
-		if err := os.RemoveAll(dir); err != nil {
+		if err := removeVersion(filepath.Join(in.Home, "versions", ids[i])); err != nil {
 			return err
 		}
-		fmt.Fprintf(stdout, "Removed old version %s\n", ids[i])
+		fmt.Fprintf(stdout, "Removed old build %s\n", ids[i])
 	}
 	return nil
+}
+
+func removeVersion(dir string) error {
+	if manifest, err := readManifest(dir); err == nil && strings.HasPrefix(filepath.Base(manifest.Work), "build-") {
+		// Compiled extensions load files from the build's work directory in the pitch cache.
+		if err := os.RemoveAll(manifest.Work); err != nil {
+			return err
+		}
+	}
+	return os.RemoveAll(dir)
 }
 
 func readManifest(dir string) (Manifest, error) {
@@ -327,45 +332,21 @@ func readManifest(dir string) (Manifest, error) {
 	return manifest, err
 }
 
-// buildWork is the build's work directory in the pitch cache; compiled extensions load files from it.
-func buildWork(dir string) string {
-	manifest, err := readManifest(dir)
-	if err != nil || !strings.HasPrefix(filepath.Base(manifest.Work), "build-") {
-		return ""
-	}
-	return manifest.Work
-}
-
 func quote(s string) string { return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'" }
 
-// writeCommand writes the command that users run in place of Pi.
+// writeCommand writes the extra command, which runs `pitch run`.
 func writeCommand(in *installation) error {
-	script := `#!/bin/sh
-# Installed by pitch: runs the pitch build of Pi. ` + "`pitch off`" + ` (or PITCH_OFF=1) runs the original Pi instead.
-home=` + quote(in.Home) + `
-stock=` + quote(in.Stock) + `
-version() { sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' "$1" 2>/dev/null | head -n 1; }
-case "$1" in
-install|remove|uninstall|update|config)
-	# The original Pi manages packages and itself; the build picks the changes up when rebuilt.
-	"$stock" "$@"
-	status=$?
-	echo 'pitch: run ` + "`pitch update`" + ` to rebuild with this change.' >&2
-	exit $status
-	;;
-esac
-if [ -n "$PITCH_OFF" ] || [ -e "$home/off" ]; then
-	exec "$stock" "$@"
-fi
-built=$(version "$home/current/package.json")
-original=$(version ` + quote(in.StockPackage) + `)
-if [ -n "$original" ] && [ -n "$built" ] && [ "$original" != "$built" ] &&
-	[ "$(printf '%s\n%s\n' "$built" "$original" | sort -t. -k1,1n -k2,2n -k3,3n | tail -n 1)" = "$original" ]; then
-	echo "pitch: your Pi is $original and this pitch build is $built; running the original Pi until pitch supports $original." >&2
-	exec "$stock" "$@"
-fi
-exec "$home/current/pi" "$@"
-`
+	pitch, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	if pitch, err = filepath.EvalSymlinks(pitch); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(in.command()), 0755); err != nil {
+		return err
+	}
+	script := "#!/bin/sh\n# Installed by pitch: runs the pitch build of Pi (see `pitch status`).\nexec " + quote(pitch) + " run \"$@\"\n"
 	tmp := in.command() + ".new"
 	if err := os.WriteFile(tmp, []byte(script), 0755); err != nil {
 		return err
@@ -373,46 +354,78 @@ exec "$home/current/pi" "$@"
 	return os.Rename(tmp, in.command())
 }
 
-func requireInstalled() (*installation, error) {
-	in, err := loadInstallation()
-	if err == nil && !in.installed() {
-		err = fmt.Errorf("pitch is not installed; run `pitch install`")
+func packageVersion(path string) string {
+	var pkg struct{ Version string }
+	data, err := os.ReadFile(path)
+	if err == nil {
+		_ = json.Unmarshal(data, &pkg)
 	}
-	return in, err
+	return pkg.Version
 }
 
-func update(ctx context.Context, stdout io.Writer) error {
-	in, err := requireInstalled()
-	if err != nil {
-		return err
+// newer reports whether version a is newer than b, comparing the numeric parts of major.minor.patch.
+func newer(a, b string) bool {
+	part := func(v string, i int) int {
+		parts := strings.SplitN(v, ".", 3)
+		if i >= len(parts) {
+			return 0
+		}
+		digits := strings.TrimRightFunc(parts[i], func(r rune) bool { return r < '0' || r > '9' })
+		n, _ := strconv.Atoi(digits)
+		return n
 	}
-	if err := deploy(ctx, in, stdout); err != nil {
-		return err
-	}
-	fmt.Fprintf(stdout, "\n`%s` now runs the new build; `pitch rollback` returns to the previous one.\n", in.Name)
-	return nil
-}
-
-func rollback(stdout io.Writer) error {
-	in, err := requireInstalled()
-	if err != nil {
-		return err
-	}
-	ids, err := in.versions()
-	if err != nil {
-		return err
-	}
-	current := in.current()
-	for i := len(ids) - 1; i >= 0; i-- {
-		if ids[i] != current {
-			if err := in.switchTo(ids[i]); err != nil {
-				return err
-			}
-			fmt.Fprintf(stdout, "`%s` now runs version %s (was %s).\n", in.Name, ids[i], current)
-			return nil
+	for i := range 3 {
+		if x, y := part(a, i), part(b, i); x != y {
+			return x > y
 		}
 	}
-	return fmt.Errorf("no other version to roll back to")
+	return false
+}
+
+// launch decides how `pitch run` runs Pi: the executable, whether to wait for it (then suggest a rebuild), and a
+// notice for the user.
+func (in *installation) launch(args []string) (exe string, wait bool, notice string, err error) {
+	build := filepath.Join(in.Home, "current", "pi")
+	manage := len(args) > 0 && slices.Contains(manageCommands, args[0])
+	off := os.Getenv("PITCH_OFF") != "" || exists(filepath.Join(in.Home, "off"))
+	if in.Stock == "" && (manage || off) {
+		return "", false, "", fmt.Errorf("no original Pi found on PATH (install Pi, then run `pitch build`)")
+	}
+	switch {
+	case manage:
+		return in.Stock, true, "pitch: run `pitch build` to rebuild with this change.", nil
+	case off:
+		return in.Stock, false, "", nil
+	}
+	if original, built := packageVersion(in.StockPackage), packageVersion(filepath.Join(in.Home, "current", "package.json")); in.Stock != "" && original != "" && built != "" && newer(original, built) {
+		return in.Stock, false, fmt.Sprintf("pitch: your Pi is %s and this pitch build is %s; running the original Pi until pitch supports %s.", original, built, original), nil
+	}
+	return build, false, "", nil
+}
+
+func runPi(args []string, stderr io.Writer) error {
+	in, err := requireInstalled()
+	if err != nil {
+		return err
+	}
+	exe, wait, notice, err := in.launch(args)
+	if err != nil {
+		return err
+	}
+	if !wait {
+		if notice != "" {
+			fmt.Fprintln(stderr, notice)
+		}
+		return syscall.Exec(exe, append([]string{exe}, args...), os.Environ())
+	}
+	cmd := exec.Command(exe, args...)
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+	runErr := cmd.Run()
+	fmt.Fprintln(stderr, notice)
+	if exit, ok := runErr.(*exec.ExitError); ok {
+		os.Exit(exit.ExitCode())
+	}
+	return runErr
 }
 
 func setOff(off bool, stdout io.Writer) error {
@@ -422,16 +435,19 @@ func setOff(off bool, stdout io.Writer) error {
 	}
 	marker := filepath.Join(in.Home, "off")
 	if off {
+		if in.Stock == "" {
+			return fmt.Errorf("no original Pi found on PATH")
+		}
 		if err := os.WriteFile(marker, nil, 0644); err != nil {
 			return err
 		}
-		fmt.Fprintf(stdout, "`%s` now runs the original Pi (%s); `pitch on` switches back.\n", in.Name, in.Stock)
+		fmt.Fprintf(stdout, "`pitch` now runs the original Pi (%s); `pitch on` switches back.\n", in.Stock)
 		return nil
 	}
 	if err := os.Remove(marker); err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	fmt.Fprintf(stdout, "`%s` now runs the pitch build.\n", in.Name)
+	fmt.Fprintln(stdout, "`pitch` now runs the pitch build.")
 	return nil
 }
 
@@ -446,16 +462,19 @@ func status(stdout io.Writer) error {
 		return err
 	}
 	fmt.Fprintf(stdout, "pitch %s\n", Version)
-	resolved, _ := exec.LookPath(in.Name)
-	switch {
-	case resolved != in.command():
-		fmt.Fprintf(stdout, "Command:  `%s` is not on PATH ahead of others (found %q); add %s first on PATH\n", in.Name, resolved, filepath.Dir(in.command()))
-	case exists(filepath.Join(in.Home, "off")):
-		fmt.Fprintf(stdout, "Command:  `%s` runs the original Pi (`pitch on` switches back)\n", in.Name)
-	default:
-		fmt.Fprintf(stdout, "Command:  `%s` runs the pitch build\n", in.Name)
+	if exists(filepath.Join(in.Home, "off")) {
+		fmt.Fprintln(stdout, "Runs:     the original Pi (`pitch on` switches back)")
+	} else {
+		fmt.Fprintln(stdout, "Runs:     the pitch build")
 	}
-	fmt.Fprintf(stdout, "Build:    Pi %s, %s (%s)\n", strings.TrimPrefix(manifest.Sources.Pi.Tag, "v"), in.current(), manifest.BuiltAt)
+	if in.Name != "" {
+		state := "on PATH"
+		if path, _ := exec.LookPath(in.Name); path != in.command() {
+			state = fmt.Sprintf("not first on PATH (found %q); put %s first", path, filepath.Dir(in.command()))
+		}
+		fmt.Fprintf(stdout, "Command:  `%s`, %s\n", in.Name, state)
+	}
+	fmt.Fprintf(stdout, "Build:    Pi %s, built %s\n", strings.TrimPrefix(manifest.Sources.Pi.Tag, "v"), manifest.BuiltAt)
 	ids := []string{}
 	for _, f := range manifest.Features {
 		ids = append(ids, f.ID)
@@ -465,7 +484,9 @@ func status(stdout io.Writer) error {
 	for _, e := range manifest.Extensions {
 		fmt.Fprintf(stdout, "          %s %s\n", e.Name, e.Version)
 	}
-	fmt.Fprintf(stdout, "Original: %s\n", in.Stock)
+	if in.Stock != "" {
+		fmt.Fprintf(stdout, "Original: %s %s\n", in.Stock, packageVersion(in.StockPackage))
+	}
 	settings, err := agentSettings()
 	if err != nil {
 		return err
@@ -479,35 +500,27 @@ func status(stdout io.Writer) error {
 		_ = json.Unmarshal(data, &built)
 	}
 	if !reflect.DeepEqual(now, built.Packages) {
-		fmt.Fprintln(stdout, "Packages in Pi settings changed since this build: run `pitch update`.")
-	}
-	ids, err = in.versions()
-	if err != nil {
-		return err
-	}
-	if others := slices.DeleteFunc(ids, func(id string) bool { return id == in.current() }); len(others) > 0 {
-		fmt.Fprintf(stdout, "Rollback: %s\n", strings.Join(others, ", "))
+		fmt.Fprintln(stdout, "Packages in Pi settings changed since this build: run `pitch build`.")
 	}
 	return nil
 }
 
 func uninstall(stdout io.Writer) error {
-	in, err := requireInstalled()
+	in, err := loadInstallation()
 	if err != nil {
 		return err
 	}
+	if !exists(in.Home) {
+		return fmt.Errorf("nothing to uninstall at %s", in.Home)
+	}
 	if in.RCFile != "" {
-		data, err := os.ReadFile(in.RCFile)
-		if err != nil && !os.IsNotExist(err) {
-			return err
-		}
-		var kept []string
-		for _, line := range strings.Split(string(data), "\n") {
-			if !strings.HasSuffix(line, pathMarker) {
-				kept = append(kept, line)
+		if data, err := os.ReadFile(in.RCFile); err == nil {
+			var kept []string
+			for _, line := range strings.Split(string(data), "\n") {
+				if !strings.HasSuffix(line, pathMarker) {
+					kept = append(kept, line)
+				}
 			}
-		}
-		if err == nil {
 			if err := os.WriteFile(in.RCFile, []byte(strings.Join(kept, "\n")), 0644); err != nil {
 				return err
 			}
@@ -519,18 +532,13 @@ func uninstall(stdout io.Writer) error {
 		return err
 	}
 	for _, id := range ids {
-		if work := buildWork(filepath.Join(in.Home, "versions", id)); work != "" {
-			if err := os.RemoveAll(work); err != nil {
-				return err
-			}
+		if err := removeVersion(filepath.Join(in.Home, "versions", id)); err != nil {
+			return err
 		}
 	}
 	if err := os.RemoveAll(in.Home); err != nil {
 		return err
 	}
-	fmt.Fprintf(stdout, "Removed %s and `%s`.\n", in.Home, in.Name)
-	if in.Name == "pi" {
-		fmt.Fprintln(stdout, "`pi` is the original Pi again (in new terminals).")
-	}
+	fmt.Fprintf(stdout, "Removed %s and its builds.\n", in.Home)
 	return nil
 }
