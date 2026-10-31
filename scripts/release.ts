@@ -5,7 +5,8 @@
  *   bun scripts/release.ts [--publish]
  *
  * Built locally: the embedded Bun canary archive (internal/pitch/runtime-data/bun.zip) is not in git, and canary
- * downloads expire.
+ * downloads expire. The patched, built and tested Pi (runtime-data/pi.tar.gz) is prepared here too (needs git, Node 24+
+ * and npm), so `pitch build` on users' machines only compiles.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -20,6 +21,8 @@ function run(cmd: string[], env: Record<string, string> = {}) {
 	if (proc.exitCode !== 0) throw new Error(`${cmd.join(" ")} failed`);
 }
 
+run(["go", "build", "-o", asset, "./cmd/pitch"]);
+run([asset, "prepare", path.join(root, "internal/pitch/runtime-data/pi.tar.gz")]);
 run(["go", "build", "-trimpath", "-o", asset, "./cmd/pitch"], { GOOS: "darwin", GOARCH: "arm64" });
 const hash = new Bun.CryptoHasher("sha256").update(fs.readFileSync(asset)).digest("hex");
 fs.writeFileSync(`${asset}.sha256`, `${hash}  pitch-darwin-arm64\n`);

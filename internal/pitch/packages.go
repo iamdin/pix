@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 )
 
-func resolveExtensions(r runner, pi, stage string, values []string, settings string, log io.Writer) ([]Extension, error) {
+func resolveExtensions(r runner, js, pi, stage string, values []string, settings string, log io.Writer) ([]Extension, error) {
 	if len(values) == 0 && settings == "" {
 		return []Extension{}, nil
 	}
@@ -26,7 +26,7 @@ func resolveExtensions(r runner, pi, stage string, values []string, settings str
 		return nil, err
 	}
 	script := filepath.Join(stage, "recipe", "resolve-extensions.mjs")
-	if err := r.command(stage, log, "node", script, request); err != nil {
+	if err := r.command(stage, log, js, script, request); err != nil {
 		return nil, fmt.Errorf("resolve extension packages (see build.log): %w", err)
 	}
 	data, err := os.ReadFile(output)

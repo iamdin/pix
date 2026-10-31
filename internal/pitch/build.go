@@ -55,10 +55,8 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err != nil {
 		return err
 	}
-	for _, tool := range []string{"git", "node", "npm", "codesign"} {
-		if _, err := exec.LookPath(tool); err != nil {
-			return fmt.Errorf("build requires %s in PATH", tool)
-		}
+	if _, err := exec.LookPath("codesign"); err != nil {
+		return fmt.Errorf("build requires codesign in PATH")
 	}
 	if opts.Settings != "" {
 		opts.Settings, err = filepath.Abs(opts.Settings)
@@ -106,54 +104,29 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 		return err
 	}
 	r := runner{ctx, buildEnvironment(home, opts.Cache)}
-	node, err := r.output("", "node", "--version")
-	if err != nil {
-		return err
-	}
-	var major int
-	if _, err = fmt.Sscanf(node, "v%d.", &major); err != nil || major < 24 {
-		return fmt.Errorf("build requires Node 24 or newer; found %s", node)
-	}
-	npm, err := r.output("", "npm", "--version")
-	if err != nil {
-		return err
-	}
 	log, err := os.OpenFile(filepath.Join(stage, "build.log"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if err != nil {
 		return err
 	}
 	defer log.Close()
-	fmt.Fprintf(stdout, "Building Pi %s (the release pitch %s is pinned to), a few minutes\nLog: %s\n", strings.TrimPrefix(pins.Pi.Tag, "v"), Version, filepath.Join(stage, "build.log"))
+	// A release carries Pi already patched, built and tested; other features or local patches are prepared here.
+	prepared := opts.Features == defaultFeatures && len(local) == 0 && hasPreparedPi()
+	total := 4
+	if !prepared {
+		total = 6
+	}
 	n := 0
 	step := func(s string) {
 		n++
-		fmt.Fprintf(stdout, "[%d/6] %s\n", n, s)
+		fmt.Fprintf(stdout, "[%d/%d] %s\n", n, total, s)
 	}
-	step("Get Bun and Pi source, apply patches")
+	fmt.Fprintf(stdout, "Building Pi %s (the release pitch %s is pinned to), a few minutes\nLog: %s\n", strings.TrimPrefix(pins.Pi.Tag, "v"), Version, filepath.Join(stage, "build.log"))
 	bun, err := getRuntime(r, opts.Cache, pins.Bun)
 	if err != nil {
 		return err
 	}
 	if err = r.command("", log, "codesign", "--verify", "--strict", bun); err != nil {
 		return err
-	}
-	if err = verifyTag(r, pins.Pi); err != nil {
-		return err
-	}
-	pristine, err := checkout(r, opts.Cache, pins.Pi, log)
-	if err != nil {
-		return err
-	}
-	source := filepath.Join(stage, "pi")
-	if err = r.command("", log, "git", "clone", "--no-local", "--no-hardlinks", pristine, source); err != nil {
-		return err
-	}
-	sourceCommit, err := r.output(source, "git", "rev-parse", "HEAD")
-	if err != nil {
-		return err
-	}
-	if sourceCommit != pins.Pi.Commit {
-		return fmt.Errorf("cloned source does not match the pinned commit")
 	}
 	dataDir := filepath.Join(stage, "recipe")
 	if err = materializeAssets(dataDir); err != nil {
@@ -163,51 +136,19 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err != nil {
 		return err
 	}
-	if err = applyPatches(r, source, stage, patches, log); err != nil {
-		return err
+	source := filepath.Join(stage, "pi")
+	var info preparedInfo
+	if prepared {
+		step("Unpack the patched Pi")
+		info, err = unpackPreparedPi(r, stage, source, chosen, log)
+	} else {
+		info, err = preparePi(r, opts.Cache, pins, chosen, patches, bun, stage, source, log, step)
 	}
-	tree, err := r.output(source, "git", "write-tree")
 	if err != nil {
 		return err
-	}
-	var catalog struct{ Revision string }
-	bytes, err := os.ReadFile(filepath.Join(source, "nix/model-catalog.json"))
-	if err != nil {
-		return err
-	}
-	if err = json.Unmarshal(bytes, &catalog); err != nil {
-		return err
-	}
-	if catalog.Revision != pins.ModelCatalog {
-		return fmt.Errorf("unexpected upstream model catalog revision")
-	}
-	catalogPath := filepath.Join(opts.Cache, "models-"+pins.ModelCatalog+".json")
-	if err = download(ctx, "https://pi.dev/api/models/revisions/"+pins.ModelCatalog+"?types=chat,image,classifier", catalogPath, strings.TrimPrefix(pins.ModelCatalog, "sha256-")); err != nil {
-		return err
-	}
-	step("Install dependencies and build Pi")
-	for _, command := range [][]string{{"npm", "ci", "--ignore-scripts", "--no-audit", "--no-fund"}, {"node", "packages/ai/scripts/hydrate-model-catalog.ts", catalogPath}, {"npm", "run", "build:offline"}} {
-		if err = r.command(source, log, command[0], command[1:]...); err != nil {
-			return err
-		}
-	}
-	if err = verifySource(r, source, tree); err != nil {
-		return err
-	}
-	step("Test patches")
-	for _, feature := range chosen {
-		for _, test := range feature.Tests {
-			name := test.Args[0]
-			if name == "bun" {
-				name = bun
-			}
-			if err = r.command(filepath.Join(source, test.Dir), log, name, test.Args[1:]...); err != nil {
-				return fmt.Errorf("%s tests: %w", feature.ID, err)
-			}
-		}
 	}
 	step("Fetch extensions")
-	extensions, err := resolveExtensions(r, source, stage, opts.Extensions, opts.Settings, log)
+	extensions, err := resolveExtensions(r, bun, source, stage, opts.Extensions, opts.Settings, log)
 	if err != nil {
 		return err
 	}
@@ -259,8 +200,10 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err = r.command(source, log, bun, args...); err != nil {
 		return err
 	}
-	if err = verifySource(r, source, tree); err != nil {
-		return err
+	if !prepared {
+		if err = verifySource(r, source, info.SourceTree); err != nil {
+			return err
+		}
 	}
 	for _, extension := range extensions {
 		if err = requireHash(extension.Entry, extension.SHA256); err != nil {
@@ -314,10 +257,6 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err = copyFile(filepath.Join(stage, "build.log"), filepath.Join(opts.Out, "build.log"), 0600); err != nil {
 		return err
 	}
-	lock, err := hashFile(filepath.Join(source, "package-lock.json"))
-	if err != nil {
-		return err
-	}
 	if err = os.Remove(marker); err != nil {
 		return err
 	}
@@ -333,7 +272,7 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err != nil {
 		return err
 	}
-	manifest := Manifest{Schema: 1, Pitch: Version, BuilderSHA256: builderHash, Sources: pins, Features: chosen, Patches: patches, Extensions: extensions, ExtensionsAutoLoad: true, SourceTree: tree, NPMLock: lock, Node: node, NPM: npm, BuiltAt: time.Now().UTC().Format(time.RFC3339), CompilerArgs: args, Work: stage, Checks: []string{"runtime archive and binary SHA-256", "runtime revision and code signature", "release tag and source tree", "selected feature unit tests", "artifact code signature", "version", "help", "isolated RPC get_state"}, Limitations: []string{"Local patches can execute code during build, tests and smoke; isolation is not a sandbox. Patch hashes record inputs, not trust or semantic equivalence.", "With streaming-tool-arguments, intermediate argument snapshots of large tool calls may lag; raw deltas and final arguments remain complete.", "Experimental Bun AOT; built-in mutation and module-loader behavior differ from stock Pi.", "Pi's built-in extensions (llama.cpp, codemode, tool-search, mcp) always load; user, project and settings extensions on disk do not; not a sandbox.", "Selected extensions auto-load, including during build smoke checks; use trusted packages only. No extension permission sandbox.", "Code loaded from disk or generated at runtime is interpreted, not AOT. In-place module identities and cross-machine portability require validation.", "No performance, full provider, TUI, image or multi-day stability claim.", "Package sources use pinned Pi resolution in isolated storage; npm install scripts are disabled. Local dependencies, dynamic imports and native/runtime assets are not made hermetic by this build."}, Files: hashes}
+	manifest := Manifest{Schema: 1, Pitch: Version, BuilderSHA256: builderHash, Sources: pins, Features: chosen, Patches: patches, Extensions: extensions, ExtensionsAutoLoad: true, SourceTree: info.SourceTree, NPMLock: info.NPMLock, Node: info.Node, NPM: info.NPM, BuiltAt: time.Now().UTC().Format(time.RFC3339), CompilerArgs: args, Work: stage, Checks: []string{"runtime archive and binary SHA-256", "runtime revision and code signature", "release tag and source tree", "selected feature unit tests", "artifact code signature", "version", "help", "isolated RPC get_state"}, Limitations: []string{"Local patches can execute code during build, tests and smoke; isolation is not a sandbox. Patch hashes record inputs, not trust or semantic equivalence.", "With streaming-tool-arguments, intermediate argument snapshots of large tool calls may lag; raw deltas and final arguments remain complete.", "Experimental Bun AOT; built-in mutation and module-loader behavior differ from stock Pi.", "Pi's built-in extensions (llama.cpp, codemode, tool-search, mcp) always load; user, project and settings extensions on disk do not; not a sandbox.", "Selected extensions auto-load, including during build smoke checks; use trusted packages only. No extension permission sandbox.", "Code loaded from disk or generated at runtime is interpreted, not AOT. In-place module identities and cross-machine portability require validation.", "No performance, full provider, TUI, image or multi-day stability claim.", "Package sources use pinned Pi resolution in isolated storage; npm install scripts are disabled. Local dependencies, dynamic imports and native/runtime assets are not made hermetic by this build."}, Files: hashes}
 	if err = writeJSON(filepath.Join(opts.Out, "pitch-build.json"), manifest); err != nil {
 		return err
 	}

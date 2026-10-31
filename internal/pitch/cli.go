@@ -117,6 +117,15 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer) error
 		}
 		fmt.Fprintf(stdout, "Built %s\n", filepath.Join(opts.Out, "pi"))
 		return nil
+	case "prepare": // for scripts/release.ts
+		if len(args) != 2 {
+			return fmt.Errorf("usage: pitch prepare OUT.tar.gz")
+		}
+		cache, err := os.UserCacheDir()
+		if err != nil {
+			return err
+		}
+		return Prepare(ctx, filepath.Join(cache, "pitch"), args[1], stdout)
 	case "status", "off", "on", "uninstall":
 		if len(args) != 1 {
 			return fmt.Errorf("usage: pitch %s", args[0])

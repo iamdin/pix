@@ -8,7 +8,7 @@
 curl -fsSL https://raw.githubusercontent.com/iamdin/pitch/main/install.sh | sh
 ```
 
-装到 `~/.local/bin/pitch`（`PITCH_INSTALL_DIR` 可改），校验 sha256。构建 Pi 需要 Git、Node 24+、npm、codesign 和网络；不需要预装 Pi 或 Bun，不改动全局安装。从源码构建：`go build -trimpath -o bin/pitch ./cmd/pitch`（需要 Go 1.24+ 和本地的 `internal/pitch/runtime-data/bun.zip`，它不在仓库里）。
+装到 `~/.local/bin/pitch`（`PITCH_INSTALL_DIR` 可改），校验 sha256。pitch 自带 Bun 和已经打好补丁、构建并测试过的 Pi，`pitch build` 只在本机编译你的扩展，约一分钟；不需要 Node。来自 npm 的扩展用 npm 下载，来自 Git 的用 git。不改动全局安装。从源码构建：`go build -trimpath -o bin/pitch ./cmd/pitch`（需要 Go 1.24+ 和本地的 `internal/pitch/runtime-data/bun.zip`，它不在仓库里；没有 `runtime-data/pi.tar.gz` 时，`pitch build` 在本机准备 Pi，需要 Git、Node 24+ 和 npm，`bun scripts/release.ts` 会生成它）。`--features` 或 `--patch` 改了补丁时同样在本机准备。
 
 ## 使用
 
@@ -87,7 +87,7 @@ Go CLI 是编排主体；小型 JS 桥接直接使用这份 Pi 的包管理器�
 | Bun | 000ef503730334a388c47b1bd025851a76b4832e |
 | WebKit/JSC | 8c6c963e3c49fe39942d9625d1fc924128fad26e |
 
-不提供 Pi/Bun 版本选择。Pi 只跟上游发布 tag；Bun AOT 只在 canary 中提供，因此 Bun 固定到某个官方 canary 构建，随维护者升级。Bun 固定归档嵌入 Go CLI（约 65 MiB），校验归档/程序哈希、revision 和签名；不依赖已删除的上游下载资产，不静默升级。Git/npm/模型目录的冷获取仍需要网络。当前使用官方预编译 Bun，不是自建优化版 Bun/JSC。
+不提供 Pi/Bun 版本选择。Pi 只跟上游发布 tag；Bun AOT 只在 canary 中提供，因此 Bun 固定到某个官方 canary 构建，随维护者升级。Bun 固定归档和准备好的 Pi 嵌入 Go CLI（共约 100 MiB），校验归档/程序哈希、revision 和签名；不依赖已删除的上游下载资产，不静默升级。Git/npm/模型目录的冷获取仍需要网络。当前使用官方预编译 Bun，不是自建优化版 Bun/JSC。
 
 **默认打上 5 个经过 AOT 性能关卡的优化补丁**（见下）。alpha.6 撤回的旧组合（P1–P5）已删除；旧产物不自动修改。
 

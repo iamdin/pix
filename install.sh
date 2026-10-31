@@ -10,7 +10,7 @@ asset=pitch-darwin-arm64
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-echo "Downloading pitch (about 70 MB, Bun is inside)..."
+echo "Downloading pitch (about 110 MB; Bun and the patched Pi are inside)..."
 curl -fL --progress-bar "$base/$asset" -o "$tmp/pitch"
 curl -fsSL "$base/$asset.sha256" -o "$tmp/pitch.sha256"
 [ "$(shasum -a 256 "$tmp/pitch" | cut -d' ' -f1)" = "$(cut -d' ' -f1 "$tmp/pitch.sha256")" ] || { echo "pitch: checksum mismatch" >&2; exit 1; }
@@ -23,7 +23,4 @@ case ":$PATH:" in
 *":$dir:"*) ;;
 *) echo "Add $dir to PATH: echo 'export PATH=\"$dir:\$PATH\"' >> ~/.zshrc" ;;
 esac
-for tool in git node npm; do
-	command -v "$tool" >/dev/null || echo "Note: pitch build needs $tool (Node 24+)"
-done
-echo "Next: pitch build (builds your Pi with its packages, a few minutes), then pitch pi"
+echo "Next: pitch build (builds your Pi with its packages, about a minute), then pitch pi"

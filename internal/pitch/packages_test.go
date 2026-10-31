@@ -94,7 +94,7 @@ func TestPackageLocalSources(t *testing.T) {
 				values, want = []string{"builtin:codemode"}, 0
 			}
 			var log bytes.Buffer
-			selected, err := resolveExtensions(r, pi, stage, values, "", &log)
+			selected, err := resolveExtensions(r, "node", pi, stage, values, "", &log)
 			if want == 0 {
 				if err == nil {
 					t.Fatalf("accepted %v", values)
@@ -182,7 +182,7 @@ func TestPackageNPMDependencies(t *testing.T) {
 	defer server.Close()
 	r.env = append(r.env, "npm_config_registry="+server.URL)
 	var log bytes.Buffer
-	selected, err := resolveExtensions(r, pi, stage, []string{"npm:@fixture/plugin@1.2.3"}, "", &log)
+	selected, err := resolveExtensions(r, "node", pi, stage, []string{"npm:@fixture/plugin@1.2.3"}, "", &log)
 	if err != nil || len(selected) != 1 {
 		t.Fatalf("%+v %v\n%s", selected, err, &log)
 	}
@@ -239,7 +239,7 @@ func TestPackageGitSources(t *testing.T) {
 				values = []string{"git:example.test/owner/plugin@missing-ref", "https://example.test/owner/plugin@v1"}
 			}
 			var log bytes.Buffer
-			selected, err := resolveExtensions(r, pi, stage, values, "", &log)
+			selected, err := resolveExtensions(r, "node", pi, stage, values, "", &log)
 			if err != nil || len(selected) != 1 {
 				t.Fatalf("%+v %v\n%s", selected, err, &log)
 			}
