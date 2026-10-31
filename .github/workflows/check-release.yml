@@ -1,0 +1,35 @@
+# scripts/release.ts runs this on a draft release for the platforms it checks on GitHub (--host PLATFORM=gh): the
+# asset builds Pi, and that Pi passes bench/e2e, on the platform it is for.
+name: check-release
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        required: true
+      platforms:
+        description: JSON list of GOOS/GOARCH
+        required: true
+permissions:
+  contents: write # a draft release is visible only with write access
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(inputs.platforms) }}
+    runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || matrix.platform == 'linux/amd64' && 'ubuntu-latest' || 'macos-latest' }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: pitch build
+        run: |
+          asset=pitch-$(echo "${{ matrix.platform }}" | tr / -)
+          gh release download "${{ inputs.tag }}" --pattern "$asset" --pattern "$asset.sha256" --dir dl
+          (cd dl && sha256sum -c "$asset.sha256" 2>/dev/null || shasum -a 256 -c "$asset.sha256")
+          chmod +x "dl/$asset"
+          "dl/$asset" build --out "$RUNNER_TEMP/build"
+      - name: bench/e2e
+        run: |
+          bun=$(ls -t ~/.cache/pitch/runtime/*/bun ~/Library/Caches/pitch/runtime/*/bun 2>/dev/null | head -1)
+          "$bun" bench/e2e/run.ts "$RUNNER_TEMP/build/pi"

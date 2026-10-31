@@ -1,15 +1,16 @@
 /**
  * Build pitch for each platform into dist-release/pitch-<goos>-<goarch>, the assets install.sh downloads, and check
- * each one where it runs: `pitch build` and bench/e2e on this machine for its own platform, over ssh for the others.
- * --publish then creates the GitHub release v<Version> and installs it back with install.sh.
+ * each one where it runs: `pitch build` and bench/e2e on this machine for its own platform, over ssh for the others, or
+ * on GitHub Actions (.github/workflows/check-release.yml) with --host PLATFORM=gh. --publish then creates the GitHub
+ * release v<Version> as a draft, runs the GitHub checks on it, publishes it and installs it back with install.sh.
  *
- *   bun scripts/release.ts [--host linux/amd64=root@100.88.65.47] [--unchecked linux/arm64] [--publish]
+ *   bun scripts/release.ts --host linux/amd64=root@100.88.65.47 --host linux/arm64=gh [--unchecked PLATFORM] [--publish]
  *
  * Built locally: the embedded Bun canary archives (internal/pitch/runtime-data/<goos>-<goarch>/bun.zip) are not in git,
  * and canary downloads expire. The patched, built and tested Pi for each platform (runtime-data/<goos>-<goarch>/pi.tar.gz)
  * is prepared here too (needs git, Node 24+ and npm 11+), so `pitch build` on users' machines only compiles.
  *
- * Every platform must be checked (--host) unless --unchecked names it. --publish also needs a clean main that is
+ * Every platform must be checked (--host) unless --unchecked names it; GitHub checks need --publish. --publish also needs a clean main that is
  * pushed and a version not released yet. The pinned Pi commit must be the head of its fork branch.
  */
 import fs from "node:fs";
@@ -58,6 +59,8 @@ for (const platform of platforms) {
 	const zip = path.join(dataDir(platform), "bun.zip");
 	if (!fs.existsSync(zip) || sha256(zip) !== pins.bun.platforms[platform].sha256) fail(`${zip} is missing or not the pinned Bun`);
 }
+const onGitHub = platforms.filter((p) => hosts.get(p) === "gh");
+if (onGitHub.length > 0 && !args.publish) fail(`${onGitHub.join(", ")}: GitHub checks run on the draft release, with --publish`);
 if (args.publish) {
 	if (output(["git", "status", "--porcelain"])) fail("the work tree is not clean");
 	if (output(["git", "branch", "--show-current"]) !== "main") fail("not on main");
@@ -92,6 +95,8 @@ for (const platform of platforms) {
 	if (platform === local) {
 		run([asset, "build", "--out", path.join(scratch, "build")]);
 		run(["bun", path.join(root, "bench/e2e/run.ts"), path.join(scratch, "build/pi")]);
+	} else if (hosts.get(platform) === "gh") {
+		console.error(`release: ${platform} is checked on GitHub, on the draft`);
 	} else if (hosts.has(platform)) {
 		const target = hosts.get(platform)!;
 		const dir = output(["ssh", target, "mktemp -d"]);
@@ -113,6 +118,18 @@ if (args.publish) {
 	run(["gh", "release", "download", tag, "--dir", download]);
 	for (const asset of assets) {
 		if (sha256(path.join(download, path.basename(asset))) !== sha256(asset)) fail(`the uploaded ${path.basename(asset)} differs; ${tag} stays a draft`);
+	}
+	if (onGitHub.length > 0) {
+		const since = new Date(Date.now() - 60_000).toISOString(); // allow for clock skew
+		run(["gh", "workflow", "run", "check-release.yml", "-f", `tag=${tag}`, "-f", `platforms=${JSON.stringify(onGitHub)}`]);
+		let id = "";
+		for (let i = 0; i < 30 && !id; i++) {
+			Bun.sleepSync(2000);
+			id = output(["gh", "run", "list", "--workflow", "check-release.yml", "--event", "workflow_dispatch", "-L", "1", "--json", "databaseId,createdAt", "--jq", `.[] | select(.createdAt >= "${since.slice(0, 19)}") | .databaseId`]);
+		}
+		if (!id) fail("the check-release workflow did not start");
+		if (Bun.spawnSync(["gh", "run", "watch", id, "--exit-status"], { cwd: root, stdout: "inherit", stderr: "inherit" }).exitCode !== 0)
+			fail(`the GitHub checks failed (gh run view ${id} --log-failed); ${tag} stays a draft`);
 	}
 	run(["gh", "release", "edit", tag, "--draft=false", "--latest"]);
 	const bin = path.join(scratch, "installed");
