@@ -148,6 +148,74 @@ for (const scenario of scenarios) {
 	report("export html", !!exported && fs.existsSync(html) && /<html/i.test(fs.readFileSync(html, "utf8")), `${file} ${exported?.stdout} ${exported?.stderr}`);
 }
 
+// RPC mode: commands answer, a prompt runs a tool, and the session can be inspected, compacted, exported and replaced.
+{
+	const { home, cwd } = agentDir();
+	calls = [{ name: "read", args: { path: "hello.txt" } }];
+	requests = [];
+	// Keep almost nothing on compaction, so a short session has something to summarize.
+	fs.writeFileSync(path.join(home, "settings.json"), JSON.stringify({ compaction: { keepRecentTokens: 1 } }));
+	const proc = Bun.spawn([pi, "--mode", "rpc", "--session-dir", path.join(home, "sessions-rpc"), "--model", "fake/fake"], {
+		cwd,
+		env: { ...process.env, PI_CODING_AGENT_DIR: home, PI_SKIP_VERSION_CHECK: "1", PI_TELEMETRY: "0" },
+		stdin: "pipe",
+		stdout: "pipe",
+		stderr: "pipe",
+	});
+	const lines: any[] = [];
+	const waiters: { test: (line: any) => boolean; resolve: (line: any) => void }[] = [];
+	(async () => {
+		let buffer = "";
+		for await (const bytes of proc.stdout) {
+			buffer += new TextDecoder().decode(bytes);
+			let end: number;
+			while ((end = buffer.indexOf("\n")) >= 0) {
+				const line = JSON.parse(buffer.slice(0, end));
+				buffer = buffer.slice(end + 1);
+				lines.push(line);
+				for (const w of waiters.splice(0).filter((w) => !w.test(line) || (w.resolve(line), false))) waiters.push(w);
+			}
+		}
+	})();
+	const waitFor = (test: (line: any) => boolean) =>
+		Promise.race([
+			new Promise<any>((resolve) => {
+				const hit = lines.find(test);
+				hit ? resolve(hit) : waiters.push({ test, resolve });
+			}),
+			Bun.sleep(30_000).then(() => undefined),
+		]);
+	let n = 0;
+	const send = async (command: object) => {
+		const id = `r${++n}`;
+		proc.stdin.write(`${JSON.stringify({ id, ...command })}\n`);
+		proc.stdin.flush();
+		return waitFor((line) => line.type === "response" && line.id === id);
+	};
+	const check = async (name: string, command: object, ok: (response: any) => boolean) => {
+		const response = await send(command);
+		report(`rpc ${name}`, !!response?.success && ok(response), JSON.stringify(response) ?? "no response");
+		return response;
+	};
+	await check("get_state", { type: "get_state" }, () => true);
+	await check("get_available_models", { type: "get_available_models" }, (r) => JSON.stringify(r.data).includes("fake"));
+	await check("get_commands", { type: "get_commands" }, () => true);
+	await check("prompt", { type: "prompt", message: "go" }, () => true);
+	const settled = await waitFor((line) => line.type === "agent_settled");
+	report("rpc prompt runs a tool to the end", !!settled, `events: ${lines.map((l) => l.type).join(",")}`);
+	await check("get_messages", { type: "get_messages" }, (r) => JSON.stringify(r.data).includes("hello pitch"));
+	await check("bash", { type: "bash", command: "echo rpc-bash" }, (r) => JSON.stringify(r.data).includes("rpc-bash"));
+	await check("get_session_stats", { type: "get_session_stats" }, () => true);
+	await check("second prompt", { type: "prompt", message: "again" }, () => true);
+	await waitFor((line) => line.type === "agent_settled" && line !== settled);
+	await check("compact", { type: "compact" }, () => true);
+	const html = path.join(home, "rpc.html");
+	await check("export_html", { type: "export_html", outputPath: html }, () => fs.existsSync(html));
+	await check("new_session", { type: "new_session" }, () => true);
+	proc.kill();
+	await proc.exited;
+}
+
 // Commands that only print.
 {
 	const { home, cwd } = agentDir();
