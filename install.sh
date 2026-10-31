@@ -10,7 +10,8 @@ asset=pitch-darwin-arm64
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-curl -fsSL "$base/$asset" -o "$tmp/pitch"
+echo "Downloading pitch (about 70 MB, Bun is inside)..."
+curl -fL --progress-bar "$base/$asset" -o "$tmp/pitch"
 curl -fsSL "$base/$asset.sha256" -o "$tmp/pitch.sha256"
 [ "$(shasum -a 256 "$tmp/pitch" | cut -d' ' -f1)" = "$(cut -d' ' -f1 "$tmp/pitch.sha256")" ] || { echo "pitch: checksum mismatch" >&2; exit 1; }
 
