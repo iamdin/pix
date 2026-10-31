@@ -186,15 +186,16 @@ func buildInstalled(ctx context.Context, name string, stdout io.Writer) error {
 	if err := in.prune(stdout); err != nil {
 		return err
 	}
-	fmt.Fprintln(stdout, "Done. Run `pitch pi`; everything after pi goes to Pi.")
-	if in.Name != "" {
+	if in.Name == "" {
+		fmt.Fprintln(stdout, "Done. Start it with `pitch pi`, which takes the same arguments as `pi` (`pitch pi -c`).")
+		return nil
+	}
+	fmt.Fprintf(stdout, "Done. Start it with `%s` or `pitch pi`.\n", in.Name)
 		if path, _ := exec.LookPath(in.Name); path != in.command() {
 			if err := addToPath(in, stdout); err != nil {
 				return err
 			}
 		}
-		fmt.Fprintf(stdout, "`%s` runs it too.\n", in.Name)
-	}
 	return nil
 }
 
