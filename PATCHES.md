@@ -1,6 +1,6 @@
 # Patch 使用与贡献
 
-pitch alpha.8 仍固定 Pi/Bun 版本；通用的是 patch 输入与构建流程，不是任意上游/平台构建器。
+pitch alpha.9 仍固定 Pi/Bun 版本；通用的是 patch 输入与构建流程，不是任意上游/平台构建器。
 
 ## 使用自己的补丁
 

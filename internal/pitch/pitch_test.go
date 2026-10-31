@@ -75,7 +75,7 @@ func TestExtensionSelectionAndAutomaticEntry(t *testing.T) {
 		t.Fatal(err)
 	}
 	source := entrySource(dir, []Extension{selected})
-	for _, want := range []string{"['--no-extensions', '-e', " + jsString(selected.Entry), "...args]", "PI_PACKAGE_DIR", "process.exit(2)"} {
+	for _, want := range []string{"['--no-extensions', ", "'-e', 'builtin:codemode', ", "'-e', 'builtin:mcp', '-e', " + jsString(selected.Entry), "...args]", "PI_PACKAGE_DIR", "process.exit(2)"} {
 		if !strings.Contains(source, want) {
 			t.Fatalf("missing %s", want)
 		}

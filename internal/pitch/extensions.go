@@ -51,7 +51,12 @@ func entrySource(pi string, extensions []Extension) string {
 	fmt.Fprintf(&out, "await import(%s);\nawait import(%s);\nconst { setupCli } = await import(%s);\nconst { main } = await import(%s);\n", jsString(filepath.Join(src, "bun/sandbox-env-setup.ts")), jsString(filepath.Join(src, "bun/runtime-setup.ts")), jsString(filepath.Join(src, "cli/setup.ts")), jsString(filepath.Join(src, "main.ts")))
 	out.WriteString("const args = process.argv.slice(2);\n")
 	out.WriteString("if (['install','remove','uninstall','update','list','config','auth','mcp'].includes(args[0] ?? '')) {\n console.error('This custom build does not manage installations or configuration. Use your installed Pi.');\n process.exit(2);\n}\nsetupCli();\n")
+	// --no-extensions keeps Pi from loading the user's packages again from disk; it also drops Pi's built-in extensions
+	// (packages/coding-agent/src/extensions/index.ts), so load those back by name.
 	out.WriteString("await main(['--no-extensions', ")
+	for _, name := range []string{"llama.cpp", "codemode", "tool-search", "mcp"} {
+		fmt.Fprintf(&out, "'-e', 'builtin:%s', ", name)
+	}
 	for _, extension := range extensions {
 		fmt.Fprintf(&out, "'-e', %s, ", jsString(extension.Entry))
 	}
