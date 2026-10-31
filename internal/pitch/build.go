@@ -187,8 +187,13 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err = packageAssets(source, opts.Out); err != nil {
 		return err
 	}
-	for _, name := range []string{"LICENSE.Pi", "LICENSE.Bun"} {
-		if err = copyFile(filepath.Join(dataDir, name), filepath.Join(opts.Out, name), 0644); err != nil {
+	// Every license that comes with pitch's data goes with the build.
+	licenses, err := filepath.Glob(filepath.Join(dataDir, "LICENSE.*"))
+	if err != nil {
+		return err
+	}
+	for _, license := range licenses {
+		if err = copyFile(license, filepath.Join(opts.Out, filepath.Base(license)), 0644); err != nil {
 			return err
 		}
 	}
