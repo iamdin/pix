@@ -2,7 +2,7 @@
  * End-to-end check of Pi's own capabilities against a Pi binary, with a local fake model:
  * print mode and the built-in tools, subcommands, codemode, MCP, skills/templates/extensions, sessions, RPC and the TUI.
  *
- *   bun bench/e2e/run.ts <pi>
+ *   bun bench/e2e/run.ts <pi> [leading args, e.g. bin/pitch pi]
  *
  * Run it on stock Pi first: what fails there is a wrong check, not a pitch bug.
  */
@@ -10,7 +10,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const pi = path.resolve(process.argv[2] ?? "");
+const pi = [path.resolve(process.argv[2] ?? ""), ...process.argv.slice(3)];
 const fixtures = path.join(import.meta.dir, "fixtures");
 
 // ---- Fake model: scripted steps in order, then "Done."; a user message containing SLOW gets a slow stream ----------
@@ -99,7 +99,7 @@ function png(file: string, size: number) {
 }
 
 async function run(a: Agent, args: string[], stdin?: string) {
-	const proc = Bun.spawn([pi, ...args], { cwd: a.cwd, env: a.env, stdin: stdin === undefined ? "ignore" : new TextEncoder().encode(stdin), stdout: "pipe", stderr: "pipe" });
+	const proc = Bun.spawn([...pi, ...args], { cwd: a.cwd, env: a.env, stdin: stdin === undefined ? "ignore" : new TextEncoder().encode(stdin), stdout: "pipe", stderr: "pipe" });
 	const timer = setTimeout(() => proc.kill("SIGKILL"), 60_000);
 	const [stdout, stderr] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
 	await proc.exited;
@@ -120,7 +120,7 @@ class Rpc {
 	private n = 0;
 	proc;
 	constructor(a: Agent, args: string[]) {
-		this.proc = Bun.spawn([pi, "--mode", "rpc", ...args], { cwd: a.cwd, env: a.env, stdin: "pipe", stdout: "pipe", stderr: "inherit" });
+		this.proc = Bun.spawn([...pi, "--mode", "rpc", ...args], { cwd: a.cwd, env: a.env, stdin: "pipe", stdout: "pipe", stderr: "inherit" });
 		(async () => {
 			let buffer = "";
 			for await (const text of this.proc.stdout.pipeThrough(new TextDecoderStream())) {
@@ -160,7 +160,7 @@ class Tty {
 	proc;
 	constructor(a: Agent, args: string[]) {
 		const decoder = new TextDecoder();
-		this.proc = Bun.spawn([pi, ...args], {
+		this.proc = Bun.spawn([...pi, ...args], {
 			cwd: a.cwd,
 			env: a.env,
 			terminal: {

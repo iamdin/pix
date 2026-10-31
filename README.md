@@ -14,16 +14,15 @@ curl -fsSL https://raw.githubusercontent.com/iamdin/pitch/main/install.sh | sh
 
 ```sh
 pitch build              # 按 ~/.pi/agent/settings.json 的插件构建（插件变了再跑一次）
-pitch                    # 运行构建好的 Pi；Pi 的命令行原样可用：pitch -c、pitch "修一下测试"、pitch install npm:x
+pitch pi                 # 运行构建好的 Pi；pi 后面的参数原样交给 Pi：pitch pi -c、pitch pi install npm:x
 pitch status             # 版本、补丁、编进去的插件、设置是否有变化
-pitch off / pitch on     # 换回原版 Pi / 再换回来（临时一次：PITCH_OFF=1 pitch）
-pitch self uninstall     # 删掉 ~/.pitch、它的构建和加过的 PATH 行
+pitch off / pitch on     # 换回原版 Pi / 再换回来（临时一次：PITCH_OFF=1 pitch pi）
+pitch uninstall          # 删掉 ~/.pitch、它的构建和加过的 PATH 行
 
-pitch build --name pi    # 另装一个 `pi` 命令替换原版 Pi（等同 pitch run，什么参数都交给 Pi）
+pitch build --name pi    # 另装一个 `pi` 命令替换原版 Pi，它就是 `pitch pi`
 ```
 
-- `build`、`status`、`off`、`on`、`self`、`features` 和 `--help`/`--version` 归 pitch，其余参数全部交给 Pi；`pitch run <参数>` 连这几个词也交给 Pi。
-- 原版 Pi 一个文件都不改。`pi install/remove/uninstall/update/config` 由原版 Pi 执行，执行完提示 `pitch build`。
+- 原版 Pi 一个文件都不改。`pitch pi install/remove/uninstall/update/config` 由原版 Pi 执行，执行完提示 `pitch build`。
 - 原版 Pi 升级到比 pitch 构建更新的版本时，自动运行原版并提示一行，等 pitch 跟上后再 `pitch build`。
 - 新构建通过自检才切换；保留上一个构建给还在运行的会话，更旧的连同缓存里的构建目录一起删掉。
 
@@ -148,6 +147,7 @@ PITCH_TEST_PI=/absolute/build-work/pi go test -race ./...
 # 先在原版 Pi 上跑通，再跑构建产物
 bun bench/e2e/run.ts ~/.bun/bin/pi
 bun bench/e2e/run.ts "$PWD/dist/my-pi/pi"
+bun bench/e2e/run.ts bin/pitch pi        # 经 pitch pi 跑已构建的版本
 ```
 
 未设置环境变量时，相应集成测试会跳过。性能记录见 `docs/pi-perf/results/`。失败构建和实验保留在 `.work/` 或系统 pitch 缓存，不修改历史 pix 产物。

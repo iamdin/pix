@@ -45,7 +45,7 @@ func TestBuildInstalledLifecycle(t *testing.T) {
 		exe, _, notice, err := in().launch(args)
 		must(err)
 		if exe != want {
-			t.Fatalf("pitch run %v: %s (%s), want %s", args, exe, notice, want)
+			t.Fatalf("pitch pi %v: %s (%s), want %s", args, exe, notice, want)
 		}
 	}
 	build := filepath.Join(home, "current", "pi")

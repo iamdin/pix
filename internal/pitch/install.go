@@ -18,13 +18,13 @@ import (
 	"time"
 )
 
-// `pitch build` without --out builds Pi with the user's packages into ~/.pitch (PITCH_HOME), and `pitch` runs it:
+// `pitch build` without --out builds Pi with the user's packages into ~/.pitch (PITCH_HOME), and `pitch pi` runs it:
 //
 //	config.json         the original Pi to fall back to, and the optional extra command name
 //	versions/<id>/      builds: the current one and the one before (sessions may still run it)
 //	current             symlink to the version in use
 //	off                 present while `pitch off` is in effect
-//	bin/<name>          optional command (for example `pi`) that runs `pitch run`
+//	bin/<name>          optional command (for example `pi`) that runs `pitch pi`
 type installation struct {
 	Home string `json:"-"`
 	// Extra command for the build, if the user asked for one.
@@ -133,7 +133,7 @@ func isTerminal(f *os.File) bool {
 
 var validName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
 
-// buildInstalled builds Pi with the packages in the user's Pi settings and makes it what `pitch` runs.
+// buildInstalled builds Pi with the packages in the user's Pi settings and makes it what `pitch pi` runs.
 func buildInstalled(ctx context.Context, name string, stdout io.Writer) error {
 	in, err := loadInstallation()
 	if err != nil {
@@ -186,7 +186,7 @@ func buildInstalled(ctx context.Context, name string, stdout io.Writer) error {
 	if err := in.prune(stdout); err != nil {
 		return err
 	}
-	fmt.Fprintln(stdout, "\nRun `pitch` to use it (with Pi's options: `pitch -c`, `pitch run <args>`).")
+	fmt.Fprintln(stdout, "\nRun `pitch pi` to use it; everything after pi goes to Pi (`pitch pi -c`).")
 	if in.Name != "" {
 		if path, _ := exec.LookPath(in.Name); path != in.command() {
 			if err := addToPath(in, stdout); err != nil {
@@ -196,7 +196,7 @@ func buildInstalled(ctx context.Context, name string, stdout io.Writer) error {
 		fmt.Fprintf(stdout, "`%s` runs it too.\n", in.Name)
 	}
 	if in.Stock != "" {
-		fmt.Fprintf(stdout, "The original Pi stays at %s: `pitch off` makes `pitch` run it, `pitch on` switches back.\n", in.Stock)
+		fmt.Fprintf(stdout, "The original Pi stays at %s: `pitch off` makes `pitch pi` run it, `pitch on` switches back.\n", in.Stock)
 	}
 	return nil
 }
@@ -334,7 +334,7 @@ func readManifest(dir string) (Manifest, error) {
 
 func quote(s string) string { return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'" }
 
-// writeCommand writes the extra command, which runs `pitch run`.
+// writeCommand writes the extra command, which runs `pitch pi`.
 func writeCommand(in *installation) error {
 	pitch, err := os.Executable()
 	if err != nil {
@@ -346,7 +346,7 @@ func writeCommand(in *installation) error {
 	if err := os.MkdirAll(filepath.Dir(in.command()), 0755); err != nil {
 		return err
 	}
-	script := "#!/bin/sh\n# Installed by pitch: runs the pitch build of Pi (see `pitch status`).\nexec " + quote(pitch) + " run \"$@\"\n"
+	script := "#!/bin/sh\n# Installed by pitch: runs the pitch build of Pi (see `pitch status`).\nexec " + quote(pitch) + " pi \"$@\"\n"
 	tmp := in.command() + ".new"
 	if err := os.WriteFile(tmp, []byte(script), 0755); err != nil {
 		return err
@@ -382,7 +382,7 @@ func newer(a, b string) bool {
 	return false
 }
 
-// launch decides how `pitch run` runs Pi: the executable, whether to wait for it (then suggest a rebuild), and a
+// launch decides how `pitch pi` runs Pi: the executable, whether to wait for it (then suggest a rebuild), and a
 // notice for the user.
 func (in *installation) launch(args []string) (exe string, wait bool, notice string, err error) {
 	build := filepath.Join(in.Home, "current", "pi")
@@ -441,13 +441,13 @@ func setOff(off bool, stdout io.Writer) error {
 		if err := os.WriteFile(marker, nil, 0644); err != nil {
 			return err
 		}
-		fmt.Fprintf(stdout, "`pitch` now runs the original Pi (%s); `pitch on` switches back.\n", in.Stock)
+		fmt.Fprintf(stdout, "`pitch pi` now runs the original Pi (%s); `pitch on` switches back.\n", in.Stock)
 		return nil
 	}
 	if err := os.Remove(marker); err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	fmt.Fprintln(stdout, "`pitch` now runs the pitch build.")
+	fmt.Fprintln(stdout, "`pitch pi` now runs the pitch build.")
 	return nil
 }
 
