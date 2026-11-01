@@ -49,18 +49,16 @@ func entrySource(pi string, extensions []Extension) string {
 	src := filepath.Join(pi, "packages/coding-agent/src")
 	var out strings.Builder
 	out.WriteString("import { dirname } from 'node:path';\nprocess.env.PI_PACKAGE_DIR ??= dirname(process.execPath);\n")
-	// pix follows Pi releases itself: no notice of a newer Pi, and `update` updates packages, never this Pi.
+	// pix follows Pi releases itself: no notice of a newer Pi.
 	out.WriteString("process.env.PI_SKIP_VERSION_CHECK ??= '1';\n")
 	fmt.Fprintf(&out, "await import(%s);\nawait import(%s);\nconst { setupCli } = await import(%s);\nconst { main } = await import(%s);\n", jsString(filepath.Join(src, "bun/sandbox-env-setup.ts")), jsString(filepath.Join(src, "bun/runtime-setup.ts")), jsString(filepath.Join(src, "cli/setup.ts")), jsString(filepath.Join(src, "main.ts")))
+	// `pix update` updates pix and the Pi it holds; only a build run directly gets here. Pi's self-update would
+	// install the original Pi instead.
 	out.WriteString(`let args = process.argv.slice(2);
-if (args[0] === 'update') {
- const rest = args.slice(1);
- if (rest.some((a) => a === '--self' || a === 'self' || a === 'pi')) {
-  console.error('pix: Pi is updated with pix (run the pix installer again); packages: pix update --extensions');
-  process.exit(2);
- }
- if (rest.includes('--all')) args = args.map((a) => (a === '--all' ? '--extensions' : a));
- else if (!rest.some((a) => ['--extensions', '--extension', '--models'].includes(a) || !a.startsWith('-'))) args.push('--extensions');
+const rest = args.slice(1);
+if (args[0] === 'update' && (rest.some((a) => ['--self', '--all', 'self', 'pi'].includes(a)) || !rest.some((a) => ['--extensions', '--extension', '--models'].includes(a) || !a.startsWith('-')))) {
+ console.error('pix: run pix update');
+ process.exit(2);
 }
 `)
 	// Pi reads a subcommand only as the first argument.

@@ -79,3 +79,23 @@ func TestPruneKeepsRunningVersion(t *testing.T) {
 		t.Fatalf("kept %v, want the running a and the current c", ids)
 	}
 }
+
+func TestUpdateTarget(t *testing.T) {
+	for _, c := range []struct {
+		args []string
+		self bool
+		rest []string
+	}{
+		{[]string{"update"}, true, nil},
+		{[]string{"update", "--self"}, true, nil},
+		{[]string{"update", "pi", "--force"}, true, nil},
+		{[]string{"update", "--all"}, true, []string{"update", "--extensions"}},
+		{[]string{"update", "--extensions"}, false, []string{"update", "--extensions"}},
+		{[]string{"update", "npm:x"}, false, []string{"update", "npm:x"}},
+		{[]string{"update", "--models"}, false, []string{"update", "--models"}},
+	} {
+		if self, rest := updateTarget(c.args); self != c.self || !slices.Equal(rest, c.rest) {
+			t.Errorf("%v: %v %q, want %v %q", c.args, self, rest, c.self, c.rest)
+		}
+	}
+}

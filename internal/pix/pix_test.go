@@ -57,7 +57,7 @@ func TestExtensionSelectionAndAutomaticEntry(t *testing.T) {
 	}
 	selected.Source = "npm:x"
 	source := entrySource(dir, []Extension{selected})
-	for _, want := range []string{"if (!command) args = ['-e', " + jsString(selected.Entry) + ", ...args]", `new Set(["npm:x"])`, "PI_PACKAGE_DIR", "PI_SKIP_VERSION_CHECK", "process.exit(2)", "args.push('--extensions')"} {
+	for _, want := range []string{"if (!command) args = ['-e', " + jsString(selected.Entry) + ", ...args]", `new Set(["npm:x"])`, "PI_PACKAGE_DIR", "PI_SKIP_VERSION_CHECK", "process.exit(2)", "pix: run pix update"} {
 		if !strings.Contains(source, want) {
 			t.Fatalf("missing %s", want)
 		}

@@ -197,10 +197,27 @@ func runPi(ctx context.Context, args []string, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
+	if len(args) > 0 && args[0] == "update" {
+		var self bool
+		if self, args = updateTarget(args); self {
+			if err := updateSelf(stderr); err != nil {
+				return err
+			}
+			if args == nil {
+				return nil
+			}
+		}
+	}
 	if in.current() == "" {
 		fmt.Fprintln(stderr, "pix: building Pi for this machine, once (about a minute)")
 		if err := in.compile(ctx, false, 30*time.Minute, stderr); err != nil {
 			return err
+		}
+	} else if built, _ := readManifest(filepath.Join(in.Home, "current")); built.Pix != Version {
+		// A new pix carries a new Pi: build it the way the current one was built.
+		fmt.Fprintf(stderr, "pix: building Pi for pix %s (about a minute)\n", Version)
+		if err := in.compile(ctx, len(built.Extensions) > 0, 30*time.Minute, stderr); err != nil {
+			fmt.Fprintf(stderr, "pix: %v\npix: running the previous build\n", err)
 		}
 	}
 	if ids, _ := in.versions(); len(ids) > 1 {
@@ -297,4 +314,47 @@ func uninstall(stdout io.Writer) error {
 func isTerminal(f *os.File) bool {
 	info, err := f.Stat()
 	return err == nil && info.Mode()&os.ModeCharDevice != 0
+}
+
+// updateTarget splits Pi's `update` arguments into pix itself (pi, self, --self, --all or no target: pix holds Pi) and
+// the rest for Pi, nil when nothing is left.
+func updateTarget(args []string) (bool, []string) {
+	self, other, rest := false, false, []string{"update"}
+	for _, a := range args[1:] {
+		switch {
+		case a == "pi" || a == "self" || a == "--self":
+			self = true
+		case a == "--all":
+			self, other = true, true
+			rest = append(rest, "--extensions")
+		default:
+			other = other || a == "--extensions" || a == "--extension" || a == "--models" || !strings.HasPrefix(a, "-")
+			rest = append(rest, a)
+		}
+	}
+	if !other {
+		return true, nil
+	}
+	return self, rest
+}
+
+// installer updates pix in place; replaced in tests.
+var installer = "curl -fsSL https://raw.githubusercontent.com/iamdin/pix/main/install.sh | sh"
+
+// updateSelf installs the latest pix over this one; its first run builds the Pi it carries.
+func updateSelf(stderr io.Writer) error {
+	self, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	if self, err = filepath.EvalSymlinks(self); err != nil {
+		return err
+	}
+	cmd := exec.Command("sh", "-c", installer)
+	cmd.Env = append(os.Environ(), "PIX_INSTALL_DIR="+filepath.Dir(self))
+	cmd.Stdout, cmd.Stderr = stderr, stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("update pix: %w", err)
+	}
+	return nil
 }

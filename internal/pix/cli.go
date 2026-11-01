@@ -40,6 +40,7 @@ func Main(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 const usage = `pix — Pi, built ahead of time with Bun, with performance patches
 
   pix [Pi arguments]          Pi itself: pix, pix -c, pix -p "...", pix install npm:x, pix --help
+  pix update                  update pix and the Pi it carries (--extensions: packages, --all: both)
   pix compile                 compile the packages in your Pi settings into pix, for speed (again after they change)
   pix self status             what pix runs: Pi version, compiled-in extensions
   pix self feedback FILE      send a failed compile's feedback as a GitHub issue, after you confirm

@@ -34,11 +34,11 @@ pix self feedback FILE # send a failed compile's feedback (it names FILE) as a G
 - `pix compile` compiles the packages as installed (`pix install`), downloading nothing. It links their files into the
   build with hard links, which take no space; only Pi itself (about 110 MB, 200 MB with extensions) is added. Bun, Pi's
   sources and other compile-only files are removed afterwards, and only the build in use is kept.
-- `pix install/remove/update` manage packages as Pi does; with extensions compiled in, pix reminds you to run
-  `pix compile`. `pix update` updates packages only: Pi in pix is updated by installing a new pix.
+- `pix install/remove/update` work as in Pi; with extensions compiled in, pix reminds you to run `pix compile`.
+  `pix update` updates pix, which carries Pi (`--extensions` updates packages, `--all` both); the next run builds the
+  new Pi the way the current one was built, compiled-in extensions included.
 - A new build is switched to only after it passes its checks. The previous build is kept for sessions still running it;
   older ones are deleted along with their build directories in the cache.
-- To upgrade pix, run the install command again.
 - `compile` shows each step and how long it took (the current one counts up in a terminal; elsewhere a long compile adds
   a line every 5 minutes) and stops compiling after 30 minutes (`--timeout`, `0` for no limit). An extension with a very
   large function can compile for a long time; leave one out with `{"source": "...", "extensions": []}` in the settings
@@ -113,8 +113,8 @@ upgrading Pi must run the resolution regression tests.
   prompts and themes of packages.
 - npm lifecycle scripts are disabled and user or global npm configuration is not read. Packages that need install
   scripts or private registry credentials may not build; compile-time code such as Bun macros may still run.
-- Pi's self-update is refused (`update --self`, `update pi`); `update` without a target updates packages, and Pi's
-  notice of a newer Pi is off. pix follows Pi releases.
+- Pi's self-update is `pix update`, which installs the latest pix; Pi's notice of a newer Pi is off, as pix follows Pi
+  releases.
 
 ## Pinned toolchain and optimizations
 

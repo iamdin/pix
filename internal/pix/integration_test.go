@@ -108,7 +108,7 @@ func TestIntegrationExtensions(t *testing.T) {
 func TestIntegrationManagementCommands(t *testing.T) {
 	exe := filepath.Join(integrationArtifact(t), "pi")
 	home := t.TempDir()
-	// Packages are managed as by Pi; Pi itself is updated with pix, not by Pi's self-update.
+	// Packages are managed as by Pi; Pi itself is updated by `pix update`, not by Pi's self-update.
 	for _, args := range [][]string{{"update", "--self"}, {"update", "pi"}} {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		cmd := exec.CommandContext(ctx, exe, args...)
@@ -116,7 +116,7 @@ func TestIntegrationManagementCommands(t *testing.T) {
 		out, err := cmd.CombinedOutput()
 		cancel()
 		exit, ok := err.(*exec.ExitError)
-		if !ok || exit.ExitCode() != 2 || !bytes.Contains(out, []byte("Pi is updated with pix")) {
+		if !ok || exit.ExitCode() != 2 || !bytes.Contains(out, []byte("pix: run pix update")) {
 			t.Fatalf("%v: %v %s", args, err, out)
 		}
 	}
