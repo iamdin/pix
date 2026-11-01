@@ -1,5 +1,5 @@
-# scripts/release.ts runs this on a draft release for the platforms it checks on GitHub (--host PLATFORM=gh): the
-# asset builds Pi, and that Pi passes bench/e2e, on the platform it is for.
+# scripts/release.ts runs this on a draft release for the platforms it compiles on GitHub (--host PLATFORM=gh): pix
+# compiles the release's Pi on the platform it is for, that Pi passes bench/e2e, and it is uploaded to the draft.
 name: check-release
 on:
   workflow_dispatch:
@@ -12,7 +12,7 @@ on:
 permissions:
   contents: write # a draft release is visible only with write access
 jobs:
-  check:
+  compile:
     strategy:
       fail-fast: false
       matrix:
@@ -24,12 +24,16 @@ jobs:
       - uses: actions/checkout@v4
       - name: pix compile
         run: |
-          asset=pix-$(echo "${{ matrix.platform }}" | tr / -)
-          gh release download "${{ inputs.tag }}" --pattern "$asset" --pattern "$asset.sha256" --dir dl
-          (cd dl && sha256sum -c "$asset.sha256" 2>/dev/null || shasum -a 256 -c "$asset.sha256")
-          chmod +x "dl/$asset"
-          "dl/$asset" compile --out "$RUNNER_TEMP/build"
+          p=$(echo "${{ matrix.platform }}" | tr / -)
+          echo "P=$p" >> "$GITHUB_ENV"
+          gh release download "${{ inputs.tag }}" --pattern "builder-$p" --pattern "pi-source-$p.tar.gz" --dir dl
+          chmod +x "dl/builder-$p"
+          "dl/builder-$p" compile --pi "$PWD/dl/pi-source-$p.tar.gz" --out "$RUNNER_TEMP/build"
       - name: bench/e2e
         run: |
           bun=$(ls -t ~/.cache/pix/runtime/*/bun ~/Library/Caches/pix/runtime/*/bun 2>/dev/null | head -1)
           "$bun" bench/e2e/run.ts "$RUNNER_TEMP/build/pi"
+      - name: upload
+        run: |
+          tar -czf "pi-$P.tar.gz" -C "$RUNNER_TEMP/build" .
+          gh release upload "${{ inputs.tag }}" "pi-$P.tar.gz"

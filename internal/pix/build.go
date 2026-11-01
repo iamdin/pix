@@ -132,7 +132,13 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	}
 	source := filepath.Join(stage, "pi")
 	step("Unpack the patched Pi")
-	info, err := unpackPi(r, pins, opts.Pi, source, log)
+	archive, pinned := opts.Pi, opts.Pi == ""
+	if pinned {
+		if archive, err = fetchAsset(ctx, opts.Cache, sourceAsset()); err != nil {
+			return err
+		}
+	}
+	info, err := unpackPi(r, pins, pinned, archive, source, log)
 	if err != nil {
 		return err
 	}
@@ -155,7 +161,8 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err = os.WriteFile(marker, []byte("Incomplete build; see "+stage+"/build.log\n"), 0600); err != nil {
 		return err
 	}
-	entry := filepath.Join(stage, "entry.ts")
+	// Beside Pi's own sources, so that the embedded root is packages/coding-agent, where Pi looks for its workers.
+	entry := filepath.Join(source, "packages/coding-agent/pix-entry.ts")
 	if err = os.WriteFile(entry, []byte(entrySource(source, extensions)), 0600); err != nil {
 		return err
 	}
@@ -168,8 +175,13 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 		return err
 	}
 	executable := filepath.Join(opts.Out, "pi")
-	args := []string{"build", "--compile", "--aot", "--format=esm", "--aot-allow-code-from-disk", "--no-compile-autoload-dotenv", "--no-compile-autoload-bunfig", "--tsconfig-override=" + tsconfig, "--metafile=" + filepath.Join(stage, "metafile.json"), entry, filepath.Join(source, "packages/coding-agent/src/utils/image-resize-worker.ts"), filepath.Join(source, "packages/coding-agent/src/extensions/codemode/worker.ts"), filepath.Join(source, "packages/codemode/src/runtime/worker.ts"), "--outfile", executable}
-	args = append(args, "--compile-in-place", "--asset="+filepath.Join(source, "packages/coding-agent/package.json"))
+	args := []string{"build", "--compile", "--aot", "--format=esm", "--aot-allow-code-from-disk", "--no-compile-autoload-dotenv", "--no-compile-autoload-bunfig", "--tsconfig-override=" + tsconfig, "--metafile=" + filepath.Join(stage, "metafile.json"), entry, filepath.Join(source, "packages/coding-agent/src/utils/image-resize-worker.ts"), filepath.Join(source, "packages/coding-agent/src/extensions/codemode/worker.ts"), "--outfile", executable}
+	// In place, modules keep their paths on disk, which compiled extensions need; such a build runs only on this
+	// machine. Without extensions, the build is portable.
+	if len(extensions) > 0 {
+		// pi-codemode's own worker, for compiled extensions that run it directly.
+		args = append(args, filepath.Join(source, "packages/codemode/src/runtime/worker.ts"), "--compile-in-place", "--asset="+filepath.Join(source, "packages/coding-agent/package.json"))
+	}
 	for _, extension := range extensions {
 		args = append(args, extension.Entry)
 	}
@@ -254,7 +266,10 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	}
 	checks = append(checks, "artifact macOS code signature", "version", "help", "isolated RPC get_state")
 	pins.Pi = info.Pi
-	manifest := Manifest{Schema: 1, Pix: Version, BuilderSHA256: builderHash, Sources: pins, Extensions: extensions, ExtensionsAutoLoad: true, SourceTree: info.SourceTree, NPMLock: info.NPMLock, Node: info.Node, NPM: info.NPM, BuiltAt: time.Now().UTC().Format(time.RFC3339), CompilerArgs: args, Work: stage, Checks: checks, Limitations: []string{"With streaming-tool-arguments, intermediate argument snapshots of large tool calls may lag; raw deltas and final arguments remain complete.", "Experimental Bun AOT; built-in mutation and module-loader behavior differ from stock Pi.", "Extensions on disk load as in Pi, except those of compiled-in packages; not a sandbox.", "Selected extensions auto-load, including during build smoke checks; use trusted packages only. No extension permission sandbox.", "Code loaded from disk or generated at runtime is interpreted, not AOT. In-place module identities and cross-machine portability require validation.", "No performance, full provider, TUI, image or multi-day stability claim.", "Package sources use pinned Pi resolution in isolated storage; npm install scripts are disabled. Local dependencies, dynamic imports and native/runtime assets are not made hermetic by this build."}, Files: hashes}
+	manifest := Manifest{Schema: 1, Pix: Version, BuilderSHA256: builderHash, Sources: pins, Extensions: extensions, ExtensionsAutoLoad: true, SourceTree: info.SourceTree, NPMLock: info.NPMLock, Node: info.Node, NPM: info.NPM, BuiltAt: time.Now().UTC().Format(time.RFC3339), CompilerArgs: args, Checks: checks, Limitations: []string{"With streaming-tool-arguments, intermediate argument snapshots of large tool calls may lag; raw deltas and final arguments remain complete.", "Experimental Bun AOT; built-in mutation and module-loader behavior differ from stock Pi.", "Extensions on disk load as in Pi, except those of compiled-in packages; not a sandbox.", "Selected extensions auto-load, including during build smoke checks; use trusted packages only. No extension permission sandbox.", "Code loaded from disk or generated at runtime is interpreted, not AOT. In-place module identities and cross-machine portability require validation.", "No performance, full provider, TUI, image or multi-day stability claim.", "Package sources use pinned Pi resolution in isolated storage; npm install scripts are disabled. Local dependencies, dynamic imports and native/runtime assets are not made hermetic by this build."}, Files: hashes}
+	if len(extensions) > 0 {
+		manifest.Work = stage
+	}
 	if err = writeJSON(filepath.Join(opts.Out, "pix-build.json"), manifest); err != nil {
 		return err
 	}

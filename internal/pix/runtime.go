@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 )
 
-// runtime-data/<goos>-<goarch> holds bun.zip and, in releases, pi.tar.gz (see Prepare); neither is in git.
+// runtime-data/<goos>-<goarch>/bun.zip is the official Bun canary for the platform; it is not in git.
 // runtime_<goos>_<goarch>.go embeds the one for the platform pix is built for.
 
 // Canary assets are disposable; keep the exact validated compiler with the CLI.

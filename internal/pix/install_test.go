@@ -3,25 +3,60 @@ package pix
 import (
 	"context"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
-	"time"
 )
+
+// fakeRelease serves a prebuilt Pi for this pix as its release asset.
+func fakeRelease(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "pi"), "#!/bin/sh\n", 0755)
+	writeFile(t, filepath.Join(dir, "package.json"), "{}", 0644)
+	writeFile(t, filepath.Join(dir, "recipe", "sources.lock.json"), "{}", 0644)
+	files, err := fileHashes(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := writeJSON(filepath.Join(dir, "pix-build.json"), Manifest{Schema: 1, Pix: Version, Files: files}); err != nil {
+		t.Fatal(err)
+	}
+	archive := filepath.Join(t.TempDir(), prebuiltAsset())
+	if out, err := exec.Command("tar", "-czf", archive, "-C", dir, ".").CombinedOutput(); err != nil {
+		t.Fatal(err, string(out))
+	}
+	sum, err := hashFile(archive)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(http.FileServer(http.Dir(filepath.Dir(archive))))
+	t.Cleanup(server.Close)
+	base, sums := releaseBase, releaseSums
+	releaseBase, releaseSums = server.URL, prebuiltAsset()+"="+sum
+	t.Cleanup(func() { releaseBase, releaseSums = base, sums })
+}
 
 func TestInstallationLifecycle(t *testing.T) {
 	root := t.TempDir()
 	home := filepath.Join(root, "pix")
+	t.Setenv("HOME", root)
+	t.Setenv("XDG_CACHE_HOME", filepath.Join(root, "cache"))
 	t.Setenv("PIX_HOME", home)
 	t.Setenv("PI_CODING_AGENT_DIR", filepath.Join(root, "agent"))
-	writeFile(t, filepath.Join(root, "agent", "settings.json"), `{"packages": ["npm:x"]}`, 0644)
-	var settings []string
+	fakeRelease(t)
+	builds := 0
 	buildFunc = func(_ context.Context, opts Options, _ io.Writer) error {
-		settings = append(settings, opts.Settings)
+		builds++
+		if !opts.Installed || opts.Settings != filepath.Join(root, "agent", "settings.json") {
+			t.Fatalf("compiles the packages Pi installed: %+v", opts)
+		}
 		writeFile(t, filepath.Join(opts.Out, "pi"), "#!/bin/sh\n", 0755)
-		return writeJSON(filepath.Join(opts.Out, "pix-build.json"), Manifest{Schema: 1, BuiltAt: time.Now().String()})
+		return writeJSON(filepath.Join(opts.Out, "pix-build.json"), Manifest{Schema: 1, Pix: Version, Extensions: []Extension{{Name: "x"}}})
 	}
 	defer func() { buildFunc = Build }()
 	must := func(err error) {
@@ -33,19 +68,42 @@ func TestInstallationLifecycle(t *testing.T) {
 	in, err := loadInstallation()
 	must(err)
 	must(status(io.Discard))
-	must(in.compile(context.Background(), false, 0, io.Discard))
-	must(in.compile(context.Background(), true, 0, io.Discard))
-	must(in.compile(context.Background(), true, 0, io.Discard))
-	if want := filepath.Join(root, "agent", "settings.json"); !slices.Equal(settings, []string{"", want, want}) {
-		t.Fatalf("settings per build: %q", settings)
+	must(in.install(context.Background(), io.Discard))
+	must(in.compile(context.Background(), 0, io.Discard)) // no packages: the release's Pi again
+	if builds != 0 {
+		t.Fatal("compiled without packages")
+	}
+	writeFile(t, filepath.Join(root, "agent", "settings.json"), `{"packages": ["npm:x"]}`, 0644)
+	must(in.compile(context.Background(), 0, io.Discard))
+	if m, _ := readManifest(filepath.Join(home, "current")); builds != 1 || len(m.Extensions) != 1 {
+		t.Fatalf("builds %d, current %+v", builds, m)
 	}
 	if ids, _ := in.versions(); len(ids) != 1 || in.current() != ids[0] {
 		t.Fatalf("versions: %v, current %s", ids, in.current())
+	}
+	cache, _ := os.UserCacheDir()
+	if downloads, _ := filepath.Glob(filepath.Join(cache, "pix", "pi-*")); len(downloads) != 0 {
+		t.Fatalf("left downloads: %v", downloads)
 	}
 	must(status(io.Discard))
 	must(uninstall(io.Discard))
 	if exists(home) {
 		t.Fatal("uninstall left", home)
+	}
+}
+
+func TestInstallRejectsTamperedAsset(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	fakeRelease(t)
+	releaseSums = prebuiltAsset() + "=" + strings.Repeat("0", 64)
+	in := &installation{Home: t.TempDir()}
+	if err := in.install(context.Background(), io.Discard); err == nil || in.current() != "" {
+		t.Fatalf("installed an asset with the wrong sum: %v", err)
+	}
+	releaseSums = ""
+	if err := in.install(context.Background(), io.Discard); err == nil {
+		t.Fatal("a development build has no release assets")
 	}
 }
 

@@ -274,13 +274,13 @@ func TestUnpackPi(t *testing.T) {
 	}
 	variant := pins.Pi
 	variant.Commit = strings.Repeat("a", 40)
-	if info, err := unpackPi(r, pins, pack(preparedInfo{Pix: Version, Pi: variant, Platform: platform}), filepath.Join(t.TempDir(), "pi"), io.Discard); err != nil || info.Pi.Commit != variant.Commit {
+	if info, err := unpackPi(r, pins, false, pack(preparedInfo{Pix: Version, Pi: variant, Platform: platform}), filepath.Join(t.TempDir(), "pi"), io.Discard); err != nil || info.Pi.Commit != variant.Commit {
 		t.Fatalf("--pi takes any commit: %+v %v", info, err)
 	}
-	if _, err := unpackPi(r, pins, pack(preparedInfo{Pix: "0.0.0", Pi: pins.Pi, Platform: platform}), filepath.Join(t.TempDir(), "pi"), io.Discard); err == nil {
+	if _, err := unpackPi(r, pins, false, pack(preparedInfo{Pix: "0.0.0", Pi: pins.Pi, Platform: platform}), filepath.Join(t.TempDir(), "pi"), io.Discard); err == nil {
 		t.Fatal("accepted Pi prepared by another pix")
 	}
-	if _, err := unpackPi(r, pins, pack(preparedInfo{Pix: Version, Pi: pins.Pi, Platform: "plan9/386"}), filepath.Join(t.TempDir(), "pi"), io.Discard); err == nil {
+	if _, err := unpackPi(r, pins, false, pack(preparedInfo{Pix: Version, Pi: pins.Pi, Platform: "plan9/386"}), filepath.Join(t.TempDir(), "pi"), io.Discard); err == nil {
 		t.Fatal("accepted Pi prepared for another platform")
 	}
 }

@@ -21,8 +21,8 @@ import (
 //	versions/<id>/  builds: the current one, and older ones while a session still runs them
 //	current         symlink to the version in use
 //
-// The first run builds Pi without extensions; Pi loads the user's packages from disk, as the original does.
-// `pix compile` builds again with the packages in the Pi settings compiled in.
+// Installing pix downloads the Pi that its release compiled; Pi loads the user's packages from disk, as the original
+// does. `pix compile` builds again with the packages in the Pi settings compiled in.
 type installation struct{ Home string }
 
 // Build is replaced in tests.
@@ -60,37 +60,77 @@ func (in *installation) current() string {
 	return filepath.Base(target)
 }
 
-// compile builds Pi into a new version and switches to it; withPackages compiles in the packages in the Pi settings.
-func (in *installation) compile(ctx context.Context, withPackages bool, timeout time.Duration, stdout io.Writer) error {
+// compile builds Pi with the packages in the Pi settings compiled in, and switches to it; without packages, it
+// switches to the release's Pi.
+func (in *installation) compile(ctx context.Context, timeout time.Duration, stdout io.Writer) error {
+	settings, err := agentSettings()
+	if err != nil {
+		return err
+	}
+	if packages, err := settingsPackages(settings); err != nil {
+		return err
+	} else if packages == nil {
+		return in.install(ctx, stdout)
+	}
 	if err := os.MkdirAll(filepath.Join(in.Home, "versions"), 0755); err != nil {
 		return err
 	}
-	opts := Options{Out: filepath.Join(in.Home, "versions", time.Now().Format("20060102-150405.000000000")), Timeout: timeout}
 	cache, err := os.UserCacheDir()
 	if err != nil {
 		return err
 	}
-	opts.Cache = filepath.Join(cache, "pix")
-	if withPackages {
-		settings, err := agentSettings()
-		if err != nil {
-			return err
-		}
-		if packages, err := settingsPackages(settings); err != nil {
-			return err
-		} else if packages != nil {
-			opts.Settings, opts.Installed = settings, true
-		}
-	}
+	opts := Options{Out: filepath.Join(in.Home, "versions", time.Now().Format("20060102-150405.000000000")), Cache: filepath.Join(cache, "pix"), Settings: settings, Installed: true, Timeout: timeout}
 	if err := buildFunc(ctx, opts, stdout); err != nil {
 		return err
 	}
-	if err := in.switchTo(filepath.Base(opts.Out)); err != nil {
+	return in.use(filepath.Base(opts.Out), opts.Cache, stdout)
+}
+
+// install switches to the Pi that pix's release compiled, which loads every package from disk.
+func (in *installation) install(ctx context.Context, stdout io.Writer) error {
+	cache, err := os.UserCacheDir()
+	if err != nil {
 		return err
 	}
-	// Bun, Pi's sources and npm's cache are only for compiling; pix unpacks or downloads them again next time.
+	cache = filepath.Join(cache, "pix")
+	fmt.Fprintf(stdout, "Downloading Pi for pix %s\n", Version)
+	archive, err := fetchAsset(ctx, cache, prebuiltAsset())
+	if err != nil {
+		return err
+	}
+	versions := filepath.Join(in.Home, "versions")
+	if err := os.MkdirAll(versions, 0755); err != nil {
+		return err
+	}
+	tmp, err := os.MkdirTemp(in.Home, ".download-")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tmp)
+	if out, err := exec.CommandContext(ctx, "tar", "-xzf", archive, "-C", tmp).CombinedOutput(); err != nil {
+		return fmt.Errorf("unpack %s: %v: %s", archive, err, out)
+	}
+	if err := Verify(tmp); err != nil {
+		return err
+	}
+	if manifest, err := readManifest(tmp); err != nil || manifest.Pix != Version || len(manifest.Extensions) > 0 {
+		return fmt.Errorf("%s is not the Pi of pix %s", prebuiltAsset(), Version)
+	}
+	id := time.Now().Format("20060102-150405.000000000")
+	if err := os.Rename(tmp, filepath.Join(versions, id)); err != nil {
+		return err
+	}
+	return in.use(id, cache, stdout)
+}
+
+// use switches to version id and removes what only compiling needs and the versions no longer in use.
+func (in *installation) use(id, cache string, stdout io.Writer) error {
+	if err := in.switchTo(id); err != nil {
+		return err
+	}
+	// Bun, Pi's prepared sources and the downloads are fetched again when needed.
 	for _, pattern := range []string{"runtime", "pi-*", "npm"} {
-		dirs, _ := filepath.Glob(filepath.Join(opts.Cache, pattern))
+		dirs, _ := filepath.Glob(filepath.Join(cache, pattern))
 		for _, dir := range dirs {
 			if err := os.RemoveAll(dir); err != nil {
 				return err
@@ -191,7 +231,7 @@ func readManifest(dir string) (Manifest, error) {
 	return manifest, err
 }
 
-// runPi runs Pi with args, building it first on the first run.
+// runPi runs Pi with args, downloading it first on the first run.
 func runPi(ctx context.Context, args []string, stderr io.Writer) error {
 	in, err := loadInstallation()
 	if err != nil {
@@ -209,15 +249,20 @@ func runPi(ctx context.Context, args []string, stderr io.Writer) error {
 		}
 	}
 	if in.current() == "" {
-		fmt.Fprintln(stderr, "pix: building Pi for this machine, once (about a minute)")
-		if err := in.compile(ctx, false, 30*time.Minute, stderr); err != nil {
+		if err := in.install(ctx, stderr); err != nil {
 			return err
 		}
 	} else if built, _ := readManifest(filepath.Join(in.Home, "current")); built.Pix != Version {
-		// A new pix carries a new Pi: build it the way the current one was built.
-		fmt.Fprintf(stderr, "pix: building Pi for pix %s (about a minute)\n", Version)
-		if err := in.compile(ctx, len(built.Extensions) > 0, 30*time.Minute, stderr); err != nil {
-			fmt.Fprintf(stderr, "pix: %v\npix: running the previous build\n", err)
+		// A new pix comes with a new Pi; compile the packages into it again if they were.
+		var err error
+		if len(built.Extensions) > 0 {
+			fmt.Fprintf(stderr, "pix: compiling your packages into the Pi of pix %s (about a minute)\n", Version)
+			err = in.compile(ctx, 30*time.Minute, stderr)
+		} else {
+			err = in.install(ctx, stderr)
+		}
+		if err != nil {
+			fmt.Fprintf(stderr, "pix: %v\npix: running the previous Pi\n", err)
 		}
 	}
 	if ids, _ := in.versions(); len(ids) > 1 {
@@ -249,7 +294,7 @@ func status(stdout io.Writer) error {
 	}
 	fmt.Fprintf(stdout, "pix %s\n", Version)
 	if in.current() == "" {
-		fmt.Fprintln(stdout, "Build:      none yet; the first `pix` builds it")
+		fmt.Fprintln(stdout, "Build:      none yet; the first `pix` downloads it")
 		return nil
 	}
 	current := filepath.Join(in.Home, "versions", in.current())
@@ -341,7 +386,7 @@ func updateTarget(args []string) (bool, []string) {
 // installer updates pix in place; replaced in tests.
 var installer = "curl -fsSL https://raw.githubusercontent.com/iamdin/pix/main/install.sh | sh"
 
-// updateSelf installs the latest pix over this one; its first run builds the Pi it carries.
+// updateSelf installs the latest pix over this one, with its Pi.
 func updateSelf(stderr io.Writer) error {
 	self, err := os.Executable()
 	if err != nil {

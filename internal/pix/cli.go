@@ -105,6 +105,12 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer) error
 			return fmt.Errorf("usage: pix self feedback [-y] FEEDBACK.md (a failed compile names its file)")
 		}
 		return feedback(f.Arg(0), *yes, os.Stdin, stdout)
+	case "install": // for install.sh
+		in, err := loadInstallation()
+		if err != nil {
+			return err
+		}
+		return in.install(ctx, stdout)
 	case "status", "uninstall":
 		if len(args) != 1 {
 			return fmt.Errorf("usage: pix self %s", args[0])
@@ -126,13 +132,13 @@ func compileCommand(ctx context.Context, args []string, stdout, stderr io.Writer
 	opts := Options{}
 	f := flag.NewFlagSet("compile", flag.ContinueOnError)
 	f.SetOutput(stderr)
-	f.StringVar(&opts.Pi, "pi", "", "build this Pi (a .tar.gz from `pix self prepare`) instead of the one built into pix")
+	f.StringVar(&opts.Pi, "pi", "", "build this Pi (a .tar.gz from `pix self prepare`) instead of the release's")
 	f.StringVar(&opts.Cache, "cache-dir", filepath.Join(cache, "pix"), "downloads, pristine sources and retained build logs")
 	f.StringVar(&opts.Out, "out", "", "build into this new directory (never overwritten) instead of the Pi that pix runs")
 	f.StringVar(&opts.Settings, "settings", "", "with --out: JSON file with Pi packages declarations; relative sources resolve from this file")
 	f.Var(&opts.Extensions, "extension", "with --out: append a Pi package source (repeatable)")
 	f.DurationVar(&opts.Timeout, "timeout", 30*time.Minute, "stop compiling after this long (0: never)")
-	none := f.Bool("none", false, "compile nothing in: Pi loads every package from disk")
+	none := f.Bool("none", false, "compile nothing in: use the release's Pi, which loads every package from disk")
 	if err := f.Parse(args); err != nil {
 		return err
 	}
@@ -147,7 +153,12 @@ func compileCommand(ctx context.Context, args []string, stdout, stderr io.Writer
 		if err != nil {
 			return err
 		}
-		if err := in.compile(ctx, !*none, opts.Timeout, stdout); err != nil {
+		if *none {
+			err = in.install(ctx, stdout)
+		} else {
+			err = in.compile(ctx, opts.Timeout, stdout)
+		}
+		if err != nil {
 			return err
 		}
 		fmt.Fprintln(stdout, "Done: pix runs the new build.")

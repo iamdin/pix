@@ -10,14 +10,15 @@ in for speed. **Currently alpha.10, for macOS ARM64, Linux x64 and Linux ARM64 (
 curl -fsSL https://raw.githubusercontent.com/iamdin/pix/main/install.sh | sh
 ```
 
-Installs to `~/.local/bin/pix` (change it with `PIX_INSTALL_DIR`) and checks the SHA-256. pix carries Bun and a Pi
-that is already patched, built and tested. The first run builds Pi for this machine, in about a minute, and needs no
-Node; the original Pi is not changed. Installing packages uses npm or git, as with Pi.
+Installs `~/.local/bin/pix` (about 65 MB, with Bun inside for `pix compile`; change the directory with
+`PIX_INSTALL_DIR`), then the Pi that the release compiled for your platform (about 55 MB) into `~/.pix`, both checked
+against SHA-256 sums. Nothing is built on your machine and no Node is needed; the original Pi is not changed. Installing
+packages uses npm or git, as with Pi.
 
 From source: `go build -trimpath -o bin/pix ./cmd/pix` (Go 1.24+, and the Bun archive for your platform in
-`internal/pix/runtime-data/<goos>-<goarch>/bun.zip`, which is not in git). Such a development build has no Pi in it:
-run `pix self prepare /abs/pi.tar.gz` first (needs Git, Node 24+ and npm 11+), then `pix compile --pi /abs/pi.tar.gz
---out DIR`. `bun scripts/release.ts` builds Pi into pix.
+`internal/pix/runtime-data/<goos>-<goarch>/bun.zip`, which is not in git). Such a development build has no release
+to download from: run `pix self prepare /abs/pi.tar.gz` first (needs Git, Node 24+ and npm 11+), then `pix compile --pi
+/abs/pi.tar.gz --out DIR`. `bun scripts/release.ts` builds a release.
 
 ## Use
 
@@ -31,18 +32,19 @@ pix self feedback FILE # send a failed compile's feedback (it names FILE) as a G
 
 - Extensions not compiled in load from disk, as in Pi. Without a JIT they run interpreted: light extensions don't
   notice; compile in the ones that do heavy work. A compiled-in package's extensions are not loaded again from disk.
-- `pix compile` compiles the packages as installed (`pix install`), downloading nothing. It links their files into the
-  build with hard links, which take no space; only Pi itself (about 110 MB, 200 MB with extensions) is added. Bun, Pi's
-  sources and other compile-only files are removed afterwards, and only the build in use is kept.
+- `pix compile` compiles the packages as installed (`pix install`) together with Pi, with the Bun inside pix and Pi's
+  prepared sources from the release (about 45 MB, downloaded then and removed afterwards); it runs no npm. It links the
+  packages' files into the build with hard links, which take no space; the build is about 200 MB. Only the build in use
+  is kept.
 - `pix install/remove/update` work as in Pi; with extensions compiled in, pix reminds you to run `pix compile`.
-  `pix update` updates pix, which carries Pi (`--extensions` updates packages, `--all` both); the next run builds the
-  new Pi the way the current one was built, compiled-in extensions included.
+  `pix update` updates pix and its Pi (`--extensions` updates packages, `--all` both); if extensions were compiled
+  in, the next run compiles them into the new Pi.
 - A new build is switched to only after it passes its checks. The previous build is kept for sessions still running it;
   older ones are deleted along with their build directories in the cache.
 - `compile` shows each step and how long it took (the current one counts up in a terminal; elsewhere a long compile adds
   a line every 5 minutes) and stops compiling after 30 minutes (`--timeout`, `0` for no limit). An extension with a very
   large function can compile for a long time; leave one out with `{"source": "...", "extensions": []}` in the settings
-  to find it, or use `pix compile --none` to compile nothing in.
+  to find it, or use `pix compile --none` to go back to the release's Pi.
 - A failed compile writes feedback for a GitHub issue next to its log, with your home directory replaced by `~`, and
   sends nothing. `pix self feedback FILE` shows it and asks before sending it with the GitHub CLI when `gh` is logged
   in; otherwise it prints a prefilled link to submit in the browser. `-y` sends without asking, for an agent that has

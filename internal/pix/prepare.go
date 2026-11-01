@@ -3,10 +3,8 @@ package pix
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,8 +25,8 @@ type preparedInfo struct {
 
 const preparedFile = "pix-prepared.json"
 
-// Prepare writes Pi, built and without dev dependencies, to a .tar.gz for `pix build`: releases embed it as
-// runtime-data/<goos>-<goarch>/pi.tar.gz, and `pix build --pi` takes one. It needs git, Node 24+ and npm 11+.
+// Prepare writes Pi, built and without dev dependencies, to a .tar.gz: releases publish it as pi-source-<goos>-<goarch>.tar.gz,
+// which `pix compile` downloads, and `pix compile --pi` takes one. It needs git, Node 24+ and npm 11+.
 // target is the GOOS/GOARCH the Pi is for: it is built and tested here, then npm installs the runtime
 // dependencies for target, whose optional native packages differ by platform.
 func Prepare(ctx context.Context, cache string, pi Source, target, out string, stdout io.Writer) (err error) {
@@ -165,14 +163,9 @@ func Prepare(ctx context.Context, cache string, pi Source, target, out string, s
 	return nil
 }
 
-// unpackPi extracts a prepared Pi into source: the file at path, or the one the release embeds.
-func unpackPi(r runner, pins Sources, path, source string, log io.Writer) (info preparedInfo, err error) {
-	var archive io.ReadCloser
-	if path != "" {
-		archive, err = os.Open(path)
-	} else if archive, err = runtimeData.Open(runtimeDataDir + "/pi.tar.gz"); errors.Is(err, fs.ErrNotExist) {
-		err = fmt.Errorf("this pix has no Pi built in (a development build); make one with `pix prepare OUT.tar.gz` and pass it with --pi")
-	}
+// unpackPi extracts the prepared Pi at path into source; a pinned one must be the commit pix pins.
+func unpackPi(r runner, pins Sources, pinned bool, path, source string, log io.Writer) (info preparedInfo, err error) {
+	archive, err := os.Open(path)
 	if err != nil {
 		return info, err
 	}
@@ -199,8 +192,8 @@ func unpackPi(r runner, pins Sources, path, source string, log io.Writer) (info 
 	if info.Platform != platform {
 		return info, fmt.Errorf("Pi was prepared for %s, not %s", info.Platform, platform)
 	}
-	if path == "" && info.Pi.Commit != pins.Pi.Commit {
-		return info, fmt.Errorf("the built-in Pi is %s, not the pinned %s", info.Pi.Commit, pins.Pi.Commit)
+	if pinned && info.Pi.Commit != pins.Pi.Commit {
+		return info, fmt.Errorf("the release's Pi is %s, not the pinned %s", info.Pi.Commit, pins.Pi.Commit)
 	}
 	return info, nil
 }
