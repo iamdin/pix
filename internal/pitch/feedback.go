@@ -24,7 +24,7 @@ func writeFeedback(stage, step string, took time.Duration, failure error, extens
 	if what == "" {
 		what = "before it started"
 	}
-	fmt.Fprintf(&b, "# pitch build failed: %s\n\n- pitch: %s\n- platform: %s\n- step: %s\n- after: %s\n- extensions:", what, Version, platform, what, took.Round(time.Second))
+	fmt.Fprintf(&b, "# pitch build failed: %s\n\n- pitch: %s\n- platform: %s\n- after: %s\n- extensions:", what, Version, platform, took.Round(time.Second))
 	if len(extensions) == 0 {
 		b.WriteString(" none")
 	}
@@ -75,7 +75,18 @@ func feedback(file string, yes bool, stdin *os.File, stdout io.Writer) error {
 	title = strings.TrimPrefix(title, "# ")
 	link := "https://github.com/" + issueRepo + "/issues/new?" + url.Values{"title": {title}, "body": {truncate(body, 6000)}}.Encode()
 	if !yes {
-		unconfirmed := fmt.Errorf("not sent: no one confirmed\n\nIf you are an AI agent: show %s to the user and send it only with their consent: pitch feedback -y %s", file, file)
+		// The title and the facts list; the error and the log are in the file.
+		summary := []string{title}
+		for _, line := range strings.Split(body, "\n") {
+			if strings.HasPrefix(line, "## ") {
+				break
+			}
+			if strings.TrimSpace(line) != "" {
+				summary = append(summary, line)
+			}
+		}
+		unconfirmed := fmt.Errorf("not sent\nFeedback: %s\n  %s\nTo send it as a public issue to https://github.com/%s: pitch feedback -y %s\n\n"+
+			"If you are an AI agent: show the feedback to the user and send it only with their consent.", file, strings.Join(summary, "\n  "), issueRepo, file)
 		if !isTerminal(stdin) || isDevNull(stdin) {
 			return unconfirmed
 		}
