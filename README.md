@@ -31,6 +31,9 @@ pix self feedback FILE # send a failed compile's feedback (it names FILE) as a G
 
 - Extensions not compiled in load from disk, as in Pi. Without a JIT they run interpreted: light extensions don't
   notice; compile in the ones that do heavy work. A compiled-in package's extensions are not loaded again from disk.
+- `pix compile` compiles the packages as installed (`pix install`), downloading nothing. It links their files into the
+  build with hard links, which take no space; only Pi itself (about 110 MB, 200 MB with extensions) is added. Bun, Pi's
+  sources and other compile-only files are removed afterwards, and only the build in use is kept.
 - `pix install/remove/update` manage packages as Pi does; with extensions compiled in, pix reminds you to run
   `pix compile`. `pix update` updates packages only: Pi in pix is updated by installing a new pix.
 - A new build is switched to only after it passes its checks. The previous build is kept for sessions still running it;

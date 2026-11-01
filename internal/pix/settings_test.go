@@ -67,7 +67,7 @@ func TestPiSettingsPackages(t *testing.T) {
 			other := t.TempDir()
 			t.Chdir(other)
 			var log bytes.Buffer
-			selected, err := resolveExtensions(r, "node", pi, stage, nil, settings, &log)
+			selected, err := resolveExtensions(r, "node", pi, stage, nil, settings, false, &log)
 			if !valid {
 				if err == nil {
 					t.Fatalf("accepted invalid config: %s", data)

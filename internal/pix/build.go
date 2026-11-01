@@ -94,7 +94,7 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 		if err != nil {
 			prog.end()
 			// Keep the log and the feedback, not the copies of Pi and the packages.
-			for _, dir := range []string{"pi", "extension-packages", "home", "smoke-home"} {
+			for _, dir := range []string{"pi", "extension-packages", "agent", "home", "smoke-home"} {
 				_ = os.RemoveAll(filepath.Join(stage, dir))
 			}
 			if ctx.Err() != nil { // the user stopped it: nothing to report
@@ -137,7 +137,7 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 		return err
 	}
 	step("Fetch extensions")
-	extensions, err = resolveExtensions(r, bun, source, stage, opts.Extensions, opts.Settings, log)
+	extensions, err = resolveExtensions(r, bun, source, stage, opts.Extensions, opts.Settings, opts.Installed, log)
 	if err != nil {
 		return err
 	}

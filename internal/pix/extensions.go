@@ -160,5 +160,8 @@ func compilerConfig(pi, entry string) (map[string]any, error) {
 		}
 	}
 	paths["typebox"] = []string{filepath.Join(pi, "node_modules/typebox")}
+	// One copy of Node's types: an extension's own (often newer) @types/node conflicts with Pi's.
+	paths["@types/node"] = []string{filepath.Join(pi, "node_modules/@types/node")}
+	paths["@types/node/*"] = []string{filepath.Join(pi, "node_modules/@types/node/*")}
 	return map[string]any{"compilerOptions": map[string]any{"target": "ESNext", "module": "ESNext", "moduleResolution": "Bundler", "strict": true, "resolveJsonModule": true, "skipLibCheck": true, "allowImportingTsExtensions": true, "paths": paths}, "include": []string{entry, filepath.Join(pi, "packages/coding-agent/src/utils/highlight-js.d.ts"), filepath.Join(pi, "packages/coding-agent/src/bun/quickjs-wasm.d.ts")}}, nil
 }

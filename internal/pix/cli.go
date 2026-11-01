@@ -22,6 +22,8 @@ type Options struct {
 	Extensions               stringsFlag
 	// Timeout stops compiling after this long; 0 never does.
 	Timeout time.Duration
+	// Installed compiles the packages where Pi installed them, from Settings (Pi's own), instead of fetching copies.
+	Installed bool
 }
 
 func Main(ctx context.Context, args []string, stdout, stderr io.Writer) int {

@@ -79,7 +79,7 @@ func (in *installation) compile(ctx context.Context, withPackages bool, timeout 
 		if packages, err := settingsPackages(settings); err != nil {
 			return err
 		} else if packages != nil {
-			opts.Settings = settings
+			opts.Settings, opts.Installed = settings, true
 		}
 	}
 	if err := buildFunc(ctx, opts, stdout); err != nil {

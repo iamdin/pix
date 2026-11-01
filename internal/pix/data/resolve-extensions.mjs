@@ -50,20 +50,34 @@ const declarations = packages.map(({ declaration, baseDir }) => {
   originalSources.set(resolved, source);
   return typeof declaration === "string" ? resolved : { ...declaration, source: resolved };
 });
-settingsManager.setProjectPackages(declarations);
-await settingsManager.flush();
-process.env.PI_OFFLINE = "0";
-process.env.npm_config_userconfig = join(request.stage, "home", ".npmrc");
-process.env.npm_config_globalconfig = join(request.stage, "home", "global.npmrc");
-console.error("Resolve Pi packages in isolated project storage (install scripts disabled)");
-// AOT type-checks Pi and the extensions together: a second @types/node (e.g. a newer one pulled by @types/ws) breaks
-// Pi's own types. Pin the npm packages to Pi's copy; Pi keeps an existing package.json.
-const npmRoot = join(workspace, ".pi", "npm");
-mkdirSync(npmRoot, { recursive: true });
-const typesNode = readJSON(join(request.pi, "node_modules/@types/node/package.json")).version;
-writeFileSync(join(npmRoot, "package.json"), JSON.stringify({ name: "pi-extensions", private: true, overrides: { "@types/node": typesNode } }, null, 2));
-// Project scope avoids Pi's legacy global-npm fallback. Only the in-memory packages list is used.
-const resources = await manager.resolve();
+let resources;
+if (request.agentDir) {
+  // The packages Pi installed for the user (pix install), linked into the build by pix: nothing is fetched.
+  process.env.PI_OFFLINE = "1";
+  const installed = new DefaultPackageManager({
+    cwd: workspace,
+    agentDir: request.agentDir,
+    settingsManager: SettingsManager.inMemory({ packages: declarations }),
+  });
+  resources = await installed.resolve(async (source) => {
+    throw new Error(`${source} is not installed: run pix install ${source}`);
+  });
+} else {
+  settingsManager.setProjectPackages(declarations);
+  await settingsManager.flush();
+  process.env.PI_OFFLINE = "0";
+  process.env.npm_config_userconfig = join(request.stage, "home", ".npmrc");
+  process.env.npm_config_globalconfig = join(request.stage, "home", "global.npmrc");
+  console.error("Resolve Pi packages in isolated project storage (install scripts disabled)");
+  // AOT type-checks Pi and the extensions together: a second @types/node (e.g. a newer one pulled by @types/ws) breaks
+  // Pi's own types. Pin the npm packages to Pi's copy; Pi keeps an existing package.json.
+  const npmRoot = join(workspace, ".pi", "npm");
+  mkdirSync(npmRoot, { recursive: true });
+  const typesNode = readJSON(join(request.pi, "node_modules/@types/node/package.json")).version;
+  writeFileSync(join(npmRoot, "package.json"), JSON.stringify({ name: "pi-extensions", private: true, overrides: { "@types/node": typesNode } }, null, 2));
+  // Project scope avoids Pi's legacy global-npm fallback. Only the in-memory packages list is used.
+  resources = await manager.resolve();
+}
 const selected = [];
 for (const [index, resource] of resources.extensions.filter((item) => item.enabled && item.metadata.origin === "package").entries()) {
   if (!statSync(resource.path).isDirectory()) { selected.push(resource); continue; }
