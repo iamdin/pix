@@ -72,8 +72,8 @@ func TestFeedback(t *testing.T) {
 	}{
 		{"unconfirmed", "", false, "pitch feedback -y"},
 		{"unconfirmed, /dev/null", "", false, "pitch feedback -y"},
-		{"no gh", "", true, "not installed"},
-		{"logged out", "exit 1", true, "gh auth login"},
+		{"no gh", "", true, "issues/new?"},
+		{"logged out", "exit 1", true, "issues/new?"},
 		{"create fails", `[ "$1" = auth ] && exit 0; echo denied >&2; exit 1`, true, "denied"},
 		{"sent", `[ "$1" = auth ] && exit 0; cat >/dev/null; echo https://github.com/iamdin/pitch/issues/1`, true, "Sent: https://github.com/iamdin/pitch/issues/1"},
 	} {
@@ -97,7 +97,8 @@ func TestFeedback(t *testing.T) {
 					t.Fatalf("no link to file it by hand: %s", got)
 				}
 			}
-			if !strings.Contains(got, c.want) || (c.name == "sent") != (err == nil) {
+			sent := c.name == "sent" || c.name == "no gh" || c.name == "logged out" // handed over: by gh, or as a link
+			if !strings.Contains(got, c.want) || sent != (err == nil) {
 				t.Fatalf("%v %s", err, out.String())
 			}
 		})

@@ -86,7 +86,7 @@ func writeFeedback(stage, step string, took time.Duration, failure error, extens
 }
 
 func feedbackHint(file string) string {
-	return fmt.Sprintf("Feedback for a GitHub issue is in %s; nothing has been sent.\nRead it and remove anything private, then send it with: pitch feedback %s\nAgents: show the feedback to the user, and run `pitch feedback -y %s` only after they agree.", file, file, file)
+	return fmt.Sprintf("Feedback for a GitHub issue is in %s; nothing has been sent.\nRead it and remove anything private, then send it with: pitch feedback %s\nAgents: show the feedback to the user, and run `pitch feedback -y %s` only after they agree. It sends with gh when gh is logged in, and otherwise prints a prefilled link for the user to submit: help the user pick the way that suits them.", file, file, file)
 }
 
 // feedback files the feedback from writeFeedback as an issue with the GitHub CLI, after the user confirms (yes: already did).
@@ -114,19 +114,22 @@ func feedback(file string, yes bool, stdin *os.File, stdout io.Writer) error {
 			return nil
 		}
 	}
-	retry := fmt.Sprintf("then run pitch feedback -y %s again; or open this link and submit the form yourself:\n%s", file, link)
+	// Without a logged-in GitHub CLI the user submits a prefilled form; it is not sent until they do.
+	byHand := "Not sent yet: open this link in a browser signed in to GitHub and submit the form:\n" + link + "\n"
 	gh, err := exec.LookPath("gh")
 	if err != nil {
-		return fmt.Errorf("not sent: the GitHub CLI (gh) is not installed. Install it (https://cli.github.com, e.g. brew install gh) and log in with gh auth login, %s", retry)
+		fmt.Fprint(stdout, byHand)
+		return nil
 	}
 	if exec.Command(gh, "auth", "status", "--hostname", "github.com").Run() != nil {
-		return fmt.Errorf("not sent: gh is not logged in to github.com. The user logs in with gh auth login (it is interactive; an agent asks the user to run it), %s", retry)
+		fmt.Fprintf(stdout, "%s(gh is not logged in; after gh auth login, pitch feedback -y %s sends it with gh.)\n", byHand, file)
+		return nil
 	}
 	var out, stderr bytes.Buffer
 	cmd := exec.Command(gh, "issue", "create", "--repo", issueRepo, "--title", title, "--body-file", "-")
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = strings.NewReader(body), &out, &stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("not sent: gh issue create: %v\n%s\nFix that, %s", err, strings.TrimSpace(stderr.String()), retry)
+		return fmt.Errorf("not sent: gh issue create: %v\n%s\nOpen this link in a browser signed in to GitHub and submit the form instead:\n%s", err, strings.TrimSpace(stderr.String()), link)
 	}
 	fmt.Fprintf(stdout, "Sent: %s\n", strings.TrimSpace(out.String()))
 	return nil

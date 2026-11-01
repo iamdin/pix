@@ -42,9 +42,9 @@ pitch build --name pi    # also install a `pi` command that takes the place of t
   minutes (`--timeout`, `0` for no limit). An extension with a very large function can compile for a long time; leave
   one out with `{"source": "...", "extensions": []}` in the settings to find it.
 - A failed build writes feedback for a GitHub issue next to its log, with your home directory replaced by `~`, and sends
-  nothing. `pitch feedback FILE` shows it and asks before sending it with the GitHub CLI (`gh`, logged in); `-y` sends
-  without asking, for an agent that has shown the feedback to you and has your agreement. Without `gh` it prints a link
-  to file the issue by hand.
+  nothing. `pitch feedback FILE` shows it and asks before sending it with the GitHub CLI when `gh` is logged in;
+  otherwise it prints a prefilled link to submit in the browser. `-y` sends without asking, for an agent that has shown
+  the feedback to you and has your agreement.
 
 ## Build
 
