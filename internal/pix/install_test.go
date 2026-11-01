@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"testing"
@@ -38,7 +39,7 @@ func TestInstallationLifecycle(t *testing.T) {
 	if want := filepath.Join(root, "agent", "settings.json"); !slices.Equal(settings, []string{"", want, want}) {
 		t.Fatalf("settings per build: %q", settings)
 	}
-	if ids, _ := in.versions(); len(ids) != 2 || in.current() != ids[1] {
+	if ids, _ := in.versions(); len(ids) != 1 || in.current() != ids[0] {
 		t.Fatalf("versions: %v, current %s", ids, in.current())
 	}
 	must(status(io.Discard))
@@ -55,5 +56,26 @@ func writeFile(t *testing.T, path, content string, mode os.FileMode) {
 	}
 	if err := os.WriteFile(path, []byte(content), mode); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestPruneKeepsRunningVersion(t *testing.T) {
+	in := &installation{Home: t.TempDir()}
+	for _, id := range []string{"a", "b", "c"} {
+		writeFile(t, filepath.Join(in.Home, "versions", id, "pi"), "#!/bin/sh\nsleep \"$1\"\n", 0755)
+	}
+	if err := in.switchTo("c"); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command(filepath.Join(in.Home, "versions", "a", "pi"), "30")
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer cmd.Process.Kill()
+	if err := in.prune(nil); err != nil {
+		t.Fatal(err)
+	}
+	if ids, _ := in.versions(); !slices.Equal(ids, []string{"a", "c"}) {
+		t.Fatalf("kept %v, want the running a and the current c", ids)
 	}
 }

@@ -93,8 +93,12 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	defer func() {
 		if err != nil {
 			prog.end()
+			// Keep the log and the feedback, not the copies of Pi and the packages.
+			for _, dir := range []string{"pi", "extension-packages", "home", "smoke-home"} {
+				_ = os.RemoveAll(filepath.Join(stage, dir))
+			}
 			if ctx.Err() != nil { // the user stopped it: nothing to report
-				err = fmt.Errorf("stopped; work retained at %s", stage)
+				err = fmt.Errorf("stopped; log at %s", filepath.Join(stage, "build.log"))
 				return
 			}
 			err = failure(err, stage, current, time.Since(start), extensions)
@@ -250,11 +254,19 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	}
 	checks = append(checks, "artifact macOS code signature", "version", "help", "isolated RPC get_state")
 	pins.Pi = info.Pi
-	manifest := Manifest{Schema: 1, Pix: Version, BuilderSHA256: builderHash, Sources: pins, Extensions: extensions, ExtensionsAutoLoad: true, SourceTree: info.SourceTree, NPMLock: info.NPMLock, Node: info.Node, NPM: info.NPM, BuiltAt: time.Now().UTC().Format(time.RFC3339), CompilerArgs: args, Work: stage, Checks: checks, Limitations: []string{"With streaming-tool-arguments, intermediate argument snapshots of large tool calls may lag; raw deltas and final arguments remain complete.", "Experimental Bun AOT; built-in mutation and module-loader behavior differ from stock Pi.", "Pi's built-in extensions (llama.cpp, codemode, tool-search, mcp) always load; user, project and settings extensions on disk do not; not a sandbox.", "Selected extensions auto-load, including during build smoke checks; use trusted packages only. No extension permission sandbox.", "Code loaded from disk or generated at runtime is interpreted, not AOT. In-place module identities and cross-machine portability require validation.", "No performance, full provider, TUI, image or multi-day stability claim.", "Package sources use pinned Pi resolution in isolated storage; npm install scripts are disabled. Local dependencies, dynamic imports and native/runtime assets are not made hermetic by this build."}, Files: hashes}
+	manifest := Manifest{Schema: 1, Pix: Version, BuilderSHA256: builderHash, Sources: pins, Extensions: extensions, ExtensionsAutoLoad: true, SourceTree: info.SourceTree, NPMLock: info.NPMLock, Node: info.Node, NPM: info.NPM, BuiltAt: time.Now().UTC().Format(time.RFC3339), CompilerArgs: args, Work: stage, Checks: checks, Limitations: []string{"With streaming-tool-arguments, intermediate argument snapshots of large tool calls may lag; raw deltas and final arguments remain complete.", "Experimental Bun AOT; built-in mutation and module-loader behavior differ from stock Pi.", "Extensions on disk load as in Pi, except those of compiled-in packages; not a sandbox.", "Selected extensions auto-load, including during build smoke checks; use trusted packages only. No extension permission sandbox.", "Code loaded from disk or generated at runtime is interpreted, not AOT. In-place module identities and cross-machine portability require validation.", "No performance, full provider, TUI, image or multi-day stability claim.", "Package sources use pinned Pi resolution in isolated storage; npm install scripts are disabled. Local dependencies, dynamic imports and native/runtime assets are not made hermetic by this build."}, Files: hashes}
 	if err = writeJSON(filepath.Join(opts.Out, "pix-build.json"), manifest); err != nil {
 		return err
 	}
 	if err = Verify(opts.Out); err != nil {
+		return err
+	}
+	// Only compiled extensions read from the work directory at run time, from their packages; Pi's copy is not used.
+	drop := filepath.Join(stage, "pi")
+	if len(extensions) == 0 {
+		drop = stage
+	}
+	if err = os.RemoveAll(drop); err != nil {
 		return err
 	}
 	prog.end()

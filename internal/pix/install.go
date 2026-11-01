@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"slices"
 	"strings"
 	"syscall"
@@ -17,7 +18,7 @@ import (
 
 // `pix` runs Pi from ~/.pix (PIX_HOME):
 //
-//	versions/<id>/  builds: the current one and the one before (sessions may still run it)
+//	versions/<id>/  builds: the current one, and older ones while a session still runs them
 //	current         symlink to the version in use
 //
 // The first run builds Pi without extensions; Pi loads the user's packages from disk, as the original does.
@@ -87,6 +88,15 @@ func (in *installation) compile(ctx context.Context, withPackages bool, timeout 
 	if err := in.switchTo(filepath.Base(opts.Out)); err != nil {
 		return err
 	}
+	// Bun, Pi's sources and npm's cache are only for compiling; pix unpacks or downloads them again next time.
+	for _, pattern := range []string{"runtime", "pi-*", "npm"} {
+		dirs, _ := filepath.Glob(filepath.Join(opts.Cache, pattern))
+		for _, dir := range dirs {
+			if err := os.RemoveAll(dir); err != nil {
+				return err
+			}
+		}
+	}
 	return in.prune(stdout)
 }
 
@@ -134,29 +144,32 @@ func (in *installation) switchTo(id string) error {
 	return os.Rename(tmp, link)
 }
 
-// prune keeps the current version and the newest other one, which sessions started before the switch may still run,
-// and removes the rest with their build work directories.
+// prune removes every version but the current one, with its build work directory, unless a running Pi still uses it.
 func (in *installation) prune(stdout io.Writer) error {
 	ids, err := in.versions()
 	if err != nil {
 		return err
 	}
-	current := in.current()
-	previous := false
-	for i := len(ids) - 1; i >= 0; i-- {
-		if ids[i] == current {
+	for _, id := range ids {
+		dir := filepath.Join(in.Home, "versions", id)
+		if id == in.current() || running(filepath.Join(dir, "pi")) {
 			continue
 		}
-		if !previous {
-			previous = true
-			continue
-		}
-		if err := removeVersion(filepath.Join(in.Home, "versions", ids[i])); err != nil {
+		if err := removeVersion(dir); err != nil {
 			return err
 		}
-		fmt.Fprintf(stdout, "Removed old build %s\n", ids[i])
+		if stdout != nil {
+			fmt.Fprintf(stdout, "Removed old build %s\n", id)
+		}
 	}
 	return nil
+}
+
+// running reports whether a process runs exe; when that cannot be told, it assumes one does.
+func running(exe string) bool {
+	err := exec.Command("pgrep", "-f", regexp.QuoteMeta(exe)+"( |$)").Run()
+	exit, ok := err.(*exec.ExitError)
+	return !ok || exit.ExitCode() != 1
 }
 
 func removeVersion(dir string) error {
@@ -190,7 +203,11 @@ func runPi(ctx context.Context, args []string, stderr io.Writer) error {
 			return err
 		}
 	}
-	exe := filepath.Join(in.Home, "current", "pi")
+	if ids, _ := in.versions(); len(ids) > 1 {
+		_ = in.prune(nil) // a build left for sessions that have since ended
+	}
+	// The version's own path, so that prune can tell it is running.
+	exe := filepath.Join(in.Home, "versions", in.current(), "pi")
 	manifest, _ := readManifest(filepath.Join(in.Home, "current"))
 	if len(args) == 0 || !slices.Contains(packageCommands, args[0]) || len(manifest.Extensions) == 0 {
 		return syscall.Exec(exe, append([]string{exe}, args...), os.Environ())
