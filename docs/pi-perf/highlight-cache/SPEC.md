@@ -2,11 +2,11 @@
 
 - Method: work whose input did not change (highlighting a code block, looking for Mermaid, the thinking style) is not
   done again on each render.
-- Verified on: Pi v1.4.0, `getpie-dev/pi` branch `pitch-v1.4.0` commit 31dc37c9a
+- Verified on: Pi v1.4.0, `getpie-dev/pi` branch `pix-v1.4.0` commit 31dc37c9a
 - Independent: applies alone on the tag and with the other patches in any order. Alone it saves the
   re-highlighting; its biggest gain is with streaming-markdown, whose per-block cache needs stable styles and cheap code
   blocks.
-- Supersedes pitch's old builtin P1 (bounded-highlight-cache).
+- Supersedes pix's old builtin P1 (bounded-highlight-cache).
 
 ## Problem
 

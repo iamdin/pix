@@ -1,15 +1,15 @@
 /**
- * Build AOT variants of Pi with pitch with some patches taken out, to compare which patches are worth keeping.
+ * Build AOT variants of Pi with pix with some patches taken out, to compare which patches are worth keeping.
  *
  *   bun bench/build-variants.ts --repo /abs/pi --out /abs/dir base= md=streaming-markdown no-hl=all-highlight-cache
  *   bun bench/build-variants.ts --repo /abs/pi --out /abs/dir --combos
  *
- * A patch is a commit `perf(<name>): ...` (and its `fix(<name>)` commits) between --tag and --branch on the fork (defaults v1.4.0 and pitch-v1.4.0).
+ * A patch is a commit `perf(<name>): ...` (and its `fix(<name>)` commits) between --tag and --branch on the fork (defaults v1.4.0 and pix-v1.4.0).
  * A variant keeps some patches: the branch with every other patch reverted, as a commit of its own (in a scratch worktree,
- * on no branch), which `pitch prepare --repo --commit` builds and `pitch build --pi` compiles. Each argument is
+ * on no branch), which `pix prepare --repo --commit` builds and `pix build --pi` compiles. Each argument is
  * variant=patches: a comma list of patch names, `all`, or `all-name,...` (every patch but those). Empty = no patches.
  * --combos builds every subset, named by its patches joined with `+` (`base` for none). Outputs go to <out>/<variant>
- * (never overwritten: pitch refuses an existing directory). Prints variant=/abs/pi lines for bench/run.ts --build.
+ * (never overwritten: pix refuses an existing directory). Prints variant=/abs/pi lines for bench/run.ts --build.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -20,7 +20,7 @@ const { values: args, positionals } = util.parseArgs({
 	options: {
 		repo: { type: "string" },
 		tag: { type: "string", default: "v1.4.0" },
-		branch: { type: "string", default: "pitch-v1.4.0" },
+		branch: { type: "string", default: "pix-v1.4.0" },
 		out: { type: "string" },
 		combos: { type: "boolean" },
 	},
@@ -71,7 +71,7 @@ function run(cmd: string[], log: string) {
 	if (proc.exitCode !== 0) throw new Error(`${cmd.slice(0, 2).join(" ")} failed, see ${log}`);
 }
 
-const pitch = path.join(root, "bin/pitch");
+const pix = path.join(root, "bin/pix");
 const lines: string[] = [];
 for (const { variant, names } of variants) {
 	const out = path.join(args.out, variant);
@@ -88,8 +88,8 @@ for (const { variant, names } of variants) {
 		git("worktree", "remove", "--force", tree);
 	}
 	const pi = `${out}.tar.gz`;
-	run([pitch, "prepare", "--repo", path.resolve(args.repo!), "--commit", commit, pi], log);
-	run([pitch, "build", "--pi", pi, "--out", out], log);
+	run([pix, "prepare", "--repo", path.resolve(args.repo!), "--commit", commit, pi], log);
+	run([pix, "build", "--pi", pi, "--out", out], log);
 	console.error(`built ${variant} (${names.join(",") || "no patches"})`);
 	lines.push(`${variant}=${path.join(out, "pi")}`);
 }

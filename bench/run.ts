@@ -33,7 +33,7 @@ function splitCommand(command: string): string[] {
 }
 
 function piHome(port: number): string {
-	const home = fs.mkdtempSync(path.join(os.tmpdir(), "pitch-bench-home-"));
+	const home = fs.mkdtempSync(path.join(os.tmpdir(), "pix-bench-home-"));
 	const models = [{ id: "fake-model", contextWindow: 200000, maxTokens: 8192 }];
 	const provider = { baseUrl: `http://127.0.0.1:${port}/v1`, api: "openai-completions", apiKey: "fake", models };
 	fs.writeFileSync(path.join(home, "models.json"), JSON.stringify({ providers: { fake: provider } }));
@@ -137,7 +137,7 @@ const round = (value: number, digits: number) => Number(value.toFixed(digits));
 
 async function runScenario(build: Build, scenario: string, port: number, timeoutMs: number): Promise<Result> {
 	const home = piHome(port);
-	const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "pitch-bench-cwd-"));
+	const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "pix-bench-cwd-"));
 	const env = piEnv(home);
 	const [name, arg] = scenario.split(":");
 	try {

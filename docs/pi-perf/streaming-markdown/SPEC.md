@@ -2,7 +2,7 @@
 
 - Method: a streaming Markdown reply is lexed, rendered, wrapped and joined incrementally, so the cost of a chunk does not
   grow with the length of the reply.
-- Verified on: Pi v1.4.0, `getpie-dev/pi` branch `pitch-v1.4.0` commit 40b48953a
+- Verified on: Pi v1.4.0, `getpie-dev/pi` branch `pix-v1.4.0` commit 40b48953a
 - Independent: applies alone on the tag and with the other patches in any order.
 - Implement the parts below in order: each builds on the one before.
 

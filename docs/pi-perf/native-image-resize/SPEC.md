@@ -1,16 +1,16 @@
 # Large images are resized with Bun.Image, not Photon
 
 - Method: under Bun, image resizing uses Bun's native pipeline (`Bun.Image`) instead of Photon (WebAssembly).
-- Verified on: Pi v1.4.0, `getpie-dev/pi` branch `pitch-v1.4.0` commit d95a12ee1
+- Verified on: Pi v1.4.0, `getpie-dev/pi` branch `pix-v1.4.0` commit d95a12ee1
 - Independent: applies alone on the tag and with the other patches in any order (it touches only the image resize files).
-- Reference: none; pitch's own.
+- Reference: none; pix's own.
 
 ## Problem
 
 Bun's `--aot` executables run with every JavaScriptCore JIT off (`BUN_JSC_dumpOptions=2`: `useJIT=false`,
 `useRegExpJIT=false`, and so on), so WebAssembly is interpreted. Pi resizes images over 2000 px (read tool, `@image`
 attachments) with Photon, which is WebAssembly. Measured: one 2100×2100 PNG takes 20.5 s in an AOT binary and 0.6 s
-under JIT; `bench/e2e/run.ts` "print mode" (one 3000 px image read) took 25 s on a pitch build, 1.4 s on stock Pi.
+under JIT; `bench/e2e/run.ts` "print mode" (one 3000 px image read) took 25 s on a pix build, 1.4 s on stock Pi.
 
 ## Change
 
@@ -41,7 +41,7 @@ small, so they are left alone.
   unchanged small image equals Photon's result; 3000×1000 resizes to Photon's size and format; EXIF orientation 6
   gives Photon's dimensions; a tiny `maxBytes` is met; undecodable input gives `null` from `resizeImage()`, as from Photon.
 - Must pass: `npx vitest run test/image-processing.test.ts test/image-resize-callers.test.ts`, root `npx tsc --noEmit`.
-- End to end: `bun bench/e2e/run.ts <pitch build>/pi` ("print mode" reads a 3000 px image).
+- End to end: `bun bench/e2e/run.ts <pix build>/pi` ("print mode" reads a 3000 px image).
 
 ## Performance gate
 

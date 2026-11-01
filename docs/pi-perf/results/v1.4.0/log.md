@@ -1,8 +1,8 @@
 # v1.4.0 log
 
-Machine: Apple M4, 24 GiB, not pinned to cores. Bun 1.4.4-canary.1+000ef5037 (pitch's pin).
-JIT runs: `bun packages/coding-agent/src/cli.ts` from snapshots `pitch/.work/pi-perf-snapshots/NNN`
-(baseline v1.4.0: `pitch/.work/pi-opt-20261030/pi`). AOT runs: `pitch build` outputs in `pitch/.work/pi-perf-aot/`.
+Machine: Apple M4, 24 GiB, not pinned to cores. Bun 1.4.4-canary.1+000ef5037 (pix's pin).
+JIT runs: `bun packages/coding-agent/src/cli.ts` from snapshots `pix/.work/pi-perf-snapshots/NNN`
+(baseline v1.4.0: `pix/.work/pi-opt-20261030/pi`). AOT runs: `pix build` outputs in `pix/.work/pi-perf-aot/`.
 
 ## Per spec (JIT unless noted)
 
@@ -28,8 +28,8 @@ JIT runs: `bun packages/coding-agent/src/cli.ts` from snapshots `pitch/.work/pi-
 | md:20000 CPU | 6.41 s | 1.78 s | 1.54 s |
 | md:20000 RSS after | 152.6 MB | 93.1 MB | 92.0 MB |
 
-The 10 per-spec diffs passed to `pitch build --patch` in order give the same `source_tree`
-(36e280e066ec532636cc72b678419deaa9048ad1) as the cumulative diff; `pitch verify` passes.
+The 10 per-spec diffs passed to `pix build --patch` in order give the same `source_tree`
+(36e280e066ec532636cc72b678419deaa9048ad1) as the cumulative diff; `pix verify` passes.
 
 ## Tests
 
@@ -39,7 +39,7 @@ model-runtime-classifiers (1), package-command-paths (2), classifier-models (1),
 
 ## Ablation on AOT (`ablation-aot.txt`, 3 rounds + 1 warm-up, medians)
 
-Builds (`bench/build-variants.ts`, in `pitch/.work/pi-perf-ablation/`): `cNNN` = specs 001..NNN; `no003`, `no004` = all but
+Builds (`bench/build-variants.ts`, in `pix/.work/pi-perf-ablation/`): `cNNN` = specs 001..NNN; `no003`, `no004` = all but
 that one. Marginal effect = cNNN vs c(NNN-1), or all vs noNNN.
 
 | spec | marginal effect | verdict |

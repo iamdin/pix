@@ -1,8 +1,8 @@
 .work/
 .cache/
 dist/
-pitch-dist/
+pix-dist/
 bin/
-internal/pitch/runtime-data/*/*.zip
-internal/pitch/runtime-data/*/*.tar.gz
+internal/pix/runtime-data/*/*.zip
+internal/pix/runtime-data/*/*.tar.gz
 dist-release/

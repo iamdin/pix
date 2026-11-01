@@ -2,9 +2,9 @@
  * End-to-end check of Pi's own capabilities against a Pi binary, with a local fake model:
  * print mode and the built-in tools, subcommands, codemode, MCP, skills/templates/extensions, sessions, RPC and the TUI.
  *
- *   bun bench/e2e/run.ts <pi> [leading args, e.g. bin/pitch pi]
+ *   bun bench/e2e/run.ts <pi> [leading args, e.g. bin/pix pi]
  *
- * Run it on stock Pi first: what fails there is a wrong check, not a pitch bug.
+ * Run it on stock Pi first: what fails there is a wrong check, not a pix bug.
  */
 import fs from "node:fs";
 import os from "node:os";
@@ -79,7 +79,7 @@ function agent(options: { settings?: object; mcp?: object } = {}): Agent {
 	const home = fs.mkdtempSync(path.join(os.tmpdir(), "pi-e2e-"));
 	const cwd = path.join(home, "work");
 	fs.mkdirSync(cwd);
-	fs.writeFileSync(path.join(cwd, "hello.txt"), "hello pitch\nsecond line\nthird line\n");
+	fs.writeFileSync(path.join(cwd, "hello.txt"), "hello pix\nsecond line\nthird line\n");
 	const model = { contextWindow: 100000, maxTokens: 1000, input: ["text", "image"] };
 	const provider = { baseUrl: `http://127.0.0.1:${server.port}/v1`, api: "openai-completions", apiKey: "fake-key" };
 	const models = ["fake", "fake2"].map((id) => ({ id, name: id, ...model }));
@@ -237,7 +237,7 @@ await check("print mode: inputs and built-in tools", async () => {
 	need(r.code === 0 && r.output.includes("Done."), r.output);
 	need(requests[0].headers.authorization === "Bearer KEY-MARK", "api key");
 	need(fs.readFileSync(path.join(a.cwd, "sub/w.txt"), "utf8") === "uno\ndos\n", "write/edit");
-	needSeen("hello pitch", "FROM-STDIN", "CONTEXT-MARK", "APPEND-MARK", "image_url", "second line", /ENOENT|not found/i, "original 3000x3000", "ok-2", "hello.txt:2");
+	needSeen("hello pix", "FROM-STDIN", "CONTEXT-MARK", "APPEND-MARK", "image_url", "second line", /ENOENT|not found/i, "original 3000x3000", "ok-2", "hello.txt:2");
 });
 
 await check("subcommands and info flags", async () => {
@@ -270,7 +270,7 @@ await check("codemode (only mode, with MCP)", async () => {
 	const r = await run(a, ["-p", "--no-session", "--model", "fake/fake", "--tools", "+codemode", "go"]);
 	// Compiled-in extensions may declare their own tools; the built-in ones must be hidden.
 	need(toolNames(0).includes("codemode") && !toolNames(0).some((n) => ["read", "bash", "edit", "write"].includes(n)), `declared: ${toolNames(0)} ${r.output}`);
-	needSeen("T-MARK", "C-MARK", "hello pitch|B-5|EDITED", "PARALLEL-true", "CAUGHT", "image_url", "undefined|undefined|undefined");
+	needSeen("T-MARK", "C-MARK", "hello pix|B-5|EDITED", "PARALLEL-true", "CAUGHT", "image_url", "undefined|undefined|undefined");
 	needSeen("STORED-MARK|Echo server for tests.|5|true|true|true|2", "BOOM-MARK");
 	need((seen().match(/Script failed/g)?.length ?? 0) >= 2, "error and timeout should fail their scripts");
 });
@@ -329,7 +329,7 @@ await check("rpc: commands, extension dialogs, compaction, fork, abort, steer, f
 		need(JSON.stringify(await rpc.send({ type: "get_available_models" })).includes("fake2"), "models");
 		need(JSON.stringify(await rpc.send({ type: "get_commands" })).includes("e2e-ask"), "commands");
 		await rpc.prompt("go");
-		need(JSON.stringify(await rpc.send({ type: "get_messages" })).includes("hello pitch"), "tool result");
+		need(JSON.stringify(await rpc.send({ type: "get_messages" })).includes("hello pix"), "tool result");
 		need((await rpc.send({ type: "get_last_assistant_text" })).text === "LAST-MARK", "last text");
 		need(JSON.stringify(await rpc.send({ type: "bash", command: "echo rpc-bash" })).includes("rpc-bash"), "bash");
 		await rpc.send({ type: "get_session_stats" });

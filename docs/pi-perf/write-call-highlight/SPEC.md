@@ -1,10 +1,10 @@
 # A collapsed write call highlights the lines it shows, not the whole file
 
-- Verified on: Pi v1.4.0, `getpie-dev/pi` branch `pitch-v1.4.0` commit b577999cb
+- Verified on: Pi v1.4.0, `getpie-dev/pi` branch `pix-v1.4.0` commit b577999cb
 - Method: a collapsed write call highlights only the lines it can show.
 - Independent: applies alone on the tag and with the other patches in any order. Its gain shows with
   streaming-tool-arguments; without it the argument parsing dominates.
-- Supersedes pitch's old builtin P4 (completed-write-cache) for the
+- Supersedes pix's old builtin P4 (completed-write-cache) for the
   collapsed case.
 
 ## Problem

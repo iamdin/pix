@@ -1,4 +1,4 @@
-# Go tests on every platform pitch ships. The Bun and Pi archives are not in git, so tests that need them skip here;
+# Go tests on every platform pix ships. The Bun and Pi archives are not in git, so tests that need them skip here;
 # scripts/release.ts runs every test with them before a release.
 name: test
 on:

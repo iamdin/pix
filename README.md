@@ -1,4 +1,4 @@
-# pitch
+# pix
 
 Pi, built ahead of time with official Bun AOT, with performance patches and your extensions compiled in.
 **Currently alpha.10, for macOS ARM64, Linux x64 and Linux ARM64 (glibc). Still an experimental toolchain.**
@@ -6,57 +6,57 @@ Pi, built ahead of time with official Bun AOT, with performance patches and your
 ## Install
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/iamdin/pitch/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/iamdin/pix/main/install.sh | sh
 ```
 
-Installs to `~/.local/bin/pitch` (change it with `PITCH_INSTALL_DIR`) and checks the SHA-256. pitch carries Bun and a Pi
-that is already patched, built and tested, so `pitch build` only compiles your extensions on your machine, in about a
+Installs to `~/.local/bin/pix` (change it with `PIX_INSTALL_DIR`) and checks the SHA-256. pix carries Bun and a Pi
+that is already patched, built and tested, so `pix build` only compiles your extensions on your machine, in about a
 minute, and needs no Node. Extensions from npm are downloaded with npm, from Git with git. Nothing global is changed.
 
-From source: `go build -trimpath -o bin/pitch ./cmd/pitch` (Go 1.24+, and the Bun archive for your platform in
-`internal/pitch/runtime-data/<goos>-<goarch>/bun.zip`, which is not in git). Such a development build has no Pi in it:
-run `pitch prepare /abs/pi.tar.gz` first (needs Git, Node 24+ and npm 11+), then `pitch build --pi /abs/pi.tar.gz --out
-DIR`. `bun scripts/release.ts` builds Pi into pitch.
+From source: `go build -trimpath -o bin/pix ./cmd/pix` (Go 1.24+, and the Bun archive for your platform in
+`internal/pix/runtime-data/<goos>-<goarch>/bun.zip`, which is not in git). Such a development build has no Pi in it:
+run `pix prepare /abs/pi.tar.gz` first (needs Git, Node 24+ and npm 11+), then `pix build --pi /abs/pi.tar.gz --out
+DIR`. `bun scripts/release.ts` builds Pi into pix.
 
 ## Use
 
 ```sh
-pitch build              # build with the extensions in ~/.pi/agent/settings.json (again after they change)
-pitch pi                 # run the build; everything after pi goes to Pi: pitch pi -c, pitch pi install npm:x
-pitch status             # version, patches, compiled-in extensions, whether the settings changed
-pitch off / pitch on     # run the original Pi instead / the pitch build again (once: PITCH_OFF=1 pitch pi)
-pitch uninstall          # remove ~/.pitch, its builds and the PATH line it added
-pitch feedback FILE      # send a failed build's feedback (it names FILE) as a GitHub issue, after you confirm
+pix build              # build with the extensions in ~/.pi/agent/settings.json (again after they change)
+pix pi                 # run the build; everything after pi goes to Pi: pix pi -c, pix pi install npm:x
+pix status             # version, patches, compiled-in extensions, whether the settings changed
+pix off / pix on     # run the original Pi instead / the pix build again (once: PIX_OFF=1 pix pi)
+pix uninstall          # remove ~/.pix, its builds and the PATH line it added
+pix feedback FILE      # send a failed build's feedback (it names FILE) as a GitHub issue, after you confirm
 
-pitch build --name pi    # also install a `pi` command that takes the place of the original Pi; it is `pitch pi`
+pix build --name pi    # also install a `pi` command that takes the place of the original Pi; it is `pix pi`
 ```
 
-- The original Pi is not changed. `pitch pi install/remove/uninstall/update/config` run the original Pi, which then
-  reminds you to run `pitch build`.
-- When the original Pi is upgraded past the version pitch builds, `pitch pi` runs the original and says so in one line;
-  run `pitch build` again once pitch has caught up.
+- The original Pi is not changed. `pix pi install/remove/uninstall/update/config` run the original Pi, which then
+  reminds you to run `pix build`.
+- When the original Pi is upgraded past the version pix builds, `pix pi` runs the original and says so in one line;
+  run `pix build` again once pix has caught up.
 - A new build is switched to only after it passes its checks. The previous build is kept for sessions still running it;
   older ones are deleted along with their build directories in the cache.
-- To upgrade pitch, run the install command again.
+- To upgrade pix, run the install command again.
 - `build` shows each step and how long it took (the current one counts up in a terminal; elsewhere a long compile adds
   a line every 5 minutes) and stops compiling after 30 minutes (`--timeout`, `0` for no limit). An extension with a very large function can compile for a long time; leave
   one out with `{"source": "...", "extensions": []}` in the settings to find it.
 - A failed build writes feedback for a GitHub issue next to its log, with your home directory replaced by `~`, and sends
-  nothing. `pitch feedback FILE` shows it and asks before sending it with the GitHub CLI when `gh` is logged in;
+  nothing. `pix feedback FILE` shows it and asks before sending it with the GitHub CLI when `gh` is logged in;
   otherwise it prints a prefilled link to submit in the browser. `-y` sends without asking, for an agent that has shown
   the feedback to you and has your agreement.
 
 ## Build
 
 ```sh
-pitch build --out ./dist/my-pi
+pix build --out ./dist/my-pi
 ./dist/my-pi/pi
 
 # a new settings file, in the format of the packages in Pi's settings
-pitch build --settings ./pitch-settings.json --out ./dist/my-pi-ext
+pix build --settings ./pix-settings.json --out ./dist/my-pi-ext
 ```
 
-Example `pitch-settings.json`:
+Example `pix-settings.json`:
 
 ```json
 {
@@ -76,7 +76,7 @@ User settings are not read and installed extensions are not scanned unless you a
 Sources can also be given directly:
 
 ```sh
-./bin/pitch build --extension npm:@getpie/pi-loop --out ./dist/pi-loop
+./bin/pix build --extension npm:@getpie/pi-loop --out ./dist/pi-loop
 ./dist/pi-loop/pi
 ```
 
@@ -108,7 +108,7 @@ upgrading Pi must run the resolution regression tests.
 - Only the extensions selected at build time load automatically. The entry still passes `--no-extensions`, so other
   extensions in user, project or settings are not run; `-e` at run time can still load an extension from disk, but it
   is not AOT code.
-- No `builtin:pitch-NAME`, no new extension URI or ID protocol. Extension tool and command names are not rewritten;
+- No `builtin:pix-NAME`, no new extension URI or ID protocol. Extension tool and command names are not rewritten;
   conflicts are Pi's to handle.
 - Skills, prompts, themes, models, credentials and sessions come from your normal configuration; skills, prompts and
   themes inside built packages are not distributed with the build.
@@ -121,11 +121,11 @@ upgrading Pi must run the resolution regression tests.
 
 | Component | Pinned |
 |---|---|
-| Pi | v1.4.0 with pitch's patches: [getpie-dev/pi](https://github.com/getpie-dev/pi) `pitch-v1.4.0`, f9731d41a29da59e2893622d7189ce85840cf137 |
+| Pi | v1.4.0 with pix's patches: [getpie-dev/pi](https://github.com/getpie-dev/pi) `pix-v1.4.0`, f9731d41a29da59e2893622d7189ce85840cf137 |
 | Bun | 1.4.4-canary.1, da867c60bf0bcbf9d6d36994f8ca0efa42075115 |
 | WebKit/JSC | 8c6c963e3c49fe39942d9625d1fc924128fad26e |
 
-There is no choice of Pi or Bun version. Pi follows upstream release tags only, and pitch's patches are commits on a
+There is no choice of Pi or Bun version. Pi follows upstream release tags only, and pix's patches are commits on a
 fork (see [PATCHES.md](PATCHES.md)). Bun AOT exists only in canary builds, so Bun is pinned to one official canary build
 and moves when the maintainers upgrade it. Each platform's release embeds that platform's pinned Bun archive and the
 prepared Pi (about 110 MiB) and checks the archive and binary hashes and the revision, and on macOS the code signature.
@@ -144,19 +144,19 @@ commit on the fork, and its tests run at every release. Method, invariants and m
 | `write-call-highlight` | A collapsed write call highlights only the lines it shows |
 | `native-image-resize` | Large images are resized natively with Bun.Image, not Photon (without a JIT, its WebAssembly is tens of times slower) |
 
-Pi v1.4.0 with official AOT, stock → pitch (Apple M4, CPU time / RSS): a 60,000-character streamed Markdown reply
+Pi v1.4.0 with official AOT, stock → pix (Apple M4, CPU time / RSS): a 60,000-character streamed Markdown reply
 24.2 s → 4.8 s; a 200 KB write (`pi -p`) 9.7 s → 0.1 s; memory for a 200 KB write in the TUI 316 MB → 105 MB; startup
 unchanged; reading one 3000 px image 25 s → 0.3 s.
 
 **`streaming-tool-arguments` changes behavior**: intermediate parsed snapshots of large tool arguments are updated less
 often; raw deltas and final arguments stay complete. For an extension that needs a fresh parsed snapshot on every delta,
-switch back to the original Pi with `pitch off`.
+switch back to the original Pi with `pix off`.
 
 How the patches are maintained and changed: [PATCHES.md](PATCHES.md).
 
 ## Output and portability
 
-The whole output directory is the build, not just `pi`. `pitch-build.json` records the sources, toolchain, entries,
+The whole output directory is the build, not just `pi`. `pix-build.json` records the sources, toolchain, entries,
 actual package versions and commits, arguments and file hashes; `source_tree` is the Git tree of the Pi that was built,
 `checks` lists the checks that actually ran, and `extensions_auto_load` marks the loading behavior.
 `recipe/extensions.json` keeps the packages as declared, the resolved entries and the npm lock files found; no other
@@ -187,20 +187,20 @@ go test -race ./...
 go vet ./...
 
 # a real build: default loading, extensions from disk, management commands, a local SSE write and more
-PITCH_TEST_ARTIFACT="$PWD/dist/my-pi" go test -race ./...
+PIX_TEST_ARTIFACT="$PWD/dist/my-pi" go test -race ./...
 
 # the pinned Pi work tree must have finished its offline build; package tests use local npm and Git fixtures
-PITCH_TEST_PI=/absolute/build-work/pi go test -race ./...
+PIX_TEST_PI=/absolute/build-work/pi go test -race ./...
 
 # Pi's own features end to end (CLI, tools, codemode, MCP, sessions, skills/templates/extensions, RPC, TUI) with a local
 # fake model: first on the original Pi, then on the build
 bun bench/e2e/run.ts ~/.bun/bin/pi
 bun bench/e2e/run.ts "$PWD/dist/my-pi/pi"
-bun bench/e2e/run.ts bin/pitch pi        # the installed build, through pitch pi
+bun bench/e2e/run.ts bin/pix pi        # the installed build, through pix pi
 ```
 
 Integration tests skip when their variables are not set. Performance records are in `docs/pi-perf/results/`. Failed
-builds and experiments stay in `.work/` or the pitch cache.
+builds and experiments stay in `.work/` or the pix cache.
 
 ## Thanks
 

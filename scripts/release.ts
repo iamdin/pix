@@ -1,14 +1,14 @@
 /**
- * Build pitch for each platform into dist-release/pitch-<goos>-<goarch>, the assets install.sh downloads, and check
- * each one where it runs: `pitch build` and bench/e2e on this machine for its own platform, over ssh for the others, or
+ * Build pix for each platform into dist-release/pix-<goos>-<goarch>, the assets install.sh downloads, and check
+ * each one where it runs: `pix build` and bench/e2e on this machine for its own platform, over ssh for the others, or
  * on GitHub Actions (.github/workflows/check-release.yml) with --host PLATFORM=gh. --publish then creates the GitHub
  * release v<Version> as a draft, runs the GitHub checks on it, publishes it and installs it back with install.sh.
  *
  *   bun scripts/release.ts --host linux/amd64=root@100.88.65.47 --host linux/arm64=gh [--unchecked PLATFORM] [--publish]
  *
- * Built locally: the embedded Bun canary archives (internal/pitch/runtime-data/<goos>-<goarch>/bun.zip) are not in git,
+ * Built locally: the embedded Bun canary archives (internal/pix/runtime-data/<goos>-<goarch>/bun.zip) are not in git,
  * and canary downloads expire. The patched, built and tested Pi for each platform (runtime-data/<goos>-<goarch>/pi.tar.gz)
- * is prepared here too (needs git, Node 24+ and npm 11+), so `pitch build` on users' machines only compiles.
+ * is prepared here too (needs git, Node 24+ and npm 11+), so `pix build` on users' machines only compiles.
  *
  * Every platform must be checked (--host) unless --unchecked names it; GitHub checks need --publish. --publish also needs a clean main that is
  * pushed and a version not released yet. The pinned Pi commit must be the head of its fork branch.
@@ -26,16 +26,16 @@ const { values: args } = util.parseArgs({
 		unchecked: { type: "string", multiple: true, default: [] },
 	},
 });
-const version = /const Version = "(.+)"/.exec(fs.readFileSync(path.join(root, "internal/pitch/catalog.go"), "utf8"))![1];
+const version = /const Version = "(.+)"/.exec(fs.readFileSync(path.join(root, "internal/pix/catalog.go"), "utf8"))![1];
 const tag = `v${version}`;
-const pins = JSON.parse(fs.readFileSync(path.join(root, "internal/pitch/data/sources.lock.json"), "utf8"));
+const pins = JSON.parse(fs.readFileSync(path.join(root, "internal/pix/data/sources.lock.json"), "utf8"));
 const platforms = Object.keys(pins.bun.platforms);
 const local = `${process.platform}/${process.arch === "x64" ? "amd64" : process.arch}`;
 const hosts = new Map(args.host!.map((h) => h.split("=") as [string, string]));
 const dist = path.join(root, "dist-release");
-const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "pitch-release-"));
-const dataDir = (platform: string) => path.join(root, "internal/pitch/runtime-data", platform.replace("/", "-"));
-const assetName = (platform: string) => `pitch-${platform.replace("/", "-")}`;
+const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "pix-release-"));
+const dataDir = (platform: string) => path.join(root, "internal/pix/runtime-data", platform.replace("/", "-"));
+const assetName = (platform: string) => `pix-${platform.replace("/", "-")}`;
 
 function run(cmd: string[], env: Record<string, string> = {}) {
 	console.error(`$ ${cmd.join(" ")}`);
@@ -73,16 +73,16 @@ if (head !== pins.pi.commit) fail(`${pins.pi.repository} ${pins.pi.branch} is at
 run(["go", "vet", "./..."]);
 run(["go", "test", "-count=1", "./..."]);
 
-// Prepare Pi for every platform, then build pitch with it.
-const builder = path.join(scratch, "pitch");
-run(["go", "build", "-o", builder, "./cmd/pitch"]);
+// Prepare Pi for every platform, then build pix with it.
+const builder = path.join(scratch, "pix");
+run(["go", "build", "-o", builder, "./cmd/pix"]);
 for (const platform of platforms) run([builder, "prepare", "--platform", platform, path.join(dataDir(platform), "pi.tar.gz")]);
 fs.mkdirSync(dist, { recursive: true });
 const assets: string[] = [];
 for (const platform of platforms) {
 	const [GOOS, GOARCH] = platform.split("/");
 	const asset = path.join(dist, assetName(platform));
-	run(["go", "build", "-trimpath", "-o", asset, "./cmd/pitch"], { GOOS, GOARCH });
+	run(["go", "build", "-trimpath", "-o", asset, "./cmd/pix"], { GOOS, GOARCH });
 	fs.writeFileSync(`${asset}.sha256`, `${sha256(asset)}  ${assetName(platform)}\n`);
 	assets.push(asset, `${asset}.sha256`);
 }
@@ -101,19 +101,19 @@ for (const platform of platforms) {
 		const target = hosts.get(platform)!;
 		const dir = output(["ssh", target, "mktemp -d"]);
 		run(["scp", "-q", asset, e2e, `${target}:${dir}/`]);
-		// bench/e2e runs with the Bun that `pitch build` unpacked into its cache.
-		const script = `set -e; cd ${dir}; chmod +x ${assetName(platform)}; tar -xzf e2e.tar.gz; ./${assetName(platform)} build --out build; bun=$(ls -t ~/.cache/pitch/runtime/*/bun | head -1); $bun e2e/run.ts ${dir}/build/pi; rm -rf ${dir}`;
+		// bench/e2e runs with the Bun that `pix build` unpacked into its cache.
+		const script = `set -e; cd ${dir}; chmod +x ${assetName(platform)}; tar -xzf e2e.tar.gz; ./${assetName(platform)} build --out build; bun=$(ls -t ~/.cache/pix/runtime/*/bun | head -1); $bun e2e/run.ts ${dir}/build/pi; rm -rf ${dir}`;
 		run(["ssh", target, script]);
 	} else {
 		console.error(`release: ${platform} is not checked (--unchecked)`);
 	}
 }
-for (const platform of platforms) console.log(`pitch ${version} ${platform}: ${sha256(path.join(dist, assetName(platform)))}`);
+for (const platform of platforms) console.log(`pix ${version} ${platform}: ${sha256(path.join(dist, assetName(platform)))}`);
 
 if (args.publish) {
 	// A draft first, so that nobody downloads assets that differ from the checked ones.
-	const install = "curl -fsSL https://raw.githubusercontent.com/iamdin/pitch/main/install.sh | sh";
-	run(["gh", "release", "create", tag, ...assets, "--draft", "--title", `pitch ${version}`, "--notes", `Install: \`${install}\``]);
+	const install = "curl -fsSL https://raw.githubusercontent.com/iamdin/pix/main/install.sh | sh";
+	run(["gh", "release", "create", tag, ...assets, "--draft", "--title", `pix ${version}`, "--notes", `Install: \`${install}\``]);
 	const download = path.join(scratch, "download");
 	run(["gh", "release", "download", tag, "--dir", download]);
 	for (const asset of assets) {
@@ -133,8 +133,8 @@ if (args.publish) {
 	}
 	run(["gh", "release", "edit", tag, "--draft=false", "--latest"]);
 	const bin = path.join(scratch, "installed");
-	run(["sh", path.join(root, "install.sh")], { PITCH_INSTALL_DIR: bin });
-	if (output([path.join(bin, "pitch"), "--version"]) !== version) fail("install.sh did not install this version");
+	run(["sh", path.join(root, "install.sh")], { PIX_INSTALL_DIR: bin });
+	if (output([path.join(bin, "pix"), "--version"]) !== version) fail("install.sh did not install this version");
 	console.log(`released ${tag}`);
 }
 fs.rmSync(scratch, { recursive: true, force: true });
