@@ -1,6 +1,6 @@
 # Bun 1.4.4-canary.1+000ef5037 → +da867c60b
 
-Same Pi (getpie-dev/pi pitch-v1.4.0, d95a12ee1), all five patches, AOT on Apple M4, `bun bench/run.ts --rounds 3 --warmup 1` (machine under load ~12). No scenario more than 5% worse; `bench/e2e/run.ts` all passed on the new build. The 32 combos were not rebuilt.
+Same Pi (getpie-dev/pi pitch-v1.4.0, d95a12ee1), all five patches, AOT on Apple M4, `bun bench/run.ts --rounds 3 --warmup 1` (machine under load ~12). No scenario more than 5% worse; `bench/e2e/run.ts` all passed on the new build. Combos are rebuilt only when this or `base` vs `all` shows a loss (pi-perf-upgrade skill).
 
 ```
 scenario     build        metric           median                min–max  vs oldbun  n

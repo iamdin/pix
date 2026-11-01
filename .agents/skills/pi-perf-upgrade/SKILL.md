@@ -30,8 +30,9 @@ measurably slower. Code may overlap, but each commit must revert cleanly from th
 
 - `TAG`: the upstream Pi tag to move to (only release tags, never main).
 - `BUN`: the Bun pitch pins (`internal/pitch/data/sources.lock.json`); run every build and the bench with it. Bun AOT
-  exists only in canary builds, so pitch follows official Bun canaries. When only the Bun pin changes, run steps 4–6
-  (combos, comparison with the previous build, default build) on the unchanged patches: a new runtime can move the numbers.
+  exists only in canary builds, so pitch follows official Bun canaries. When only the Bun pin changes, the patches are unchanged: run step
+  5 (all patches vs the previous build) and `base` vs `all` from step 4, and step 6. Only when one of them is worse or a
+  gain is gone, run the combos of step 4 to find which patch.
   To pin a canary: download `bun-darwin-aarch64.zip`, `bun-linux-x64.zip` and `bun-linux-aarch64.zip` of one canary
   (all three `bun --revision` equal) into `internal/pitch/runtime-data/<goos>-<goarch>/bun.zip`, and record each
   zip's and binary's SHA-256 under `bun.platforms` in `sources.lock.json`; WebKit is `WEBKIT_VERSION` in Bun's
