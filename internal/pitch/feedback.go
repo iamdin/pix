@@ -55,14 +55,13 @@ func failure(err error, stage, step string, took time.Duration, extensions []Ext
 	if step == "" {
 		step = "setup"
 	}
-	cause := "The cause is in the log."
+	cause := ""
 	if errors.Is(err, errCompileTime) {
-		cause = "A compile this long usually means an extension with a very large function: to find it, leave extensions out one at a time with {\"source\": \"...\", \"extensions\": []} in the Pi settings and build again, then tell the user which one."
+		cause = " A compile this long usually means an extension with a very large function: find it by leaving extensions out one at a time with {\"source\": \"...\", \"extensions\": []} in the Pi settings."
 	}
-	return fmt.Errorf("%w\nLog: %s\nFeedback: %s (not sent; pitch feedback FILE shows it and asks before sending)\n\n"+
-		"If you are an AI agent: pitch build failed at %q after %s; the user's current Pi is unchanged. %s "+
-		"To report it, show the feedback file to the user first; only after they agree run `pitch feedback -y %s`. "+
-		"It opens an issue with gh when gh is logged in, and otherwise prints a link for the user to open and submit.",
+	return fmt.Errorf("%w\nLog: %s\nSend feedback: pitch feedback %s\n\n"+
+		"If you are an AI agent: the build failed at %q after %s; the user's current Pi is unchanged.%s "+
+		"Show the feedback file to the user and send it only with their consent: pitch feedback -y %s",
 		err, log, file, step, took.Round(time.Second), cause, file)
 }
 
@@ -76,7 +75,7 @@ func feedback(file string, yes bool, stdin *os.File, stdout io.Writer) error {
 	title = strings.TrimPrefix(title, "# ")
 	link := "https://github.com/" + issueRepo + "/issues/new?" + url.Values{"title": {title}, "body": {truncate(body, 6000)}}.Encode()
 	if !yes {
-		unconfirmed := fmt.Errorf("not sent: sending needs the user's consent\n\nIf you are an AI agent: show %s to the user; only after they agree run `pitch feedback -y %s`", file, file)
+		unconfirmed := fmt.Errorf("not sent: no one confirmed\n\nIf you are an AI agent: show %s to the user and send it only with their consent: pitch feedback -y %s", file, file)
 		if !isTerminal(stdin) || isDevNull(stdin) {
 			return unconfirmed
 		}
@@ -99,7 +98,7 @@ func feedback(file string, yes bool, stdin *os.File, stdout io.Writer) error {
 		return nil
 	}
 	if exec.Command(gh, "auth", "status", "--hostname", "github.com").Run() != nil {
-		fmt.Fprintf(stdout, "%s(gh is not logged in; after gh auth login, pitch feedback -y %s sends it with gh.)\n", byHand, file)
+		fmt.Fprintf(stdout, "%s(or log in with gh auth login and send it again)\n", byHand)
 		return nil
 	}
 	var out, stderr bytes.Buffer

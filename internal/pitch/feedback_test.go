@@ -26,7 +26,7 @@ func TestWriteFeedback(t *testing.T) {
 	data, _ := os.ReadFile(file)
 	text := string(data)
 	msg := failure(errCompileTime, stage, "Compile", time.Minute, nil).Error()
-	if !errors.Is(failure(errCompileTime, stage, "Compile", time.Minute, nil), errCompileTime) || !strings.Contains(msg, "\nFeedback: ") || !strings.Contains(msg[strings.Index(msg, "If you are an AI agent"):], "pitch feedback -y") || !strings.Contains(msg, "leave extensions out") {
+	if !errors.Is(failure(errCompileTime, stage, "Compile", time.Minute, nil), errCompileTime) || !strings.Contains(msg, "\nSend feedback: pitch feedback "+stage) || !strings.Contains(msg[strings.Index(msg, "If you are an AI agent"):], "pitch feedback -y") || !strings.Contains(msg, "leaving extensions out") || strings.Contains(msg[:strings.Index(msg, "If you are")], "-y") {
 		t.Fatal(msg)
 	}
 	if !strings.HasPrefix(text, "# pitch build failed: Fetch extensions\n") || strings.Contains(text, home) || !strings.Contains(text, "~/x.ts") || !strings.Contains(text, "ext 1.0.0 (npm:ext)") {

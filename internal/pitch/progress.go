@@ -91,7 +91,7 @@ func compile(ctx context.Context, r runner, timeout time.Duration, p *progress, 
 	close(stop)
 	<-stopped
 	if err != nil && ctx.Err() == nil && errors.Is(compileCtx.Err(), context.DeadlineExceeded) {
-		return fmt.Errorf("%w in %s (pitch build --timeout changes the limit)", errCompileTime, timeout)
+		return fmt.Errorf("%w in %s", errCompileTime, timeout)
 	}
 	return err
 }
