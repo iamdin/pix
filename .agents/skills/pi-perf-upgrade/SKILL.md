@@ -34,8 +34,9 @@ measurably slower. Code may overlap, but each commit must revert cleanly from th
   unchanged: run step 5 (all patches vs the previous build), `base` vs `all` from step 4, and step 6. Only when one of
   them is worse or a gain is gone, run the combos of step 4 to find which patch.
   To pin a canary: download `bun-darwin-aarch64.zip`, `bun-linux-x64.zip` and `bun-linux-aarch64.zip` of one canary
-  (all three `bun --revision` equal) into `internal/pix/runtime-data/<goos>-<goarch>/bun.zip`, and record each
-  zip's and binary's SHA-256 under `bun.platforms` in `sources.lock.json`; WebKit is `WEBKIT_VERSION` in Bun's
+  (all three `bun --revision` equal), publish them unchanged as the prerelease `bun-<short commit>` of this repository
+  (`gh release create bun-<c> *.zip --prerelease --latest=false`), and record each zip's release URL and the zip's and
+  binary's SHA-256 under `bun.platforms` in `sources.lock.json`; WebKit is `WEBKIT_VERSION` in Bun's
   `scripts/build/deps/webkit.ts` at that commit.
 
 ## Steps

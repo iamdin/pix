@@ -2,18 +2,20 @@ package pix
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 )
 
-// runtime-data/<goos>-<goarch> holds bun.zip and, in releases, pi.tar.gz (see Prepare); neither is in git.
+// runtime-data/<goos>-<goarch> holds pi.tar.gz in releases (see Prepare); it is not in git.
 // runtime_<goos>_<goarch>.go embeds the one for the platform pix is built for.
 
-// Canary assets are disposable; keep the exact validated compiler with the CLI.
-func cacheRuntimeArchive(ctx context.Context, target, expected string) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
+// cacheRuntimeArchive downloads the pinned Bun archive from url, once: canary builds disappear upstream, so pix's
+// own release keeps them, and the hash is checked either way.
+func cacheRuntimeArchive(ctx context.Context, url, target, expected string) error {
 	if exists(target) {
 		return requireHash(target, expected)
 	}
@@ -22,30 +24,31 @@ func cacheRuntimeArchive(ctx context.Context, target, expected string) error {
 		return err
 	}
 	defer os.Remove(f.Name())
-	bun, err := runtimeData.ReadFile(runtimeDataDir + "/bun.zip")
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		f.Close()
 		return err
 	}
-	_, writeErr := f.Write(bun)
-	closeErr := f.Close()
-	if writeErr != nil {
-		return writeErr
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		f.Close()
+		return fmt.Errorf("download Bun: %w", err)
 	}
-	if closeErr != nil {
-		return closeErr
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		f.Close()
+		return fmt.Errorf("download Bun: %s: %s", url, resp.Status)
+	}
+	_, copyErr := io.Copy(f, io.LimitReader(resp.Body, 512<<20))
+	closeErr := f.Close()
+	if err := errors.Join(copyErr, closeErr); err != nil {
+		return fmt.Errorf("download Bun: %w", err)
 	}
 	if err := requireHash(f.Name(), expected); err != nil {
 		return err
 	}
-	if err := ctx.Err(); err != nil {
+	if err := os.Link(f.Name(), target); err != nil && !os.IsExist(err) {
 		return err
 	}
-	if err := os.Link(f.Name(), target); err != nil {
-		if !os.IsExist(err) {
-			return err
-		}
-		return requireHash(target, expected)
-	}
-	return nil
+	return requireHash(target, expected)
 }

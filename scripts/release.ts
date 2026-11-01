@@ -6,8 +6,8 @@
  *
  *   bun scripts/release.ts --host linux/amd64=root@100.88.65.47 --host linux/arm64=gh [--unchecked PLATFORM] [--publish]
  *
- * Built locally: the embedded Bun canary archives (internal/pix/runtime-data/<goos>-<goarch>/bun.zip) are not in git,
- * and canary downloads expire. The patched, built and tested Pi for each platform (runtime-data/<goos>-<goarch>/pi.tar.gz)
+ * Bun: pix downloads the pinned canary archive from this repository's release bun-<commit> (canary downloads expire
+ * upstream); it must be there with the pinned hash. The patched, built and tested Pi for each platform (runtime-data/<goos>-<goarch>/pi.tar.gz)
  * is prepared here too (needs git, Node 24+ and npm 11+), so `pix` on users' machines only compiles.
  *
  * Every platform must be checked (--host) unless --unchecked names it; GitHub checks need --publish. --publish also needs a clean main that is
@@ -56,8 +56,9 @@ const sha256 = (file: string) => new Bun.CryptoHasher("sha256").update(fs.readFi
 for (const platform of platforms) {
 	if (platform !== local && !hosts.has(platform) && !args.unchecked!.includes(platform))
 		fail(`nothing checks ${platform}: give --host ${platform}=SSH-TARGET or --unchecked ${platform}`);
-	const zip = path.join(dataDir(platform), "bun.zip");
-	if (!fs.existsSync(zip) || sha256(zip) !== pins.bun.platforms[platform].sha256) fail(`${zip} is missing or not the pinned Bun`);
+	const asset = pins.bun.platforms[platform];
+	const bun = await fetch(asset.url);
+	if (!bun.ok || new Bun.CryptoHasher("sha256").update(await bun.arrayBuffer()).digest("hex") !== asset.sha256) fail(`${asset.url} is missing or not the pinned Bun`);
 }
 const onGitHub = platforms.filter((p) => hosts.get(p) === "gh");
 if (onGitHub.length > 0 && !args.publish) fail(`${onGitHub.join(", ")}: GitHub checks run on the draft release, with --publish`);

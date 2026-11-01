@@ -242,7 +242,7 @@ func getRuntime(r runner, cache string, pin RuntimePin) (string, error) {
 		return "", err
 	}
 	archive := filepath.Join(dir, "bun.zip")
-	if err := cacheRuntimeArchive(r.ctx, archive, asset.SHA256); err != nil {
+	if err := cacheRuntimeArchive(r.ctx, asset.URL, archive, asset.SHA256); err != nil {
 		return "", err
 	}
 	binary := filepath.Join(dir, "bun")

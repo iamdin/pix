@@ -13,19 +13,19 @@
     "revision": "1.4.4-canary.1+da867c60b",
     "platforms": {
       "darwin/arm64": {
-        "url": "https://api.github.com/repos/oven-sh/bun/releases/assets/687869686",
+        "url": "https://github.com/iamdin/pix/releases/download/bun-da867c60b/bun-darwin-aarch64.zip",
         "sha256": "67ede5394a7da4a8b1a1eb0788b72325f480bc956cb1155b6be962919c9aa581",
         "binary_sha256": "256c4f08d81ae8d5c0e445c637b424ba780e0514374b5328dd3db7a953e1aac5",
         "member": "bun-darwin-aarch64/bun"
       },
       "linux/amd64": {
-        "url": "https://api.github.com/repos/oven-sh/bun/releases/assets/687869747",
+        "url": "https://github.com/iamdin/pix/releases/download/bun-da867c60b/bun-linux-x64.zip",
         "sha256": "e8f27b24f74186e87fc0f0f603bdb6b79264dc86a1680da41e2025a3cb3efee0",
         "binary_sha256": "fe406996b9915f388e3fad9e6e29ece9c7cb81e06257bbcb4c50f91691b46810",
         "member": "bun-linux-x64/bun"
       },
       "linux/arm64": {
-        "url": "https://api.github.com/repos/oven-sh/bun/releases/assets/687869647",
+        "url": "https://github.com/iamdin/pix/releases/download/bun-da867c60b/bun-linux-aarch64.zip",
         "sha256": "a6e36924c8c6dc63459660e27a48cdd7189a7e888e590272d029de98d169d1e6",
         "binary_sha256": "83fa5c7812696de87a743caa4a915d5a17fa5be2a00ada0a2f5e6233108d6781",
         "member": "bun-linux-aarch64/bun"
