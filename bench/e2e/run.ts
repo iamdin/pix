@@ -2,7 +2,7 @@
  * End-to-end check of Pi's own capabilities against a Pi binary, with a local fake model:
  * print mode and the built-in tools, subcommands, codemode, MCP, skills/templates/extensions, sessions, RPC and the TUI.
  *
- *   bun bench/e2e/run.ts <pi> [leading args, e.g. bin/pix pi]
+ *   bun bench/e2e/run.ts <pi> [leading args]
  *
  * Run it on stock Pi first: what fails there is a wrong check, not a pix bug.
  */

@@ -38,8 +38,8 @@ func TestCLI(t *testing.T) {
 		args []string
 		code int
 	}{
-		{nil, 0}, {[]string{"--version"}, 0}, {[]string{"doctor"}, 1}, {[]string{"build", "--help"}, 0},
-		{[]string{"build", "--bun-version", "latest"}, 1}, {[]string{"build", "--pi-version", "main"}, 1}, {[]string{"build", "extra"}, 1}, {[]string{"verify"}, 1}, {[]string{"wat"}, 1},
+		{[]string{"self"}, 0}, {[]string{"self", "version"}, 0}, {[]string{"self", "doctor"}, 1}, {[]string{"compile", "--help"}, 0},
+		{[]string{"compile", "--bun-version", "latest"}, 1}, {[]string{"compile", "extra"}, 1}, {[]string{"compile", "--none", "--out", "x"}, 1}, {[]string{"compile", "--settings", "x"}, 1}, {[]string{"self", "wat"}, 1},
 	} {
 		var out, errors bytes.Buffer
 		if got := Main(context.Background(), c.args, &out, &errors); got != c.code {
@@ -55,8 +55,9 @@ func TestExtensionSelectionAndAutomaticEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	selected.Source = "npm:x"
 	source := entrySource(dir, []Extension{selected})
-	for _, want := range []string{"? args : ['--no-extensions', ", "'-e', 'builtin:codemode', ", "'-e', 'builtin:mcp', '-e', " + jsString(selected.Entry), "...args]", "PI_PACKAGE_DIR", "process.exit(2)"} {
+	for _, want := range []string{"if (!command) args = ['-e', " + jsString(selected.Entry) + ", ...args]", `new Set(["npm:x"])`, "PI_PACKAGE_DIR", "PI_SKIP_VERSION_CHECK", "process.exit(2)", "args.push('--extensions')"} {
 		if !strings.Contains(source, want) {
 			t.Fatalf("missing %s", want)
 		}

@@ -6,7 +6,7 @@
  *
  * A patch is a commit `perf(<name>): ...` (and its `fix(<name>)` commits) between --tag and --branch on the fork (defaults v1.4.0 and pix-v1.4.0).
  * A variant keeps some patches: the branch with every other patch reverted, as a commit of its own (in a scratch worktree,
- * on no branch), which `pix prepare --repo --commit` builds and `pix build --pi` compiles. Each argument is
+ * on no branch), which `pix self prepare --repo --commit` builds and `pix compile --pi` compiles. Each argument is
  * variant=patches: a comma list of patch names, `all`, or `all-name,...` (every patch but those). Empty = no patches.
  * --combos builds every subset, named by its patches joined with `+` (`base` for none). Outputs go to <out>/<variant>
  * (never overwritten: pix refuses an existing directory). Prints variant=/abs/pi lines for bench/run.ts --build.
@@ -88,8 +88,8 @@ for (const { variant, names } of variants) {
 		git("worktree", "remove", "--force", tree);
 	}
 	const pi = `${out}.tar.gz`;
-	run([pix, "prepare", "--repo", path.resolve(args.repo!), "--commit", commit, pi], log);
-	run([pix, "build", "--pi", pi, "--out", out], log);
+	run([pix, "self", "prepare", "--repo", path.resolve(args.repo!), "--commit", commit, pi], log);
+	run([pix, "compile", "--pi", pi, "--out", out], log);
 	console.error(`built ${variant} (${names.join(",") || "no patches"})`);
 	lines.push(`${variant}=${path.join(out, "pi")}`);
 }

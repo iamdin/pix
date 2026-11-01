@@ -1,6 +1,6 @@
 /**
  * Build pix for each platform into dist-release/pix-<goos>-<goarch>, the assets install.sh downloads, and check
- * each one where it runs: `pix build` and bench/e2e on this machine for its own platform, over ssh for the others, or
+ * each one where it runs: `pix compile --out` and bench/e2e on this machine for its own platform, over ssh for the others, or
  * on GitHub Actions (.github/workflows/check-release.yml) with --host PLATFORM=gh. --publish then creates the GitHub
  * release v<Version> as a draft, runs the GitHub checks on it, publishes it and installs it back with install.sh.
  *
@@ -8,7 +8,7 @@
  *
  * Built locally: the embedded Bun canary archives (internal/pix/runtime-data/<goos>-<goarch>/bun.zip) are not in git,
  * and canary downloads expire. The patched, built and tested Pi for each platform (runtime-data/<goos>-<goarch>/pi.tar.gz)
- * is prepared here too (needs git, Node 24+ and npm 11+), so `pix build` on users' machines only compiles.
+ * is prepared here too (needs git, Node 24+ and npm 11+), so `pix` on users' machines only compiles.
  *
  * Every platform must be checked (--host) unless --unchecked names it; GitHub checks need --publish. --publish also needs a clean main that is
  * pushed and a version not released yet. The pinned Pi commit must be the head of its fork branch.
@@ -76,7 +76,7 @@ run(["go", "test", "-count=1", "./..."]);
 // Prepare Pi for every platform, then build pix with it.
 const builder = path.join(scratch, "pix");
 run(["go", "build", "-o", builder, "./cmd/pix"]);
-for (const platform of platforms) run([builder, "prepare", "--platform", platform, path.join(dataDir(platform), "pi.tar.gz")]);
+for (const platform of platforms) run([builder, "self", "prepare", "--platform", platform, path.join(dataDir(platform), "pi.tar.gz")]);
 fs.mkdirSync(dist, { recursive: true });
 const assets: string[] = [];
 for (const platform of platforms) {
@@ -93,7 +93,7 @@ run(["tar", "-czf", e2e, "-C", path.join(root, "bench"), "e2e"]);
 for (const platform of platforms) {
 	const asset = path.join(dist, assetName(platform));
 	if (platform === local) {
-		run([asset, "build", "--out", path.join(scratch, "build")]);
+		run([asset, "compile", "--out", path.join(scratch, "build")]);
 		run(["bun", path.join(root, "bench/e2e/run.ts"), path.join(scratch, "build/pi")]);
 	} else if (hosts.get(platform) === "gh") {
 		console.error(`release: ${platform} is checked on GitHub, on the draft`);
@@ -102,7 +102,7 @@ for (const platform of platforms) {
 		const dir = output(["ssh", target, "mktemp -d"]);
 		run(["scp", "-q", asset, e2e, `${target}:${dir}/`]);
 		// bench/e2e runs with the Bun that `pix build` unpacked into its cache.
-		const script = `set -e; cd ${dir}; chmod +x ${assetName(platform)}; tar -xzf e2e.tar.gz; ./${assetName(platform)} build --out build; bun=$(ls -t ~/.cache/pix/runtime/*/bun | head -1); $bun e2e/run.ts ${dir}/build/pi; rm -rf ${dir}`;
+		const script = `set -e; cd ${dir}; chmod +x ${assetName(platform)}; tar -xzf e2e.tar.gz; ./${assetName(platform)} compile --out build; bun=$(ls -t ~/.cache/pix/runtime/*/bun | head -1); $bun e2e/run.ts ${dir}/build/pi; rm -rf ${dir}`;
 		run(["ssh", target, script]);
 	} else {
 		console.error(`release: ${platform} is not checked (--unchecked)`);
@@ -134,7 +134,7 @@ if (args.publish) {
 	run(["gh", "release", "edit", tag, "--draft=false", "--latest"]);
 	const bin = path.join(scratch, "installed");
 	run(["sh", path.join(root, "install.sh")], { PIX_INSTALL_DIR: bin });
-	if (output([path.join(bin, "pix"), "--version"]) !== version) fail("install.sh did not install this version");
+	if (output([path.join(bin, "pix"), "self", "version"]) !== version) fail("install.sh did not install this version");
 	console.log(`released ${tag}`);
 }
 fs.rmSync(scratch, { recursive: true, force: true });

@@ -1,7 +1,8 @@
 # pix
 
-Pi, built ahead of time with official Bun AOT, with performance patches and your extensions compiled in.
-**Currently alpha.10, for macOS ARM64, Linux x64 and Linux ARM64 (glibc). Still an experimental toolchain.**
+Pi, built ahead of time with official Bun AOT and performance patches. Anyone who can use Pi can use pix: it reads
+Pi's settings, packages and sessions (`~/.pi`) and loads extensions as Pi does; `pix compile` compiles your extensions
+in for speed. **Currently alpha.10, for macOS ARM64, Linux x64 and Linux ARM64 (glibc). Still an experimental toolchain.**
 
 ## Install
 
@@ -10,50 +11,48 @@ curl -fsSL https://raw.githubusercontent.com/iamdin/pix/main/install.sh | sh
 ```
 
 Installs to `~/.local/bin/pix` (change it with `PIX_INSTALL_DIR`) and checks the SHA-256. pix carries Bun and a Pi
-that is already patched, built and tested, so `pix build` only compiles your extensions on your machine, in about a
-minute, and needs no Node. Extensions from npm are downloaded with npm, from Git with git. Nothing global is changed.
+that is already patched, built and tested. The first run builds Pi for this machine, in about a minute, and needs no
+Node; the original Pi is not changed. Installing packages uses npm or git, as with Pi.
 
 From source: `go build -trimpath -o bin/pix ./cmd/pix` (Go 1.24+, and the Bun archive for your platform in
 `internal/pix/runtime-data/<goos>-<goarch>/bun.zip`, which is not in git). Such a development build has no Pi in it:
-run `pix prepare /abs/pi.tar.gz` first (needs Git, Node 24+ and npm 11+), then `pix build --pi /abs/pi.tar.gz --out
-DIR`. `bun scripts/release.ts` builds Pi into pix.
+run `pix self prepare /abs/pi.tar.gz` first (needs Git, Node 24+ and npm 11+), then `pix compile --pi /abs/pi.tar.gz
+--out DIR`. `bun scripts/release.ts` builds Pi into pix.
 
 ## Use
 
 ```sh
-pix build              # build with the extensions in ~/.pi/agent/settings.json (again after they change)
-pix pi                 # run the build; everything after pi goes to Pi: pix pi -c, pix pi install npm:x
-pix status             # version, patches, compiled-in extensions, whether the settings changed
-pix off / pix on     # run the original Pi instead / the pix build again (once: PIX_OFF=1 pix pi)
-pix uninstall          # remove ~/.pix, its builds and the PATH line it added
-pix feedback FILE      # send a failed build's feedback (it names FILE) as a GitHub issue, after you confirm
-
-pix build --name pi    # also install a `pi` command that takes the place of the original Pi; it is `pix pi`
+pix                    # Pi: every argument and command is Pi's (pix -c, pix -p "...", pix install npm:x)
+pix compile            # compile the packages in ~/.pi/agent/settings.json into pix (again after they change)
+pix self status        # Pi version, compiled-in extensions, whether the settings changed
+pix self uninstall     # remove ~/.pix and its builds; Pi's settings and sessions stay
+pix self feedback FILE # send a failed compile's feedback (it names FILE) as a GitHub issue, after you confirm
 ```
 
-- The original Pi is not changed. `pix pi install/remove/uninstall/update/config` run the original Pi, which then
-  reminds you to run `pix build`.
-- When the original Pi is upgraded past the version pix builds, `pix pi` runs the original and says so in one line;
-  run `pix build` again once pix has caught up.
+- Extensions not compiled in load from disk, as in Pi. Without a JIT they run interpreted: light extensions don't
+  notice; compile in the ones that do heavy work. A compiled-in package's extensions are not loaded again from disk.
+- `pix install/remove/update` manage packages as Pi does; with extensions compiled in, pix reminds you to run
+  `pix compile`. `pix update` updates packages only: Pi in pix is updated by installing a new pix.
 - A new build is switched to only after it passes its checks. The previous build is kept for sessions still running it;
   older ones are deleted along with their build directories in the cache.
 - To upgrade pix, run the install command again.
-- `build` shows each step and how long it took (the current one counts up in a terminal; elsewhere a long compile adds
-  a line every 5 minutes) and stops compiling after 30 minutes (`--timeout`, `0` for no limit). An extension with a very large function can compile for a long time; leave
-  one out with `{"source": "...", "extensions": []}` in the settings to find it.
-- A failed build writes feedback for a GitHub issue next to its log, with your home directory replaced by `~`, and sends
-  nothing. `pix feedback FILE` shows it and asks before sending it with the GitHub CLI when `gh` is logged in;
-  otherwise it prints a prefilled link to submit in the browser. `-y` sends without asking, for an agent that has shown
-  the feedback to you and has your agreement.
+- `compile` shows each step and how long it took (the current one counts up in a terminal; elsewhere a long compile adds
+  a line every 5 minutes) and stops compiling after 30 minutes (`--timeout`, `0` for no limit). An extension with a very
+  large function can compile for a long time; leave one out with `{"source": "...", "extensions": []}` in the settings
+  to find it, or use `pix compile --none` to compile nothing in.
+- A failed compile writes feedback for a GitHub issue next to its log, with your home directory replaced by `~`, and
+  sends nothing. `pix self feedback FILE` shows it and asks before sending it with the GitHub CLI when `gh` is logged
+  in; otherwise it prints a prefilled link to submit in the browser. `-y` sends without asking, for an agent that has
+  shown the feedback to you and has your agreement.
 
-## Build
+## Standalone builds
 
 ```sh
-pix build --out ./dist/my-pi
+pix compile --out ./dist/my-pi
 ./dist/my-pi/pi
 
 # a new settings file, in the format of the packages in Pi's settings
-pix build --settings ./pix-settings.json --out ./dist/my-pi-ext
+pix compile --settings ./pix-settings.json --out ./dist/my-pi-ext
 ```
 
 Example `pix-settings.json`:
@@ -71,12 +70,11 @@ Example `pix-settings.json`:
 
 The Git source and another-package are placeholders: replace or remove them. Only `packages` is read; models,
 credentials and other settings are not copied. Relative local paths resolve from the directory of the settings file.
-User settings are not read and installed extensions are not scanned unless you ask for it.
 
 Sources can also be given directly:
 
 ```sh
-./bin/pix build --extension npm:@getpie/pi-loop --out ./dist/pi-loop
+./bin/pix compile --extension npm:@getpie/pi-loop --out ./dist/pi-loop
 ./dist/pi-loop/pi
 ```
 
@@ -94,8 +92,8 @@ alias. The output directory must not exist: failed or existing outputs are never
    Pi's old global npm fallback. Local packages do not get dependencies installed and are not changed.
 4. Pi and the selected extension entries are compiled as several Bun entry points with
    `--compile --aot --compile-in-place`. No extension factory aggregation, no custom builtin names.
-5. The generated entry passes the compiled paths to Pi's own `-e`. **Compiled-in extensions load automatically; there
-   is nothing to give at run time.**
+5. The generated entry passes the compiled paths to Pi's own `-e` and has Pi skip the same packages' extensions on
+   disk. **Compiled-in extensions load automatically; there is nothing to give at run time.**
 
 The Go CLI orchestrates; a small JS bridge calls this Pi's package manager instead of reimplementing its npm and Git
 resolution. Local sources are made absolute against the settings directory with the pinned Pi's internal resolver, so
@@ -105,17 +103,15 @@ upgrading Pi must run the resolution regression tests.
 
 - Compiled-in extensions run, top-level module code and factories included; the help and RPC smoke checks during the
   build may run them too. **Build trusted packages only. The isolated HOME and directories are not a sandbox.**
-- Only the extensions selected at build time load automatically. The entry still passes `--no-extensions`, so other
-  extensions in user, project or settings are not run; `-e` at run time can still load an extension from disk, but it
-  is not AOT code.
+- Other extensions (user, project, settings packages, `-e`) load from disk as in Pi, interpreted rather than AOT code.
 - No `builtin:pix-NAME`, no new extension URI or ID protocol. Extension tool and command names are not rewritten;
   conflicts are Pi's to handle.
-- Skills, prompts, themes, models, credentials and sessions come from your normal configuration; skills, prompts and
-  themes inside built packages are not distributed with the build.
+- Skills, prompts, themes, models, credentials and sessions come from your normal configuration, as do the skills,
+  prompts and themes of packages.
 - npm lifecycle scripts are disabled and user or global npm configuration is not read. Packages that need install
   scripts or private registry credentials may not build; compile-time code such as Bun macros may still run.
-- Management commands (a first argument of install/remove/uninstall/update/list/config/auth/mcp) are refused by a build
-  run directly. Do not let a self-update overwrite a custom build.
+- Pi's self-update is refused (`update --self`, `update pi`); `update` without a target updates packages, and Pi's
+  notice of a newer Pi is off. pix follows Pi releases.
 
 ## Pinned toolchain and optimizations
 
@@ -150,7 +146,7 @@ unchanged; reading one 3000 px image 25 s → 0.3 s.
 
 **`streaming-tool-arguments` changes behavior**: intermediate parsed snapshots of large tool arguments are updated less
 often; raw deltas and final arguments stay complete. For an extension that needs a fresh parsed snapshot on every delta,
-switch back to the original Pi with `pix off`.
+use the original Pi.
 
 How the patches are maintained and changed: [PATCHES.md](PATCHES.md).
 
@@ -196,7 +192,7 @@ PIX_TEST_PI=/absolute/build-work/pi go test -race ./...
 # fake model: first on the original Pi, then on the build
 bun bench/e2e/run.ts ~/.bun/bin/pi
 bun bench/e2e/run.ts "$PWD/dist/my-pi/pi"
-bun bench/e2e/run.ts bin/pix pi        # the installed build, through pix pi
+bun bench/e2e/run.ts bin/pix            # the installed build, through pix
 ```
 
 Integration tests skip when their variables are not set. Performance records are in `docs/pi-perf/results/`. Failed

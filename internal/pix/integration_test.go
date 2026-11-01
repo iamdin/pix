@@ -41,7 +41,7 @@ func TestIntegrationExtensions(t *testing.T) {
 	home := t.TempDir()
 	marker := filepath.Join(home, "marker")
 	env := append(isolatedEnv(home), "PIX_TEST_MARKER="+marker)
-	auto := fmt.Sprintf("import {appendFileSync} from 'node:fs'; appendFileSync(%s, 'unexpected discovery'); export default function() {}", jsString(marker))
+	auto := fmt.Sprintf("import {appendFileSync} from 'node:fs'; appendFileSync(%s, 'discovered\\n'); export default function() {}", jsString(marker))
 	put(t, filepath.Join(home, "agent/extensions/auto.ts"), auto)
 	put(t, filepath.Join(home, ".pi/extensions/auto.ts"), auto)
 	pkg := filepath.Join(home, "package")
@@ -68,13 +68,10 @@ func TestIntegrationExtensions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := ""
-	if fixture && manifest.ExtensionsAutoLoad {
-		want = "module\nfactory\n"
-	}
+	// Like Pi, pix discovers extensions on disk: the user's extensions directory and the settings package.
 	actual, _ := os.ReadFile(marker)
-	if string(actual) != want {
-		t.Fatalf("default activation: %q want %q", actual, want)
+	if strings.Count(string(actual), "discovered") < 2 || (fixture && manifest.ExtensionsAutoLoad && !strings.Contains(string(actual), "module\nfactory\n")) {
+		t.Fatalf("default activation: %q", actual)
 	}
 	if fixture {
 		if !manifest.ExtensionsAutoLoad {
@@ -84,7 +81,7 @@ func TestIntegrationExtensions(t *testing.T) {
 			}
 		}
 		data, err := os.ReadFile(marker)
-		if err != nil || string(data) != "module\nfactory\n" {
+		if err != nil || !strings.Contains(string(data), "module\nfactory\n") {
 			t.Fatalf("compiled activation: %q %v", data, err)
 		}
 		encoded, _ := json.Marshal(result)
@@ -103,7 +100,7 @@ func TestIntegrationExtensions(t *testing.T) {
 		t.Fatal(err)
 	}
 	actual, _ = os.ReadFile(marker)
-	if !bytes.Contains(actual, []byte("unexpected discovery")) {
+	if !bytes.Contains(actual, []byte("discovered")) {
 		t.Fatal("explicit disk extension did not load")
 	}
 }
@@ -111,16 +108,24 @@ func TestIntegrationExtensions(t *testing.T) {
 func TestIntegrationManagementCommands(t *testing.T) {
 	exe := filepath.Join(integrationArtifact(t), "pi")
 	home := t.TempDir()
-	for _, command := range []string{"install", "remove", "uninstall", "update"} {
+	// Packages are managed as by Pi; Pi itself is updated with pix, not by Pi's self-update.
+	for _, args := range [][]string{{"update", "--self"}, {"update", "pi"}} {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		cmd := exec.CommandContext(ctx, exe, command)
+		cmd := exec.CommandContext(ctx, exe, args...)
 		cmd.Dir, cmd.Env = home, isolatedEnv(home)
 		out, err := cmd.CombinedOutput()
 		cancel()
 		exit, ok := err.(*exec.ExitError)
-		if !ok || exit.ExitCode() != 2 || !bytes.Contains(out, []byte("does not manage installations")) {
-			t.Fatalf("%s: %v %s", command, err, out)
+		if !ok || exit.ExitCode() != 2 || !bytes.Contains(out, []byte("Pi is updated with pix")) {
+			t.Fatalf("%v: %v %s", args, err, out)
 		}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, exe, "list")
+	cmd.Dir, cmd.Env = home, isolatedEnv(home)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("list: %v %s", err, out)
 	}
 }
 

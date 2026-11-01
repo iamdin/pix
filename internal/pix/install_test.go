@@ -5,27 +5,21 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
+	"slices"
 	"testing"
 	"time"
 )
 
-func TestBuildInstalledLifecycle(t *testing.T) {
+func TestInstallationLifecycle(t *testing.T) {
 	root := t.TempDir()
 	home := filepath.Join(root, "pix")
 	t.Setenv("PIX_HOME", home)
-	t.Setenv("HOME", root)
 	t.Setenv("PI_CODING_AGENT_DIR", filepath.Join(root, "agent"))
-	t.Setenv("PIX_OFF", "")
-	stockDir := filepath.Join(root, "stock")
-	stock := filepath.Join(stockDir, "bin", "pi")
-	writeFile(t, stock, "#!/bin/sh\necho STOCK \"$@\"\n", 0755)
-	stockPackage := filepath.Join(stockDir, "package.json")
-	writeFile(t, stockPackage, `{"name": "@earendil-works/pi-coding-agent", "version": "1.4.0"}`, 0644)
-	t.Setenv("PATH", filepath.Join(stockDir, "bin")+":/usr/bin:/bin")
+	writeFile(t, filepath.Join(root, "agent", "settings.json"), `{"packages": ["npm:x"]}`, 0644)
+	var settings []string
 	buildFunc = func(_ context.Context, opts Options, _ io.Writer) error {
-		writeFile(t, filepath.Join(opts.Out, "pi"), "#!/bin/sh\necho PIX \"$@\"\n", 0755)
-		writeFile(t, filepath.Join(opts.Out, "package.json"), `{"version": "1.4.0"}`, 0644)
+		settings = append(settings, opts.Settings)
+		writeFile(t, filepath.Join(opts.Out, "pi"), "#!/bin/sh\n", 0755)
 		return writeJSON(filepath.Join(opts.Out, "pix-build.json"), Manifest{Schema: 1, BuiltAt: time.Now().String()})
 	}
 	defer func() { buildFunc = Build }()
@@ -35,58 +29,22 @@ func TestBuildInstalledLifecycle(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	in := func() *installation {
-		in, err := requireInstalled()
-		must(err)
-		return in
+	in, err := loadInstallation()
+	must(err)
+	must(status(io.Discard))
+	must(in.compile(context.Background(), false, 0, io.Discard))
+	must(in.compile(context.Background(), true, 0, io.Discard))
+	must(in.compile(context.Background(), true, 0, io.Discard))
+	if want := filepath.Join(root, "agent", "settings.json"); !slices.Equal(settings, []string{"", want, want}) {
+		t.Fatalf("settings per build: %q", settings)
 	}
-	launches := func(want string, args ...string) {
-		t.Helper()
-		exe, _, notice, err := in().launch(args)
-		must(err)
-		if exe != want {
-			t.Fatalf("pix pi %v: %s (%s), want %s", args, exe, notice, want)
-		}
-	}
-	build := filepath.Join(home, "current", "pi")
-
-	must(buildInstalled(context.Background(), "pi", 0, io.Discard))
-	launches(build, "-c")
-	// The command execs `<this executable> run`, which is the test binary here, so only check that it exists.
-	if info, err := os.Stat(filepath.Join(home, "bin", "pi")); err != nil || info.Mode().Perm()&0111 == 0 {
-		t.Fatal("no executable pi command")
-	}
-	must(setOff(true, io.Discard))
-	launches(stock)
-	must(setOff(false, io.Discard))
-	if exe, wait, notice, _ := in().launch([]string{"install", "npm:x"}); exe != stock || !wait || !strings.Contains(notice, "pix build") {
-		t.Fatalf("package commands go to the original Pi: %s %v %q", exe, wait, notice)
-	}
-	writeFile(t, stockPackage, `{"version": "1.10.0"}`, 0644)
-	launches(stock)
-	writeFile(t, stockPackage, `{"version": "1.3.9-beta.1"}`, 0644)
-	launches(build)
-
-	must(buildInstalled(context.Background(), "", 0, io.Discard))
-	must(buildInstalled(context.Background(), "", 0, io.Discard))
-	if ids, _ := in().versions(); len(ids) != 2 || in().current() != ids[1] {
-		t.Fatalf("versions: %v, current %s", ids, in().current())
+	if ids, _ := in.versions(); len(ids) != 2 || in.current() != ids[1] {
+		t.Fatalf("versions: %v, current %s", ids, in.current())
 	}
 	must(status(io.Discard))
 	must(uninstall(io.Discard))
 	if exists(home) {
 		t.Fatal("uninstall left", home)
-	}
-}
-
-func TestNewer(t *testing.T) {
-	for _, c := range []struct {
-		a, b string
-		want bool
-	}{{"1.10.0", "1.4.0", true}, {"1.4.0", "1.4.0", false}, {"1.3.9", "1.4.0", false}, {"2.0.0-beta.1", "1.9.9", true}, {"1.4.1", "1.4", true}} {
-		if got := newer(c.a, c.b); got != c.want {
-			t.Errorf("newer(%s, %s) = %v", c.a, c.b, got)
-		}
 	}
 }
 

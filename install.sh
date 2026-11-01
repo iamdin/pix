@@ -14,7 +14,7 @@ esac
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-echo "Downloading pix (about 110 MB; Bun and the patched Pi are inside)..."
+echo "Downloading pix (about 110 MB; Bun and Pi are inside)..."
 curl -fL --progress-bar "$base/$asset" -o "$tmp/pix"
 curl -fsSL "$base/$asset.sha256" -o "$tmp/pix.sha256"
 sum=$( (sha256sum "$tmp/pix" 2>/dev/null || shasum -a 256 "$tmp/pix") | cut -d' ' -f1)
@@ -22,10 +22,10 @@ sum=$( (sha256sum "$tmp/pix" 2>/dev/null || shasum -a 256 "$tmp/pix") | cut -d' 
 
 mkdir -p "$dir"
 install -m 755 "$tmp/pix" "$dir/pix"
-echo "Installed pix $("$dir/pix" --version) to $dir/pix"
+echo "Installed pix $("$dir/pix" self version) to $dir/pix"
 
 case ":$PATH:" in
 *":$dir:"*) ;;
 *) echo "Add $dir to PATH: export PATH=\"$dir:\$PATH\" in your shell's startup file" ;;
 esac
-echo "Next: pix build (builds your Pi with its packages, about a minute), then pix pi"
+echo "Next: run pix as you run pi (the first run builds it for this machine, about a minute)"

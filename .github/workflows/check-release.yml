@@ -22,13 +22,13 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
-      - name: pix build
+      - name: pix compile
         run: |
           asset=pix-$(echo "${{ matrix.platform }}" | tr / -)
           gh release download "${{ inputs.tag }}" --pattern "$asset" --pattern "$asset.sha256" --dir dl
           (cd dl && sha256sum -c "$asset.sha256" 2>/dev/null || shasum -a 256 -c "$asset.sha256")
           chmod +x "dl/$asset"
-          "dl/$asset" build --out "$RUNNER_TEMP/build"
+          "dl/$asset" compile --out "$RUNNER_TEMP/build"
       - name: bench/e2e
         run: |
           bun=$(ls -t ~/.cache/pix/runtime/*/bun ~/Library/Caches/pix/runtime/*/bun 2>/dev/null | head -1)

@@ -21,7 +21,7 @@ Pi releases a new version, rebase the previous branch into `pix-<new tag>` and c
 tests and performance gates; see `.agents/skills/pi-perf-upgrade/SKILL.md`.
 
 A release (`bun scripts/release.ts`) prepares Pi once, on the maintainer's machine: it fetches the pinned commit, runs
-`npm ci`, builds, runs every patch's tests and embeds the result in pix. Users' `pix build` only compiles.
+`npm ci`, builds, runs every patch's tests and embeds the result in pix. On users' machines pix only compiles.
 
 ## Provenance
 
@@ -31,6 +31,6 @@ prepared). Generated binaries are not promised to be byte-for-byte identical.
 
 ## Changing a patch
 
-Change the commit in the fork, build Pi from it with `pix prepare --repo /abs/pi --commit SHA /abs/pi.tar.gz` (needs
-Git, Node 24+ and npm 11+) and compile with `pix build --pi /abs/pi.tar.gz --out NEW`. To compare sets of patches, use
+Change the commit in the fork, build Pi from it with `pix self prepare --repo /abs/pi --commit SHA /abs/pi.tar.gz` (needs
+Git, Node 24+ and npm 11+) and compile with `pix compile --pi /abs/pi.tar.gz --out NEW`. To compare sets of patches, use
 `bench/build-variants.ts`: it reverts the unwanted patches in the fork and takes the same two steps.

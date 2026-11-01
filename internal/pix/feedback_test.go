@@ -26,7 +26,7 @@ func TestWriteFeedback(t *testing.T) {
 	data, _ := os.ReadFile(file)
 	text := string(data)
 	msg := failure(errCompileTime, stage, "Compile", time.Minute, nil).Error()
-	if !errors.Is(failure(errCompileTime, stage, "Compile", time.Minute, nil), errCompileTime) || !strings.Contains(msg, "\nSend feedback: pix feedback "+stage) || !strings.Contains(msg[strings.Index(msg, "If you are an AI agent"):], "pix feedback -y") || !strings.Contains(msg, "leaving extensions out") || strings.Contains(msg[:strings.Index(msg, "If you are")], "-y") {
+	if !errors.Is(failure(errCompileTime, stage, "Compile", time.Minute, nil), errCompileTime) || !strings.Contains(msg, "\nSend feedback: pix self feedback "+stage) || !strings.Contains(msg[strings.Index(msg, "If you are an AI agent"):], "pix self feedback -y") || !strings.Contains(msg, "leaving extensions out") || strings.Contains(msg[:strings.Index(msg, "If you are")], "-y") {
 		t.Fatal(msg)
 	}
 	if !strings.HasPrefix(text, "# pix build failed: Fetch extensions\n") || strings.Contains(text, home) || !strings.Contains(text, "~/x.ts") || !strings.Contains(text, "ext 1.0.0 (npm:ext)") {
@@ -56,8 +56,8 @@ func TestFeedback(t *testing.T) {
 		yes          bool
 		want         string
 	}{
-		{"unconfirmed", "", false, "pix feedback -y"},
-		{"unconfirmed, /dev/null", "", false, "pix feedback -y"},
+		{"unconfirmed", "", false, "pix self feedback -y"},
+		{"unconfirmed, /dev/null", "", false, "pix self feedback -y"},
 		{"no gh", "", true, "issues/new?"},
 		{"logged out", "exit 1", true, "issues/new?"},
 		{"create fails", `[ "$1" = auth ] && exit 0; echo denied >&2; exit 1`, true, "denied"},

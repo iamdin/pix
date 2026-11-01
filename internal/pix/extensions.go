@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -48,21 +49,45 @@ func entrySource(pi string, extensions []Extension) string {
 	src := filepath.Join(pi, "packages/coding-agent/src")
 	var out strings.Builder
 	out.WriteString("import { dirname } from 'node:path';\nprocess.env.PI_PACKAGE_DIR ??= dirname(process.execPath);\n")
+	// pix follows Pi releases itself: no notice of a newer Pi, and `update` updates packages, never this Pi.
+	out.WriteString("process.env.PI_SKIP_VERSION_CHECK ??= '1';\n")
 	fmt.Fprintf(&out, "await import(%s);\nawait import(%s);\nconst { setupCli } = await import(%s);\nconst { main } = await import(%s);\n", jsString(filepath.Join(src, "bun/sandbox-env-setup.ts")), jsString(filepath.Join(src, "bun/runtime-setup.ts")), jsString(filepath.Join(src, "cli/setup.ts")), jsString(filepath.Join(src, "main.ts")))
-	out.WriteString("const args = process.argv.slice(2);\n")
-	// Packages installed here would not load in this build (see below), and self-update would replace another Pi.
-	out.WriteString("if (['install','remove','uninstall','update'].includes(args[0] ?? '')) {\n console.error('This custom build does not manage installations: use your installed Pi, then rebuild with pix.');\n process.exit(2);\n}\nsetupCli();\n")
-	// --no-extensions keeps Pi from loading the user's packages again from disk; it also drops Pi's built-in extensions
-	// (packages/coding-agent/src/extensions/index.ts), so load those back by name.
-	// Pi reads a subcommand (list, config, auth, mcp) only as the first argument.
-	out.WriteString("await main(['list', 'config', 'auth', 'mcp'].includes(args[0] ?? '') ? args : ['--no-extensions', ")
-	for _, name := range []string{"llama.cpp", "codemode", "tool-search", "mcp"} {
-		fmt.Fprintf(&out, "'-e', 'builtin:%s', ", name)
+	out.WriteString(`let args = process.argv.slice(2);
+if (args[0] === 'update') {
+ const rest = args.slice(1);
+ if (rest.some((a) => a === '--self' || a === 'self' || a === 'pi')) {
+  console.error('pix: Pi is updated with pix (run the pix installer again); packages: pix update --extensions');
+  process.exit(2);
+ }
+ if (rest.includes('--all')) args = args.map((a) => (a === '--all' ? '--extensions' : a));
+ else if (!rest.some((a) => ['--extensions', '--extension', '--models'].includes(a) || !a.startsWith('-'))) args.push('--extensions');
+}
+`)
+	// Pi reads a subcommand only as the first argument.
+	out.WriteString("const command = ['install', 'remove', 'uninstall', 'update', 'list', 'config', 'auth', 'mcp'].includes(args[0] ?? '');\n")
+	if len(extensions) > 0 {
+		// Compiled extensions load by their entry (-e); Pi then skips the same packages' extensions on disk.
+		var sources []string
+		for _, e := range extensions {
+			if e.Source != "" && !slices.Contains(sources, e.Source) {
+				sources = append(sources, e.Source)
+			}
+		}
+		data, _ := json.Marshal(sources)
+		fmt.Fprintf(&out, "const compiled = new Set(%s);\nconst { DefaultPackageManager } = await import(%s);\n", data, jsString(filepath.Join(src, "core/package-manager.ts")))
+		out.WriteString(`const resolve = DefaultPackageManager.prototype.resolve;
+DefaultPackageManager.prototype.resolve = async function (...rest) {
+ const paths = await resolve.apply(this, rest);
+ if (!command) paths.extensions = paths.extensions.filter((r) => !compiled.has(r.metadata.source));
+ return paths;
+};
+if (!command) args = [`)
+		for _, extension := range extensions {
+			fmt.Fprintf(&out, "'-e', %s, ", jsString(extension.Entry))
+		}
+		out.WriteString("...args];\n")
 	}
-	for _, extension := range extensions {
-		fmt.Fprintf(&out, "'-e', %s, ", jsString(extension.Entry))
-	}
-	out.WriteString("...args]);\n")
+	out.WriteString("setupCli();\nawait main(args);\n")
 	return out.String()
 }
 func compilerConfig(pi, entry string) (map[string]any, error) {

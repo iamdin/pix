@@ -35,16 +35,27 @@ func Main(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
+const usage = `pix — Pi, built ahead of time with Bun, with performance patches
+
+  pix [Pi arguments]          Pi itself: pix, pix -c, pix -p "...", pix install npm:x, pix --help
+  pix compile                 compile the packages in your Pi settings into pix, for speed (again after they change)
+  pix self status             what pix runs: Pi version, compiled-in extensions
+  pix self feedback FILE      send a failed compile's feedback as a GitHub issue, after you confirm
+  pix self uninstall          remove ~/.pix and its builds
+  pix self version            pix's version
+
+pix uses Pi's settings, packages and sessions (~/.pi). Experimental: macOS ARM64, Linux x64 and ARM64.`
+
 func execute(ctx context.Context, args []string, stdout, stderr io.Writer) error {
+	if len(args) > 0 && args[0] == "compile" {
+		return compileCommand(ctx, args[1:], stdout, stderr)
+	}
+	if len(args) == 0 || args[0] != "self" {
+		return runPi(ctx, args, stderr)
+	}
+	args = args[1:]
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
-		fmt.Fprintln(stdout, "pix — Pi with your packages, built ahead of time with Bun\n\n  pix build [--name pi]   build Pi with the packages in your Pi settings (again after they change)\n  pix pi [args]           run it; everything after pi goes to Pi: pix pi -c, pix pi install npm:x\n  pix status              what is built and what pix pi runs\n  pix off | on            run the original Pi instead | the pix build again\n  pix uninstall           remove the builds and the --name command\n  pix feedback FILE       send a failed build's feedback as a GitHub issue, after you confirm\n\nAlso: pix build --out DIR (a standalone build, see pix build --help).\nExperimental: macOS ARM64, Linux x64 and ARM64. Pi and Bun versions are maintained by pix.")
-		return nil
-	}
-	if args[0] == "pi" {
-		return runPi(args[1:], stderr)
-	}
-	if args[0] == "--version" {
-		fmt.Fprintln(stdout, Version)
+		fmt.Fprintln(stdout, usage)
 		return nil
 	}
 	cache, err := os.UserCacheDir()
@@ -53,36 +64,8 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer) error
 	}
 	cache = filepath.Join(cache, "pix")
 	switch args[0] {
-	case "build":
-		opts := Options{}
-		f := flag.NewFlagSet("build", flag.ContinueOnError)
-		f.SetOutput(stderr)
-		f.StringVar(&opts.Pi, "pi", "", "build this Pi (a .tar.gz from `pix prepare`) instead of the one built into pix")
-		f.StringVar(&opts.Cache, "cache-dir", cache, "downloads, pristine sources and retained build logs")
-		f.StringVar(&opts.Out, "out", "", "build into this new directory (never overwritten) instead of building what `pix pi` runs")
-		name := f.String("name", "", "also install a command with this name that runs the build; pi takes the place of your Pi")
-		f.StringVar(&opts.Settings, "settings", "", "JSON file with Pi packages declarations; relative sources resolve from this file")
-		f.Var(&opts.Extensions, "extension", "append a Pi package source (repeatable); selected compiled extensions load automatically")
-		f.DurationVar(&opts.Timeout, "timeout", 30*time.Minute, "stop compiling after this long (0: never)")
-		if err := f.Parse(args[1:]); err != nil {
-			return err
-		}
-		if f.NArg() != 0 {
-			return fmt.Errorf("unexpected arguments: %v", f.Args())
-		}
-		if opts.Out == "" {
-			if opts.Settings != "" || len(opts.Extensions) > 0 || opts.Pi != "" {
-				return fmt.Errorf("--settings, --extension and --pi need --out; without it pix builds from your Pi settings")
-			}
-			return buildInstalled(ctx, *name, opts.Timeout, stdout)
-		}
-		if *name != "" {
-			return fmt.Errorf("--name installs the build `pix pi` runs; it does not go with --out")
-		}
-		if err := Build(ctx, opts, stdout); err != nil {
-			return err
-		}
-		fmt.Fprintf(stdout, "Built %s\n", filepath.Join(opts.Out, "pi"))
+	case "version", "--version":
+		fmt.Fprintln(stdout, Version)
 		return nil
 	case "prepare": // for scripts/release.ts and bench/build-variants.ts
 		pins, err := sourcePins()
@@ -99,7 +82,7 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer) error
 			return err
 		}
 		if f.NArg() != 1 {
-			return fmt.Errorf("usage: pix prepare [--repo REPO --commit SHA] [--platform GOOS/GOARCH] OUT.tar.gz")
+			return fmt.Errorf("usage: pix self prepare [--repo REPO --commit SHA] [--platform GOOS/GOARCH] OUT.tar.gz")
 		}
 		if !strings.Contains(pins.Pi.Repository, "://") && !filepath.IsAbs(pins.Pi.Repository) {
 			return fmt.Errorf("--repo must be a URL or an absolute path")
@@ -116,21 +99,63 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer) error
 			return err
 		}
 		if f.NArg() != 1 {
-			return fmt.Errorf("usage: pix feedback [-y] FEEDBACK.md (a failed build names its file)")
+			return fmt.Errorf("usage: pix self feedback [-y] FEEDBACK.md (a failed compile names its file)")
 		}
 		return feedback(f.Arg(0), *yes, os.Stdin, stdout)
-	case "status", "off", "on", "uninstall":
+	case "status", "uninstall":
 		if len(args) != 1 {
-			return fmt.Errorf("usage: pix %s", args[0])
+			return fmt.Errorf("usage: pix self %s", args[0])
 		}
-		switch args[0] {
-		case "status":
+		if args[0] == "status" {
 			return status(stdout)
-		case "uninstall":
-			return uninstall(stdout)
 		}
-		return setOff(args[0] == "off", stdout)
+		return uninstall(stdout)
 	default:
-		return fmt.Errorf("unknown command %q", args[0])
+		return fmt.Errorf("unknown command %q; see pix self help", "self "+args[0])
 	}
+}
+
+func compileCommand(ctx context.Context, args []string, stdout, stderr io.Writer) error {
+	cache, err := os.UserCacheDir()
+	if err != nil {
+		return err
+	}
+	opts := Options{}
+	f := flag.NewFlagSet("compile", flag.ContinueOnError)
+	f.SetOutput(stderr)
+	f.StringVar(&opts.Pi, "pi", "", "build this Pi (a .tar.gz from `pix self prepare`) instead of the one built into pix")
+	f.StringVar(&opts.Cache, "cache-dir", filepath.Join(cache, "pix"), "downloads, pristine sources and retained build logs")
+	f.StringVar(&opts.Out, "out", "", "build into this new directory (never overwritten) instead of the Pi that pix runs")
+	f.StringVar(&opts.Settings, "settings", "", "with --out: JSON file with Pi packages declarations; relative sources resolve from this file")
+	f.Var(&opts.Extensions, "extension", "with --out: append a Pi package source (repeatable)")
+	f.DurationVar(&opts.Timeout, "timeout", 30*time.Minute, "stop compiling after this long (0: never)")
+	none := f.Bool("none", false, "compile nothing in: Pi loads every package from disk")
+	if err := f.Parse(args); err != nil {
+		return err
+	}
+	if f.NArg() != 0 {
+		return fmt.Errorf("unexpected arguments: %v", f.Args())
+	}
+	if opts.Out == "" {
+		if opts.Settings != "" || len(opts.Extensions) > 0 || opts.Pi != "" {
+			return fmt.Errorf("--settings, --extension and --pi need --out; without it pix compiles the packages in your Pi settings")
+		}
+		in, err := loadInstallation()
+		if err != nil {
+			return err
+		}
+		if err := in.compile(ctx, !*none, opts.Timeout, stdout); err != nil {
+			return err
+		}
+		fmt.Fprintln(stdout, "Done: pix runs the new build.")
+		return nil
+	}
+	if *none {
+		return fmt.Errorf("--none does not go with --out")
+	}
+	if err := Build(ctx, opts, stdout); err != nil {
+		return err
+	}
+	fmt.Fprintf(stdout, "Built %s\n", filepath.Join(opts.Out, "pi"))
+	return nil
 }

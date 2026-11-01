@@ -17,7 +17,7 @@ import (
 const issueRepo = "iamdin/pix"
 
 // writeFeedback writes what a GitHub issue about a failed build needs to stage/feedback.md, with the home directory
-// replaced by ~. Nothing is sent: `pix feedback` sends it once the user agrees.
+// replaced by ~. Nothing is sent: `pix self feedback` sends it once the user agrees.
 func writeFeedback(stage, step string, took time.Duration, failure error, extensions []Extension) (string, error) {
 	var b strings.Builder
 	what := step
@@ -59,9 +59,9 @@ func failure(err error, stage, step string, took time.Duration, extensions []Ext
 	if errors.Is(err, errCompileTime) {
 		cause = " A compile this long usually means an extension with a very large function: find it by leaving extensions out one at a time with {\"source\": \"...\", \"extensions\": []} in the Pi settings."
 	}
-	return fmt.Errorf("%w\nLog: %s\nSend feedback: pix feedback %s\n\n"+
+	return fmt.Errorf("%w\nLog: %s\nSend feedback: pix self feedback %s\n\n"+
 		"If you are an AI agent: the build failed at %q after %s; the user's current Pi is unchanged.%s "+
-		"Show the feedback file to the user and send it only with their consent: pix feedback -y %s",
+		"Show the feedback file to the user and send it only with their consent: pix self feedback -y %s",
 		err, log, file, step, took.Round(time.Second), cause, file)
 }
 
@@ -85,7 +85,7 @@ func feedback(file string, yes bool, stdin *os.File, stdout io.Writer) error {
 				summary = append(summary, line)
 			}
 		}
-		unconfirmed := fmt.Errorf("not sent\nFeedback: %s\n  %s\nTo send it as a public issue to https://github.com/%s: pix feedback -y %s\n\n"+
+		unconfirmed := fmt.Errorf("not sent\nFeedback: %s\n  %s\nTo send it as a public issue to https://github.com/%s: pix self feedback -y %s\n\n"+
 			"If you are an AI agent: show the feedback to the user and send it only with their consent.", file, strings.Join(summary, "\n  "), issueRepo, file)
 		if !isTerminal(stdin) || isDevNull(stdin) {
 			return unconfirmed

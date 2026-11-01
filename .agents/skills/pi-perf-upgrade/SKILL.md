@@ -61,7 +61,7 @@ measurably slower. Code may overlap, but each commit must revert cleanly from th
    - all vs all without it: the gain its spec expects. No gain: propose dropping it (to the user), do not just keep it.
    Look for interactions in the other subsets too: a pair that is worse than either alone is a bug in one of them.
 5. Against the previous Pi version's final build: the full set may be at most 5% worse in any scenario.
-6. `bin/pix prepare /abs/pi.tar.gz` (every patch's tests), `bin/pix build --pi /abs/pi.tar.gz --out /abs/dir` (smoke,
+6. `bin/pix self prepare /abs/pi.tar.gz` (every patch's tests), `bin/pix compile --pi /abs/pi.tar.gz --out /abs/dir` (smoke,
    the artifact hash check); `bun bench/e2e/run.ts /abs/dir/pi`. Record everything under `docs/pi-perf/results/TAG/` and update the specs
    ("Verified on" with the new commits, numbers, what changed) and the README's numbers. `scripts/release.ts` prepares
    the Pi a release embeds.
