@@ -50,7 +50,7 @@ func packageTestRunner(t *testing.T) (runner, string, string) {
 }
 
 func TestPackageLocalSources(t *testing.T) {
-	for _, kind := range []string{"file", "tilde", "alias", "manifest", "conventional", "index", "directory", "missing", "empty", "duplicate", "builtin"} {
+	for _, kind := range []string{"file", "tilde", "alias", "manifest", "self", "conventional", "index", "directory", "missing", "empty", "duplicate", "builtin"} {
 		t.Run(kind, func(t *testing.T) {
 			r, pi, stage := packageTestRunner(t)
 			root := t.TempDir()
@@ -74,6 +74,10 @@ func TestPackageLocalSources(t *testing.T) {
 				put(t, filepath.Join(root, "pkg/src/two.ts"), module)
 				put(t, filepath.Join(root, "pkg/src/ignored.ts"), module)
 				values, want = []string{"./pkg"}, 2
+			case "self": // @plannotator/pi-extension declares its own directory
+				put(t, filepath.Join(root, "pkg/package.json"), `{"name":"self","pi":{"extensions":["./"]}}`)
+				put(t, filepath.Join(root, "pkg/index.ts"), module)
+				values = []string{"./pkg"}
 			case "conventional":
 				put(t, filepath.Join(root, "pkg/extensions/one.ts"), module)
 				values = []string{"./pkg"}

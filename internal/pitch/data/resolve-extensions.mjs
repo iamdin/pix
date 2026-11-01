@@ -75,7 +75,9 @@ for (const [index, resource] of resources.extensions.filter((item) => item.enabl
 }
 const entries = new Set();
 for (const resource of selected) {
-  const entry = realpathSync(resource.path);
+  let entry = realpathSync(resource.path);
+  // A manifest entry may name a directory, even its own ("./"): Pi imports it, which loads its index.
+  if (statSync(entry).isDirectory()) entry = ["index.ts", "index.js"].map((name) => join(entry, name)).find((file) => existsSync(file)) ?? entry;
   if (entries.has(entry)) continue;
   entries.add(entry);
   const root = resource.metadata.packageRoot;
