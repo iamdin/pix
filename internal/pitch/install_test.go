@@ -50,7 +50,7 @@ func TestBuildInstalledLifecycle(t *testing.T) {
 	}
 	build := filepath.Join(home, "current", "pi")
 
-	must(buildInstalled(context.Background(), "pi", io.Discard))
+	must(buildInstalled(context.Background(), "pi", 0, io.Discard))
 	launches(build, "-c")
 	// The command execs `<this executable> run`, which is the test binary here, so only check that it exists.
 	if info, err := os.Stat(filepath.Join(home, "bin", "pi")); err != nil || info.Mode().Perm()&0111 == 0 {
@@ -67,8 +67,8 @@ func TestBuildInstalledLifecycle(t *testing.T) {
 	writeFile(t, stockPackage, `{"version": "1.3.9-beta.1"}`, 0644)
 	launches(build)
 
-	must(buildInstalled(context.Background(), "", io.Discard))
-	must(buildInstalled(context.Background(), "", io.Discard))
+	must(buildInstalled(context.Background(), "", 0, io.Discard))
+	must(buildInstalled(context.Background(), "", 0, io.Discard))
 	if ids, _ := in().versions(); len(ids) != 2 || in().current() != ids[1] {
 		t.Fatalf("versions: %v, current %s", ids, in().current())
 	}

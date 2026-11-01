@@ -135,7 +135,7 @@ func isTerminal(f *os.File) bool {
 var validName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
 
 // buildInstalled builds Pi with the packages in the user's Pi settings and makes it what `pitch pi` runs.
-func buildInstalled(ctx context.Context, name string, stdout io.Writer) error {
+func buildInstalled(ctx context.Context, name string, timeout time.Duration, stdout io.Writer) error {
 	in, err := loadInstallation()
 	if err != nil {
 		return err
@@ -155,7 +155,7 @@ func buildInstalled(ctx context.Context, name string, stdout io.Writer) error {
 	if err := os.MkdirAll(filepath.Join(in.Home, "versions"), 0755); err != nil {
 		return err
 	}
-	opts := Options{Out: filepath.Join(in.Home, "versions", time.Now().Format("20060102-150405.000000000"))}
+	opts := Options{Out: filepath.Join(in.Home, "versions", time.Now().Format("20060102-150405.000000000")), Timeout: timeout}
 	cache, err := os.UserCacheDir()
 	if err != nil {
 		return err

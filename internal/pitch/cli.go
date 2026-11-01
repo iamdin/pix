@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type stringsFlag []string
@@ -19,6 +20,8 @@ func (s *stringsFlag) Set(v string) error { *s = append(*s, v); return nil }
 type Options struct {
 	Cache, Out, Settings, Pi string
 	Extensions               stringsFlag
+	// Timeout stops compiling after this long; 0 never does.
+	Timeout time.Duration
 }
 
 func Main(ctx context.Context, args []string, stdout, stderr io.Writer) int {
@@ -34,7 +37,7 @@ func Main(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 
 func execute(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
-		fmt.Fprintln(stdout, "pitch — Pi with your packages, built ahead of time with Bun\n\n  pitch build [--name pi]   build Pi with the packages in your Pi settings (again after they change)\n  pitch pi [args]           run it; everything after pi goes to Pi: pitch pi -c, pitch pi install npm:x\n  pitch status              what is built and what pitch pi runs\n  pitch off | on            run the original Pi instead | the pitch build again\n  pitch uninstall           remove the builds and the --name command\n\nAlso: pitch build --out DIR (a standalone build, see pitch build --help).\nExperimental: macOS ARM64, Linux x64 and ARM64. Pi and Bun versions are maintained by pitch.")
+		fmt.Fprintln(stdout, "pitch — Pi with your packages, built ahead of time with Bun\n\n  pitch build [--name pi]   build Pi with the packages in your Pi settings (again after they change)\n  pitch pi [args]           run it; everything after pi goes to Pi: pitch pi -c, pitch pi install npm:x\n  pitch status              what is built and what pitch pi runs\n  pitch off | on            run the original Pi instead | the pitch build again\n  pitch uninstall           remove the builds and the --name command\n  pitch report FILE         send a failed build's report as a GitHub issue, after you confirm\n\nAlso: pitch build --out DIR (a standalone build, see pitch build --help).\nExperimental: macOS ARM64, Linux x64 and ARM64. Pi and Bun versions are maintained by pitch.")
 		return nil
 	}
 	if args[0] == "pi" {
@@ -60,6 +63,7 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer) error
 		name := f.String("name", "", "also install a command with this name that runs the build; pi takes the place of your Pi")
 		f.StringVar(&opts.Settings, "settings", "", "JSON file with Pi packages declarations; relative sources resolve from this file")
 		f.Var(&opts.Extensions, "extension", "append a Pi package source (repeatable); selected compiled extensions load automatically")
+		f.DurationVar(&opts.Timeout, "timeout", 30*time.Minute, "stop compiling after this long (0: never)")
 		if err := f.Parse(args[1:]); err != nil {
 			return err
 		}
@@ -70,7 +74,7 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer) error
 			if opts.Settings != "" || len(opts.Extensions) > 0 || opts.Pi != "" {
 				return fmt.Errorf("--settings, --extension and --pi need --out; without it pitch builds from your Pi settings")
 			}
-			return buildInstalled(ctx, *name, stdout)
+			return buildInstalled(ctx, *name, opts.Timeout, stdout)
 		}
 		if *name != "" {
 			return fmt.Errorf("--name installs the build `pitch pi` runs; it does not go with --out")
@@ -104,6 +108,17 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer) error
 			pins.Pi.Branch = ""
 		}
 		return Prepare(ctx, cache, pins.Pi, *target, f.Arg(0), stdout)
+	case "report":
+		f := flag.NewFlagSet("report", flag.ContinueOnError)
+		f.SetOutput(stderr)
+		yes := f.Bool("y", false, "send without asking: only after the user has read the report and agreed")
+		if err := f.Parse(args[1:]); err != nil {
+			return err
+		}
+		if f.NArg() != 1 {
+			return fmt.Errorf("usage: pitch report [-y] REPORT.md (a failed build names its report)")
+		}
+		return report(f.Arg(0), *yes, os.Stdin, stdout)
 	case "status", "off", "on", "uninstall":
 		if len(args) != 1 {
 			return fmt.Errorf("usage: pitch %s", args[0])

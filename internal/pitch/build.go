@@ -88,9 +88,14 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err != nil {
 		return err
 	}
+	start, current := time.Now(), ""
+	var extensions []Extension
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("%w; work retained at %s", err, stage)
+			if file, reportErr := writeReport(stage, current, time.Since(start), err, extensions); reportErr == nil {
+				err = fmt.Errorf("%w\n\n%s", err, reportHint(file))
+			}
 		}
 	}()
 	home := filepath.Join(stage, "home")
@@ -103,9 +108,12 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 		return err
 	}
 	defer log.Close()
-	n := 0
+	n, stepStart := 0, start
 	step := func(s string) {
-		n++
+		if n > 0 {
+			fmt.Fprintf(stdout, "      %s\n", time.Since(stepStart).Round(time.Second))
+		}
+		n, current, stepStart = n+1, s, time.Now()
 		fmt.Fprintf(stdout, "[%d/4] %s\n", n, s)
 	}
 	fmt.Fprintf(stdout, "Building Pi %s with pitch %s, a few minutes\nLog: %s\n", strings.TrimPrefix(pins.Pi.Tag, "v"), Version, filepath.Join(stage, "build.log"))
@@ -127,7 +135,7 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 		return err
 	}
 	step("Fetch extensions")
-	extensions, err := resolveExtensions(r, bun, source, stage, opts.Extensions, opts.Settings, log)
+	extensions, err = resolveExtensions(r, bun, source, stage, opts.Extensions, opts.Settings, log)
 	if err != nil {
 		return err
 	}
@@ -176,7 +184,7 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 		}
 	}
 	step("Compile to machine code (the longest step)")
-	if err = r.command(source, log, bun, args...); err != nil {
+	if err = compile(ctx, r, opts.Timeout, stdout, source, log, bun, args...); err != nil {
 		return err
 	}
 	for _, extension := range extensions {
@@ -250,6 +258,7 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err = Verify(opts.Out); err != nil {
 		return err
 	}
+	fmt.Fprintf(stdout, "      %s\nBuilt in %s\n", time.Since(stepStart).Round(time.Second), time.Since(start).Round(time.Second))
 	return nil
 }
 

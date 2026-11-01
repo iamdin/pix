@@ -1,0 +1,105 @@
+package pitch
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+)
+
+func TestCompileHeartbeatAndTimeout(t *testing.T) {
+	heartbeatEvery = 20 * time.Millisecond
+	defer func() { heartbeatEvery = time.Minute }()
+	var out bytes.Buffer
+	err := compile(context.Background(), runner{context.Background(), os.Environ()}, 400*time.Millisecond, &out, "", io.Discard, "sleep", "5")
+	if err == nil || !strings.Contains(err.Error(), "did not finish in 400ms") {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "still compiling") || strings.Count(out.String(), "longer than usual") != 1 {
+		t.Fatal(out.String())
+	}
+	if err := compile(context.Background(), runner{context.Background(), os.Environ()}, time.Second, io.Discard, "", io.Discard, "true"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestWriteReport(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	stage := filepath.Join(home, "cache", "build-1")
+	must := func(err error) {
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	must(os.MkdirAll(stage, 0700))
+	must(os.WriteFile(filepath.Join(stage, "build.log"), []byte("compiling "+home+"/x.ts\n"), 0600))
+	file, err := writeReport(stage, "Fetch extensions", 3*time.Second, errors.New("failed at "+home+"/y"), []Extension{{Name: "ext", Version: "1.0.0", Source: "npm:ext"}})
+	must(err)
+	data, _ := os.ReadFile(file)
+	text := string(data)
+	if !strings.HasPrefix(text, "# pitch build failed: Fetch extensions\n") || strings.Contains(text, home) || !strings.Contains(text, "~/x.ts") || !strings.Contains(text, "ext 1.0.0 (npm:ext)") {
+		t.Fatal(text)
+	}
+}
+
+func TestReport(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "issue.md")
+	if err := os.WriteFile(file, []byte("# pitch build failed: x\n\nbody\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	stdin, err := os.Open(file) // not a terminal, like an agent's
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stdin.Close()
+	bin := t.TempDir()
+	t.Setenv("PATH", bin)
+	gh := func(script string) {
+		if err := os.WriteFile(filepath.Join(bin, "gh"), []byte("#!/bin/sh\n"+script), 0755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, c := range []struct {
+		name, script string
+		yes          bool
+		want         string
+	}{
+		{"unconfirmed", "", false, "pitch report -y"},
+		{"unconfirmed, /dev/null", "", false, "pitch report -y"},
+		{"no gh", "", true, "not installed"},
+		{"logged out", "exit 1", true, "gh auth login"},
+		{"create fails", `[ "$1" = auth ] && exit 0; echo denied >&2; exit 1`, true, "denied"},
+		{"sent", `[ "$1" = auth ] && exit 0; cat >/dev/null; echo https://github.com/iamdin/pitch/issues/1`, true, "Sent: https://github.com/iamdin/pitch/issues/1"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			if c.script != "" {
+				gh(c.script)
+			}
+			in := stdin
+			if strings.HasSuffix(c.name, "/dev/null") {
+				if in, err = os.Open(os.DevNull); err != nil {
+					t.Fatal(err)
+				}
+				defer in.Close()
+			}
+			var out bytes.Buffer
+			err := report(file, c.yes, in, &out)
+			got := out.String()
+			if err != nil {
+				got = err.Error()
+				if c.yes && !strings.Contains(got, "issues/new?") {
+					t.Fatalf("no link to file it by hand: %s", got)
+				}
+			}
+			if !strings.Contains(got, c.want) || (c.name == "sent") != (err == nil) {
+				t.Fatalf("%v %s", err, out.String())
+			}
+		})
+	}
+}

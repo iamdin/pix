@@ -26,6 +26,7 @@ pitch pi                 # run the build; everything after pi goes to Pi: pitch 
 pitch status             # version, patches, compiled-in extensions, whether the settings changed
 pitch off / pitch on     # run the original Pi instead / the pitch build again (once: PITCH_OFF=1 pitch pi)
 pitch uninstall          # remove ~/.pitch, its builds and the PATH line it added
+pitch report FILE        # send a failed build's report (it names FILE) as a GitHub issue, after you confirm
 
 pitch build --name pi    # also install a `pi` command that takes the place of the original Pi; it is `pitch pi`
 ```
@@ -37,6 +38,13 @@ pitch build --name pi    # also install a `pi` command that takes the place of t
 - A new build is switched to only after it passes its checks. The previous build is kept for sessions still running it;
   older ones are deleted along with their build directories in the cache.
 - To upgrade pitch, run the install command again.
+- `build` shows how long each step took, says every minute that compiling is still running and stops it after 30
+  minutes (`--timeout`, `0` for no limit). An extension with a very large function can compile for a long time; leave
+  one out with `{"source": "...", "extensions": []}` in the settings to find it.
+- A failed build writes a report for a GitHub issue next to its log, with your home directory replaced by `~`, and sends
+  nothing. `pitch report FILE` shows it and asks before sending it with the GitHub CLI (`gh`, logged in); `-y` sends
+  without asking, for an agent that has shown the report to you and has your agreement. Without `gh` it prints a link
+  to file the issue by hand.
 
 ## Build
 
