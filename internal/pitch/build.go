@@ -88,14 +88,12 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err != nil {
 		return err
 	}
-	start, current := time.Now(), ""
+	start, prog, current := time.Now(), newProgress(stdout), ""
 	var extensions []Extension
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("%w; work retained at %s", err, stage)
-			if file, feedbackErr := writeFeedback(stage, current, time.Since(start), err, extensions); feedbackErr == nil {
-				err = fmt.Errorf("%w\n\n%s", err, feedbackHint(file))
-			}
+			prog.end()
+			err = failure(err, stage, current, time.Since(start), extensions)
 		}
 	}()
 	home := filepath.Join(stage, "home")
@@ -108,13 +106,9 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 		return err
 	}
 	defer log.Close()
-	n, stepStart := 0, start
 	step := func(s string) {
-		if n > 0 {
-			fmt.Fprintf(stdout, "      %s\n", time.Since(stepStart).Round(time.Second))
-		}
-		n, current, stepStart = n+1, s, time.Now()
-		fmt.Fprintf(stdout, "[%d/4] %s\n", n, s)
+		current = s
+		prog.step(s)
 	}
 	fmt.Fprintf(stdout, "Building Pi %s with pitch %s, a few minutes\nLog: %s\n", strings.TrimPrefix(pins.Pi.Tag, "v"), Version, filepath.Join(stage, "build.log"))
 	bun, err := getRuntime(r, opts.Cache, pins.Bun)
@@ -139,6 +133,7 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err != nil {
 		return err
 	}
+	prog.end()
 	for _, extension := range extensions {
 		fmt.Fprintf(stdout, "      %s\n", extension.Name)
 	}
@@ -184,7 +179,7 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 		}
 	}
 	step("Compile to machine code (the longest step)")
-	if err = compile(ctx, r, opts.Timeout, stdout, source, log, bun, args...); err != nil {
+	if err = compile(ctx, r, opts.Timeout, prog, source, log, bun, args...); err != nil {
 		return err
 	}
 	for _, extension := range extensions {
@@ -258,7 +253,8 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	if err = Verify(opts.Out); err != nil {
 		return err
 	}
-	fmt.Fprintf(stdout, "      %s\nBuilt in %s\n", time.Since(stepStart).Round(time.Second), time.Since(start).Round(time.Second))
+	prog.end()
+	fmt.Fprintf(stdout, "Built in %s\n", time.Since(start).Round(time.Second))
 	return nil
 }
 

@@ -2,31 +2,13 @@ package pitch
 
 import (
 	"bytes"
-	"context"
 	"errors"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 )
-
-func TestCompileHeartbeatAndTimeout(t *testing.T) {
-	heartbeatEvery = 20 * time.Millisecond
-	defer func() { heartbeatEvery = time.Minute }()
-	var out bytes.Buffer
-	err := compile(context.Background(), runner{context.Background(), os.Environ()}, 400*time.Millisecond, &out, "", io.Discard, "sleep", "5")
-	if err == nil || !strings.Contains(err.Error(), "did not finish in 400ms") {
-		t.Fatal(err)
-	}
-	if !strings.Contains(out.String(), "still compiling") || strings.Count(out.String(), "longer than usual") != 1 {
-		t.Fatal(out.String())
-	}
-	if err := compile(context.Background(), runner{context.Background(), os.Environ()}, time.Second, io.Discard, "", io.Discard, "true"); err != nil {
-		t.Fatal(err)
-	}
-}
 
 func TestWriteFeedback(t *testing.T) {
 	home := t.TempDir()
@@ -43,6 +25,10 @@ func TestWriteFeedback(t *testing.T) {
 	must(err)
 	data, _ := os.ReadFile(file)
 	text := string(data)
+	msg := failure(errCompileTime, stage, "Compile", time.Minute, nil).Error()
+	if !errors.Is(failure(errCompileTime, stage, "Compile", time.Minute, nil), errCompileTime) || !strings.Contains(msg, "\nFeedback: ") || !strings.Contains(msg[strings.Index(msg, "If you are an AI agent"):], "pitch feedback -y") || !strings.Contains(msg, "leave extensions out") {
+		t.Fatal(msg)
+	}
 	if !strings.HasPrefix(text, "# pitch build failed: Fetch extensions\n") || strings.Contains(text, home) || !strings.Contains(text, "~/x.ts") || !strings.Contains(text, "ext 1.0.0 (npm:ext)") {
 		t.Fatal(text)
 	}

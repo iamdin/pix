@@ -3,7 +3,6 @@ package pitch
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -16,45 +15,6 @@ import (
 )
 
 const issueRepo = "iamdin/pitch"
-
-// heartbeatEvery is how often a long compile says it is still running.
-var heartbeatEvery = time.Minute
-
-// compile runs the compiler, says every heartbeatEvery that it is still running, and stops it after timeout (0: never).
-func compile(ctx context.Context, r runner, timeout time.Duration, stdout io.Writer, dir string, log io.Writer, name string, args ...string) error {
-	compileCtx, cancel := ctx, context.CancelFunc(func() {})
-	if timeout > 0 {
-		compileCtx, cancel = context.WithTimeout(ctx, timeout)
-	}
-	defer cancel()
-	stop, stopped := make(chan struct{}), make(chan struct{})
-	go func() {
-		defer close(stopped)
-		start, warned := time.Now(), false
-		tick := time.NewTicker(heartbeatEvery)
-		defer tick.Stop()
-		for {
-			select {
-			case <-stop:
-				return
-			case <-tick.C:
-				fmt.Fprintf(stdout, "      still compiling, %s\n", time.Since(start).Round(time.Second))
-				// The compiler logs nothing while it works, so say once what a long compile usually means.
-				if !warned && time.Since(start) >= 10*heartbeatEvery {
-					warned = true
-					fmt.Fprintln(stdout, "      longer than usual (1–5 minutes): an extension with a very large function can take much longer")
-				}
-			}
-		}
-	}()
-	err := runner{compileCtx, r.env}.command(dir, log, name, args...)
-	close(stop)
-	<-stopped
-	if err != nil && ctx.Err() == nil && errors.Is(compileCtx.Err(), context.DeadlineExceeded) {
-		return fmt.Errorf("compiling did not finish in %s (change the limit with pitch build --timeout); an extension with a very large function can take this long: leave one out with {\"source\": \"...\", \"extensions\": []} in the settings to find it", timeout)
-	}
-	return err
-}
 
 // writeFeedback writes what a GitHub issue about a failed build needs to stage/feedback.md, with the home directory
 // replaced by ~. Nothing is sent: `pitch feedback` sends it once the user agrees.
@@ -85,8 +45,25 @@ func writeFeedback(stage, step string, took time.Duration, failure error, extens
 	return file, os.WriteFile(file, []byte(text), 0600)
 }
 
-func feedbackHint(file string) string {
-	return fmt.Sprintf("Feedback for a GitHub issue is in %s; nothing has been sent.\nRead it and remove anything private, then send it with: pitch feedback %s\nAgents: show the feedback to the user, and run `pitch feedback -y %s` only after they agree. It sends with gh when gh is logged in, and otherwise prints a prefilled link for the user to submit: help the user pick the way that suits them.", file, file, file)
+// failure adds to a failed build's error where its log and feedback are, then, last, what an agent should do.
+func failure(err error, stage, step string, took time.Duration, extensions []Extension) error {
+	log := filepath.Join(stage, "build.log")
+	file, writeErr := writeFeedback(stage, step, took, err, extensions)
+	if writeErr != nil {
+		return fmt.Errorf("%w\nLog: %s", err, log)
+	}
+	if step == "" {
+		step = "setup"
+	}
+	cause := "The cause is in the log."
+	if errors.Is(err, errCompileTime) {
+		cause = "A compile this long usually means an extension with a very large function: to find it, leave extensions out one at a time with {\"source\": \"...\", \"extensions\": []} in the Pi settings and build again, then tell the user which one."
+	}
+	return fmt.Errorf("%w\nLog: %s\nFeedback: %s (not sent; pitch feedback FILE shows it and asks before sending)\n\n"+
+		"If you are an AI agent: pitch build failed at %q after %s; the user's current Pi is unchanged. %s "+
+		"To report it, show the feedback file to the user first; only after they agree run `pitch feedback -y %s`. "+
+		"It opens an issue with gh when gh is logged in, and otherwise prints a link for the user to open and submit.",
+		err, log, file, step, took.Round(time.Second), cause, file)
 }
 
 // feedback files the feedback from writeFeedback as an issue with the GitHub CLI, after the user confirms (yes: already did).
@@ -99,8 +76,8 @@ func feedback(file string, yes bool, stdin *os.File, stdout io.Writer) error {
 	title = strings.TrimPrefix(title, "# ")
 	link := "https://github.com/" + issueRepo + "/issues/new?" + url.Values{"title": {title}, "body": {truncate(body, 6000)}}.Encode()
 	if !yes {
-		unconfirmed := fmt.Errorf("not sent: show %s to the user, and once they agree run pitch feedback -y %s", file, file)
-		if !isTerminal(stdin) {
+		unconfirmed := fmt.Errorf("not sent: sending needs the user's consent\n\nIf you are an AI agent: show %s to the user; only after they agree run `pitch feedback -y %s`", file, file)
+		if !isTerminal(stdin) || isDevNull(stdin) {
 			return unconfirmed
 		}
 		fmt.Fprintf(stdout, "%s\nSend this as a public issue to https://github.com/%s? [y/N] ", data, issueRepo)
@@ -140,4 +117,10 @@ func truncate(s string, n int) string {
 		return string(r[:n]) + "\n…(truncated; the full feedback is in the file)"
 	}
 	return s
+}
+
+func isDevNull(f *os.File) bool {
+	a, errA := f.Stat()
+	b, errB := os.Stat(os.DevNull)
+	return errA == nil && errB == nil && os.SameFile(a, b)
 }

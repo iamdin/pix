@@ -38,8 +38,8 @@ pitch build --name pi    # also install a `pi` command that takes the place of t
 - A new build is switched to only after it passes its checks. The previous build is kept for sessions still running it;
   older ones are deleted along with their build directories in the cache.
 - To upgrade pitch, run the install command again.
-- `build` shows how long each step took, says every minute that compiling is still running and stops it after 30
-  minutes (`--timeout`, `0` for no limit). An extension with a very large function can compile for a long time; leave
+- `build` shows each step and how long it took (the current one counts up in a terminal; elsewhere a long compile adds
+  a line every 5 minutes) and stops compiling after 30 minutes (`--timeout`, `0` for no limit). An extension with a very large function can compile for a long time; leave
   one out with `{"source": "...", "extensions": []}` in the settings to find it.
 - A failed build writes feedback for a GitHub issue next to its log, with your home directory replaced by `~`, and sends
   nothing. `pitch feedback FILE` shows it and asks before sending it with the GitHub CLI when `gh` is logged in;
