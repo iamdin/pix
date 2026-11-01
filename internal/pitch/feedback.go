@@ -56,9 +56,9 @@ func compile(ctx context.Context, r runner, timeout time.Duration, stdout io.Wri
 	return err
 }
 
-// writeReport writes what a GitHub issue about a failed build needs to stage/issue.md, with the home directory
-// replaced by ~. Nothing is sent: `pitch report` sends it once the user agrees.
-func writeReport(stage, step string, took time.Duration, failure error, extensions []Extension) (string, error) {
+// writeFeedback writes what a GitHub issue about a failed build needs to stage/feedback.md, with the home directory
+// replaced by ~. Nothing is sent: `pitch feedback` sends it once the user agrees.
+func writeFeedback(stage, step string, took time.Duration, failure error, extensions []Extension) (string, error) {
 	var b strings.Builder
 	what := step
 	if what == "" {
@@ -81,16 +81,16 @@ func writeReport(stage, step string, took time.Duration, failure error, extensio
 	if home, err := os.UserHomeDir(); err == nil && home != "" {
 		text = strings.ReplaceAll(text, home, "~")
 	}
-	file := filepath.Join(stage, "issue.md")
+	file := filepath.Join(stage, "feedback.md")
 	return file, os.WriteFile(file, []byte(text), 0600)
 }
 
-func reportHint(file string) string {
-	return fmt.Sprintf("A report for a GitHub issue is in %s; nothing has been sent.\nRead it and remove anything private, then send it with: pitch report %s\nAgents: show the report to the user, and run `pitch report -y %s` only after they agree.", file, file, file)
+func feedbackHint(file string) string {
+	return fmt.Sprintf("Feedback for a GitHub issue is in %s; nothing has been sent.\nRead it and remove anything private, then send it with: pitch feedback %s\nAgents: show the feedback to the user, and run `pitch feedback -y %s` only after they agree.", file, file, file)
 }
 
-// report files a report from writeReport as an issue with the GitHub CLI, after the user confirms (yes: already did).
-func report(file string, yes bool, stdin *os.File, stdout io.Writer) error {
+// feedback files the feedback from writeFeedback as an issue with the GitHub CLI, after the user confirms (yes: already did).
+func feedback(file string, yes bool, stdin *os.File, stdout io.Writer) error {
 	data, err := os.ReadFile(file)
 	if err != nil {
 		return err
@@ -99,7 +99,7 @@ func report(file string, yes bool, stdin *os.File, stdout io.Writer) error {
 	title = strings.TrimPrefix(title, "# ")
 	link := "https://github.com/" + issueRepo + "/issues/new?" + url.Values{"title": {title}, "body": {truncate(body, 6000)}}.Encode()
 	if !yes {
-		unconfirmed := fmt.Errorf("not sent: show %s to the user, and once they agree run pitch report -y %s", file, file)
+		unconfirmed := fmt.Errorf("not sent: show %s to the user, and once they agree run pitch feedback -y %s", file, file)
 		if !isTerminal(stdin) {
 			return unconfirmed
 		}
@@ -114,7 +114,7 @@ func report(file string, yes bool, stdin *os.File, stdout io.Writer) error {
 			return nil
 		}
 	}
-	retry := fmt.Sprintf("then run pitch report -y %s again; or open this link and submit the form yourself:\n%s", file, link)
+	retry := fmt.Sprintf("then run pitch feedback -y %s again; or open this link and submit the form yourself:\n%s", file, link)
 	gh, err := exec.LookPath("gh")
 	if err != nil {
 		return fmt.Errorf("not sent: the GitHub CLI (gh) is not installed. Install it (https://cli.github.com, e.g. brew install gh) and log in with gh auth login, %s", retry)
@@ -134,7 +134,7 @@ func report(file string, yes bool, stdin *os.File, stdout io.Writer) error {
 
 func truncate(s string, n int) string {
 	if r := []rune(s); len(r) > n {
-		return string(r[:n]) + "\n…(truncated; the full report is in the file)"
+		return string(r[:n]) + "\n…(truncated; the full feedback is in the file)"
 	}
 	return s
 }

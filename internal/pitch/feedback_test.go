@@ -28,7 +28,7 @@ func TestCompileHeartbeatAndTimeout(t *testing.T) {
 	}
 }
 
-func TestWriteReport(t *testing.T) {
+func TestWriteFeedback(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	stage := filepath.Join(home, "cache", "build-1")
@@ -39,7 +39,7 @@ func TestWriteReport(t *testing.T) {
 	}
 	must(os.MkdirAll(stage, 0700))
 	must(os.WriteFile(filepath.Join(stage, "build.log"), []byte("compiling "+home+"/x.ts\n"), 0600))
-	file, err := writeReport(stage, "Fetch extensions", 3*time.Second, errors.New("failed at "+home+"/y"), []Extension{{Name: "ext", Version: "1.0.0", Source: "npm:ext"}})
+	file, err := writeFeedback(stage, "Fetch extensions", 3*time.Second, errors.New("failed at "+home+"/y"), []Extension{{Name: "ext", Version: "1.0.0", Source: "npm:ext"}})
 	must(err)
 	data, _ := os.ReadFile(file)
 	text := string(data)
@@ -48,8 +48,8 @@ func TestWriteReport(t *testing.T) {
 	}
 }
 
-func TestReport(t *testing.T) {
-	file := filepath.Join(t.TempDir(), "issue.md")
+func TestFeedback(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "feedback.md")
 	if err := os.WriteFile(file, []byte("# pitch build failed: x\n\nbody\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -70,8 +70,8 @@ func TestReport(t *testing.T) {
 		yes          bool
 		want         string
 	}{
-		{"unconfirmed", "", false, "pitch report -y"},
-		{"unconfirmed, /dev/null", "", false, "pitch report -y"},
+		{"unconfirmed", "", false, "pitch feedback -y"},
+		{"unconfirmed, /dev/null", "", false, "pitch feedback -y"},
 		{"no gh", "", true, "not installed"},
 		{"logged out", "exit 1", true, "gh auth login"},
 		{"create fails", `[ "$1" = auth ] && exit 0; echo denied >&2; exit 1`, true, "denied"},
@@ -89,7 +89,7 @@ func TestReport(t *testing.T) {
 				defer in.Close()
 			}
 			var out bytes.Buffer
-			err := report(file, c.yes, in, &out)
+			err := feedback(file, c.yes, in, &out)
 			got := out.String()
 			if err != nil {
 				got = err.Error()

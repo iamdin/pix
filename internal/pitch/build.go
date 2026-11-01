@@ -93,8 +93,8 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("%w; work retained at %s", err, stage)
-			if file, reportErr := writeReport(stage, current, time.Since(start), err, extensions); reportErr == nil {
-				err = fmt.Errorf("%w\n\n%s", err, reportHint(file))
+			if file, feedbackErr := writeFeedback(stage, current, time.Since(start), err, extensions); feedbackErr == nil {
+				err = fmt.Errorf("%w\n\n%s", err, feedbackHint(file))
 			}
 		}
 	}()
