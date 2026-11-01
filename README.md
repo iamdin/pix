@@ -10,11 +10,12 @@ in for speed. **Currently alpha.10, for macOS ARM64, Linux x64 and Linux ARM64 (
 curl -fsSL https://raw.githubusercontent.com/iamdin/pix/main/install.sh | sh
 ```
 
-Installs to `~/.local/bin/pix` (change it with `PIX_INSTALL_DIR`) and checks the SHA-256. pix carries a Pi that is
-already patched, built and tested. The first run downloads the pinned Bun (about 57 MB, checked by its SHA-256, removed
-after building) and builds Pi for this machine, in about a minute; no Node needed. The original Pi is not changed. Installing packages uses npm or git, as with Pi.
+Installs to `~/.local/bin/pix` (change it with `PIX_INSTALL_DIR`) and checks the SHA-256. pix carries Bun and a Pi
+that is already patched, built and tested. The first run builds Pi for this machine, in about a minute, and needs no
+Node; the original Pi is not changed. Installing packages uses npm or git, as with Pi.
 
-From source: `go build -trimpath -o bin/pix ./cmd/pix` (Go 1.24+). Such a development build has no Pi in it:
+From source: `go build -trimpath -o bin/pix ./cmd/pix` (Go 1.24+, and the Bun archive for your platform in
+`internal/pix/runtime-data/<goos>-<goarch>/bun.zip`, which is not in git). Such a development build has no Pi in it:
 run `pix self prepare /abs/pi.tar.gz` first (needs Git, Node 24+ and npm 11+), then `pix compile --pi /abs/pi.tar.gz
 --out DIR`. `bun scripts/release.ts` builds Pi into pix.
 
@@ -125,10 +126,9 @@ upgrading Pi must run the resolution regression tests.
 
 There is no choice of Pi or Bun version. Pi follows upstream release tags only, and pix's patches are commits on a
 fork (see [PATCHES.md](PATCHES.md)). Bun AOT exists only in canary builds, so Bun is pinned to one official canary build
-and moves when the maintainers upgrade it. Canary downloads expire upstream, so the pinned archives are kept
-unchanged in this repository's `bun-<commit>` release; pix downloads its platform's archive when it builds and checks the
-archive and binary hashes and the revision, and on macOS the code signature. Each platform's release embeds the prepared
-Pi (about 45 MB). Nothing upgrades silently. Cold fetches of Git, npm and
+and moves when the maintainers upgrade it. Each platform's release embeds that platform's pinned Bun archive and the
+prepared Pi (about 110 MiB) and checks the archive and binary hashes and the revision, and on macOS the code signature.
+Nothing depends on upstream downloads that may be deleted, and nothing upgrades silently. Cold fetches of Git, npm and
 the model catalog still need the network. The Bun is the official prebuilt one, not a custom-optimized Bun/JSC.
 
 **Pi comes with 5 optimization patches that passed AOT performance gates.** Each is one optimization method and one

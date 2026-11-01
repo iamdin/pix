@@ -1,1 +1,1 @@
-pi.tar.gz for this platform goes here; it is not in git (see scripts/release.ts). Bun is downloaded when pix builds.
+bun.zip and pi.tar.gz for this platform go here; they are not in git (see scripts/release.ts).
