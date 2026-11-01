@@ -93,6 +93,10 @@ func Build(ctx context.Context, opts Options, stdout io.Writer) (err error) {
 	defer func() {
 		if err != nil {
 			prog.end()
+			if ctx.Err() != nil { // the user stopped it: nothing to report
+				err = fmt.Errorf("stopped; work retained at %s", stage)
+				return
+			}
 			err = failure(err, stage, current, time.Since(start), extensions)
 		}
 	}()
