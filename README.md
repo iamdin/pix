@@ -44,12 +44,11 @@ pix self feedback FILE # send a failed compile's feedback (it names FILE) as a G
   is kept.
 - `pix install/remove/update` work as in Pi; with extensions compiled in, pix reminds you to run `pix compile`.
   `pix update` updates pix and its Pi (`--extensions` updates packages, `--all` both).
-- **pix updates itself.** At most once an hour a run checks for a new release; if there is one, it installs it in the
-  background at low priority, compiling your packages into the new Pi if they were compiled in, and the next run uses
-  it. A run never waits for it. If compiling fails, the new Pi loads the packages from disk (`pix compile` tries
-  again). `PIX_DISABLE_AUTOUPDATE=1` turns this off; pix then only says that a new release is out. To go back to an
-  earlier release (0.0.4 or later): `curl -fsSL https://github.com/iamdin/pix/releases/latest/download/install.sh |
-  PIX_VERSION=0.0.4 sh`, with `PIX_DISABLE_AUTOUPDATE=1`.
+- **Updates are yours to run, as in Pi.** A run checks for a new pix release in the background at most once an hour,
+  and Pi shows `pix X is available. Run pix update` when one is out (`PI_SKIP_VERSION_CHECK=1` or `PI_OFFLINE=1` turn
+  the check off, as for Pi). `pix update` installs it and compiles your packages into the new Pi if they were compiled
+  in; if that fails, the new Pi loads them from disk (`pix compile` tries again). To go back to an earlier release
+  (0.0.4 or later): `curl -fsSL https://github.com/iamdin/pix/releases/latest/download/install.sh | PIX_VERSION=0.0.4 sh`.
 - A new build is switched to only after it passes its checks. The previous build is kept for sessions still running it;
   older ones are deleted along with their build directories in the cache.
 - `compile` shows each step and how long it took (the current one counts up in a terminal; elsewhere a long compile adds

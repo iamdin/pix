@@ -57,12 +57,13 @@ func TestExtensionSelectionAndAutomaticEntry(t *testing.T) {
 	}
 	selected.Source = "npm:x"
 	source := entrySource(dir, []Extension{selected})
-	for _, want := range []string{"if (!command) args = ['-e', " + jsString(selected.Entry) + ", ...args]", `new Set(["npm:x"])`, "PI_PACKAGE_DIR", "PI_SKIP_VERSION_CHECK", "process.exit(2)", "pix: run pix update"} {
+	for _, want := range []string{"if (!command) args = ['-e', " + jsString(selected.Entry) + ", ...args]", `new Set(["npm:x"])`, "PI_PACKAGE_DIR", "PI_SKIP_VERSION_CHECK", "process.exit(2)", "pix: run pix update", "PIX_NEW_RELEASE"} {
 		if !strings.Contains(source, want) {
 			t.Fatalf("missing %s", want)
 		}
 	}
-	if strings.Contains(source, "extensionFactories") || strings.Contains(source, "import("+jsString(selected.Entry)) {
+	// The one factory is pix-release's; extensions are compiler entries.
+	if strings.Contains(source, jsString(selected.Entry)+")") || strings.Count(source, "factory:") != 1 {
 		t.Fatal("plugin should be an extra compiler entry, not a generated factory")
 	}
 	for _, bad := range []string{dir, entry + "missing"} {

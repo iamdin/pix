@@ -85,7 +85,20 @@ if (!command) args = [`)
 		}
 		out.WriteString("...args];\n")
 	}
-	out.WriteString("setupCli();\nawait main(args);\n")
+	// pix's new release, which pix found (PIX_NEW_RELEASE), is shown in Pi as Pi shows its own: the user updates.
+	out.WriteString(`const release = process.env.PIX_NEW_RELEASE;
+delete process.env.PIX_NEW_RELEASE;
+let shown = false;
+const pixRelease = { name: 'pix-release', hidden: true, factory: (pi: any) => {
+ if (release) pi.on('session_start', (_event: unknown, ctx: any) => {
+  if (!ctx.hasUI || shown) return;
+  shown = true;
+  ctx.ui.notify('pix ' + release + ' is available. Run pix update', 'info');
+ });
+} };
+setupCli();
+await main(args, { extensionFactories: [pixRelease] });
+`)
 	return out.String()
 }
 func compilerConfig(pi, entry string) (map[string]any, error) {

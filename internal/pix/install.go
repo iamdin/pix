@@ -25,7 +25,6 @@ import (
 //	current         symlink to the version in use
 //	lock            held while installing, compiling or pruning
 //	latest          the version of pix's latest release, checked at most once an hour
-//	update.log      the output of the last update in the background
 //
 // Installing pix downloads the Pi that its release compiled; Pi loads the user's packages from disk, as the original
 // does. `pix compile` builds again with the packages in the Pi settings compiled in.
@@ -297,58 +296,30 @@ func (in *installation) sync(ctx context.Context, stderr io.Writer, wait bool) e
 // latestURL redirects to the page of pix's latest release; replaced in tests.
 var latestURL = "https://github.com/iamdin/pix/releases/latest"
 
-// autoUpdate keeps pix up to date without asking: at most once an hour it starts `pix self check-update` in the
-// background, at low priority, which installs the latest release when it is another pix, as `pix update` does; the
-// next run uses it. Until then, in a terminal, it says so. PIX_DISABLE_AUTOUPDATE=1 only checks and says so.
-func (in *installation) autoUpdate(stderr io.Writer) {
+// newRelease returns the latest release when it is another pix, as last checked, for Pi to show (as Pi shows a new
+// Pi); at most once an hour it starts a check in the background. PI_SKIP_VERSION_CHECK and PI_OFFLINE turn it off, as
+// they do Pi's check.
+func (in *installation) newRelease() string {
+	if os.Getenv("PI_SKIP_VERSION_CHECK") != "" || os.Getenv("PI_OFFLINE") != "" || releaseSums == "" {
+		return "" // releaseSums: a development build has no release
+	}
 	file := filepath.Join(in.Home, "latest")
 	latest, _ := os.ReadFile(file)
-	off := os.Getenv("PIX_DISABLE_AUTOUPDATE") != "" || releaseSums == "" // a development build has no release
-	if len(latest) > 0 && string(latest) != Version && isTerminal(os.Stderr) {
-		if off {
-			fmt.Fprintf(stderr, "pix: pix %s is out (this is %s): run `pix update`\n", latest, Version)
-		} else {
-			fmt.Fprintf(stderr, "pix: updating to pix %s in the background, for the next run (%s)\n", latest, filepath.Join(in.Home, "update.log"))
+	if info, err := os.Stat(file); err != nil || time.Since(info.ModTime()) >= time.Hour {
+		_ = os.WriteFile(file, latest, 0644) // the time of this check, also when it fails
+		if self, err := os.Executable(); err == nil {
+			cmd := exec.Command(self, "self", "check-update")
+			cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+			_ = cmd.Start()
 		}
 	}
-	if info, err := os.Stat(file); err == nil && time.Since(info.ModTime()) < time.Hour {
-		return
+	if len(latest) > 0 && string(latest) != Version {
+		return string(latest)
 	}
-	_ = os.WriteFile(file, latest, 0644) // the time of this check, also when it fails
-	self, err := os.Executable()
-	if err != nil {
-		return
-	}
-	args := []string{"self", "check-update"}
-	if off {
-		args = append(args, "--no-install")
-	}
-	cmd := exec.Command(self, args...)
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
-	if cmd.Start() == nil {
-		_ = syscall.Setpriority(syscall.PRIO_PROCESS, cmd.Process.Pid, 10) // compiling must not slow Pi down
-	}
+	return ""
 }
 
-// checkUpdate records the latest release and, unless only checking, installs it when it is another pix.
-func (in *installation) checkUpdate(ctx context.Context, install bool) error {
-	if err := in.checkLatest(ctx); err != nil {
-		return err
-	}
-	latest, err := os.ReadFile(filepath.Join(in.Home, "latest"))
-	if err != nil || !install || string(latest) == Version {
-		return err
-	}
-	log, err := os.Create(filepath.Join(in.Home, "update.log"))
-	if err != nil {
-		return err
-	}
-	defer log.Close()
-	fmt.Fprintf(log, "%s: pix %s -> %s\n", time.Now().Format(time.RFC3339), Version, latest)
-	return updateSelf(log)
-}
-
-// checkLatest records the version of pix's latest release for notice.
+// checkLatest records the version of pix's latest release for newRelease.
 func (in *installation) checkLatest(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
@@ -393,16 +364,19 @@ func runPi(ctx context.Context, args []string, stderr io.Writer) error {
 		}
 		fmt.Fprintf(stderr, "pix: %v\npix: running the previous Pi\n", err)
 	}
-	in.autoUpdate(stderr)
+	env := os.Environ()
+	if release := in.newRelease(); release != "" {
+		env = append(env, "PIX_NEW_RELEASE="+release) // the entry has Pi show it
+	}
 	// The version's own path, so that prune can tell it is running.
 	exe := filepath.Join(in.Home, "versions", in.current(), "pi")
 	manifest, _ := readManifest(filepath.Join(in.Home, "current"))
 	if len(args) == 0 || !slices.Contains(packageCommands, args[0]) || len(manifest.Extensions) == 0 {
-		return syscall.Exec(exe, append([]string{exe}, args...), os.Environ())
+		return syscall.Exec(exe, append([]string{exe}, args...), env)
 	}
 	// The packages change on disk; the compiled-in copies stay until the next `pix compile`.
 	cmd := exec.Command(exe, args...)
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+	cmd.Stdin, cmd.Stdout, cmd.Stderr, cmd.Env = os.Stdin, os.Stdout, os.Stderr, env
 	runErr := cmd.Run()
 	if runErr == nil {
 		fmt.Fprintln(stderr, "pix: run `pix compile` to compile this change in.")

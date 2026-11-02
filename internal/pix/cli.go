@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"time"
 )
@@ -112,12 +111,12 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer) error
 			return err
 		}
 		return in.sync(ctx, stdout, true)
-	case "check-update": // started in the background by autoUpdate
+	case "check-update": // started in the background by newRelease
 		in, err := loadInstallation()
 		if err != nil {
 			return err
 		}
-		return in.checkUpdate(ctx, !slices.Contains(args[1:], "--no-install"))
+		return in.checkLatest(ctx)
 	case "status", "uninstall":
 		if len(args) != 1 {
 			return fmt.Errorf("usage: pix self %s", args[0])

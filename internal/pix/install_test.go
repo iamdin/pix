@@ -239,15 +239,4 @@ func TestCheckLatest(t *testing.T) {
 	if data, _ := os.ReadFile(filepath.Join(in.Home, "latest")); string(data) != "9.9.9" {
 		t.Fatalf("latest %q", data)
 	}
-	defer func(i string) { installer = i }(installer)
-	installer = "echo INSTALLED $PIX_INSTALL_DIR"
-	if err := in.checkUpdate(context.Background(), false); err != nil || exists(filepath.Join(in.Home, "update.log")) {
-		t.Fatalf("only checking installed: %v", err)
-	}
-	if err := in.checkUpdate(context.Background(), true); err != nil {
-		t.Fatal(err)
-	}
-	if log, _ := os.ReadFile(filepath.Join(in.Home, "update.log")); !strings.Contains(string(log), "-> 9.9.9") || !strings.Contains(string(log), "INSTALLED /") {
-		t.Fatalf("update.log: %s", log)
-	}
 }
