@@ -26,6 +26,10 @@ import (
 //	current         symlink to the version in use
 //	lock            held while installing, compiling or pruning
 //	latest          the version of pix's latest release, checked at most once an hour
+//	compile.log     the output of the last compile in the background
+//	compile-failed  the packages that failed to compile with this pix, and whether that was shown
+//	compiled        a compile in the background succeeded, not yet shown
+//	no-compile      `pix compile --none`: compile nothing in the background
 //
 // Installing pix downloads the Pi that its release compiled; Pi loads the user's packages from disk, as the original
 // does. `pix compile` builds again with the packages in the Pi settings compiled in.
@@ -264,9 +268,8 @@ func (in *installation) lock(stderr io.Writer, wait bool) (unlock func(), err er
 	return func() { f.Close() }, nil
 }
 
-// sync makes PIX_HOME run this pix's Pi. The first time it downloads it. After an update it compiles the packages into
-// the new Pi if they were compiled into the old one, and when that fails it downloads the new Pi, which loads them from
-// disk, rather than retry on every run. It removes the builds no longer in use. Without wait it returns errBusy while
+// sync makes PIX_HOME run this pix's Pi: the first time and after an update it downloads it. It removes the builds no
+// longer in use. Without wait it returns errBusy while
 // another pix installs or compiles.
 func (in *installation) sync(ctx context.Context, stderr io.Writer, wait bool) error {
 	unlock, err := in.lock(stderr, wait)
@@ -278,20 +281,111 @@ func (in *installation) sync(ctx context.Context, stderr io.Writer, wait bool) e
 		return in.install(ctx, stderr)
 	}
 	if built, _ := readManifest(filepath.Join(in.Home, "current")); built.Pix != Version {
-		if len(built.Extensions) > 0 {
-			fmt.Fprintf(stderr, "pix: compiling your packages into the Pi of pix %s (about a minute)\n", Version)
-			err := in.compile(ctx, 30*time.Minute, stderr)
-			if err == nil {
-				return nil
-			}
-			fmt.Fprintf(stderr, "pix: %v\npix: using the new Pi with the packages loaded from disk; `pix compile` tries again\n", err)
-		}
-		return in.install(ctx, stderr)
+		return in.install(ctx, stderr) // autoCompile compiles the packages into it again
 	}
 	if ids, _ := in.versions(); len(ids) > 1 {
 		return in.prune(nil) // a build left for sessions that have since ended
 	}
 	return nil
+}
+
+// startBackground starts `pix self <command>` apart from this process, at low priority; replaced in tests.
+var startBackground = func(command string) {
+	self, err := os.Executable()
+	if err != nil {
+		return
+	}
+	cmd := exec.Command(self, "self", command)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	if cmd.Start() == nil {
+		_ = syscall.Setpriority(syscall.PRIO_PROCESS, cmd.Process.Pid, 10) // compiling must not slow Pi down
+	}
+}
+
+// packagesCompiled reports whether the packages in Pi settings are those compiled into the current build; key names
+// them with this pix.
+func (in *installation) packagesCompiled() (key string, compiled bool, err error) {
+	settings, err := agentSettings()
+	if err != nil {
+		return "", false, err
+	}
+	now, err := settingsPackages(settings)
+	if err != nil {
+		return "", false, err
+	}
+	data, _ := json.Marshal(now)
+	return Version + " " + string(data), reflect.DeepEqual(now, builtPackages(filepath.Join(in.Home, "current"))), nil
+}
+
+// builtPackages returns the packages that a build compiled in, as declared.
+func builtPackages(build string) any {
+	var built struct{ Packages any }
+	if data, err := os.ReadFile(filepath.Join(build, "recipe", "extensions.json")); err == nil {
+		_ = json.Unmarshal(data, &built)
+	}
+	if list, ok := built.Packages.([]any); !ok || len(list) == 0 {
+		return nil
+	}
+	return built.Packages
+}
+
+// autoCompile compiles the packages in Pi settings into Pi without asking: when they are not those of the current
+// build, it starts `pix self auto-compile` in the background, and a later run has them compiled in; until then they
+// load from disk, as in Pi. A failed compile is not tried again until the packages or pix change; autoCompile returns
+// its notice once. `pix compile --none` turns it off, `pix compile` on again.
+func (in *installation) autoCompile() (notice string, started bool) {
+	if releaseSums == "" || exists(filepath.Join(in.Home, "no-compile")) {
+		return "", false // a development build has no release to compile with
+	}
+	key, compiled, err := in.packagesCompiled()
+	if err != nil {
+		return "", false
+	}
+	if compiled {
+		built, _ := readManifest(filepath.Join(in.Home, "current"))
+		if os.Remove(filepath.Join(in.Home, "compiled")) == nil && len(built.Extensions) > 0 {
+			return "pix compiled your packages into Pi", false
+		}
+		return "", false
+	}
+	failed := filepath.Join(in.Home, "compile-failed")
+	data, _ := os.ReadFile(failed)
+	if lines := strings.Split(string(data), "\n"); lines[0] == key {
+		if len(lines) == 1 {
+			_ = os.WriteFile(failed, []byte(key+"\nshown"), 0644)
+			return "pix could not compile your packages into Pi, so they load from disk: " + filepath.Join(in.Home, "compile.log"), false
+		}
+		return "", false
+	}
+	startBackground("auto-compile")
+	return "", true
+}
+
+// compileInBackground is `pix self auto-compile`: it compiles the packages in Pi settings into Pi unless another pix
+// installs or compiles, and records a failure for autoCompile.
+func (in *installation) compileInBackground(ctx context.Context) error {
+	unlock, err := in.lock(io.Discard, false)
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	key, compiled, err := in.packagesCompiled()
+	if err != nil || compiled || in.current() == "" {
+		return err
+	}
+	log, err := os.Create(filepath.Join(in.Home, "compile.log"))
+	if err != nil {
+		return err
+	}
+	defer log.Close()
+	failed := filepath.Join(in.Home, "compile-failed")
+	if err := in.compile(ctx, 30*time.Minute, log); err != nil {
+		fmt.Fprintf(log, "pix: %v\n", err)
+		_ = os.WriteFile(failed, []byte(key), 0644)
+		return err
+	}
+	_ = os.Remove(failed)
+	return os.WriteFile(filepath.Join(in.Home, "compiled"), nil, 0644)
 }
 
 // latestURL redirects to the page of pix's latest release; replaced in tests.
@@ -308,11 +402,7 @@ func (in *installation) releaseNotice() string {
 	latest, _ := os.ReadFile(file)
 	if info, err := os.Stat(file); err != nil || time.Since(info.ModTime()) >= time.Hour {
 		_ = os.WriteFile(file, latest, 0644) // the time of this check, also when it fails
-		if self, err := os.Executable(); err == nil {
-			cmd := exec.Command(self, "self", "check-update")
-			cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
-			_ = cmd.Start()
-		}
+		startBackground("check-update")
 	}
 	if len(latest) == 0 || string(latest) == Version {
 		return ""
@@ -373,6 +463,10 @@ func runPi(ctx context.Context, args []string, stderr io.Writer) error {
 			if err := updateSelf(stderr); err != nil {
 				return err
 			}
+			// The new pix compiles the packages into its Pi.
+			if _, started := in.autoCompile(); started {
+				fmt.Fprintln(stderr, "pix: compiling your packages into the new Pi in the background; until then they load from disk")
+			}
 			if args == nil {
 				return nil
 			}
@@ -385,22 +479,30 @@ func runPi(ctx context.Context, args []string, stderr io.Writer) error {
 		}
 		fmt.Fprintf(stderr, "pix: %v\npix: running the previous Pi\n", err)
 	}
+	var notices []string
+	compileNotice, _ := in.autoCompile()
+	for _, notice := range []string{in.releaseNotice(), compileNotice} {
+		if notice != "" {
+			notices = append(notices, notice)
+		}
+	}
 	env := os.Environ()
-	if notice := in.releaseNotice(); notice != "" {
-		env = append(env, "PIX_RELEASE_NOTICE="+notice) // the entry has Pi show it
+	if len(notices) > 0 {
+		env = append(env, "PIX_NOTICE="+strings.Join(notices, "\n")) // the entry has Pi show them
 	}
 	// The version's own path, so that prune can tell it is running.
 	exe := filepath.Join(in.Home, "versions", in.current(), "pi")
-	manifest, _ := readManifest(filepath.Join(in.Home, "current"))
-	if len(args) == 0 || !slices.Contains(packageCommands, args[0]) || len(manifest.Extensions) == 0 {
+	if len(args) == 0 || !slices.Contains(packageCommands, args[0]) {
 		return syscall.Exec(exe, append([]string{exe}, args...), env)
 	}
-	// The packages change on disk; the compiled-in copies stay until the next `pix compile`.
+	// The packages change on disk; they are compiled in again in the background.
 	cmd := exec.Command(exe, args...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr, cmd.Env = os.Stdin, os.Stdout, os.Stderr, env
 	runErr := cmd.Run()
 	if runErr == nil {
-		fmt.Fprintln(stderr, "pix: run `pix compile` to compile this change in.")
+		if _, started := in.autoCompile(); started {
+			fmt.Fprintln(stderr, "pix: compiling the packages into Pi in the background; until then they load from disk")
+		}
 	}
 	if exit, ok := runErr.(*exec.ExitError); ok {
 		os.Exit(exit.ExitCode())
@@ -434,27 +536,25 @@ func status(stdout io.Writer) error {
 	pi := manifest.Sources.Pi
 	fmt.Fprintf(stdout, "Source:     %s %s %.7s\n", strings.TrimSuffix(pi.Repository, ".git"), pi.Branch, pi.Commit)
 	if len(manifest.Extensions) == 0 {
-		fmt.Fprintln(stdout, "Extensions: loaded from disk, as by Pi (`pix compile` compiles them in)")
-		return nil
+		fmt.Fprintln(stdout, "Extensions: loaded from disk, as by Pi")
+	} else {
+		fmt.Fprintf(stdout, "Extensions: %d compiled in, the rest loaded from disk\n", len(manifest.Extensions))
+		for _, e := range manifest.Extensions {
+			fmt.Fprintf(stdout, "            %s %s\n", e.Name, e.Version)
+		}
 	}
-	fmt.Fprintf(stdout, "Extensions: %d compiled in, the rest loaded from disk\n", len(manifest.Extensions))
-	for _, e := range manifest.Extensions {
-		fmt.Fprintf(stdout, "            %s %s\n", e.Name, e.Version)
-	}
-	settings, err := agentSettings()
-	if err != nil {
+	key, compiled, err := in.packagesCompiled()
+	failed, _ := os.ReadFile(filepath.Join(in.Home, "compile-failed"))
+	switch {
+	case err != nil:
 		return err
-	}
-	now, err := settingsPackages(settings)
-	if err != nil {
-		return err
-	}
-	var built struct{ Packages any }
-	if data, err := os.ReadFile(filepath.Join(current, "recipe", "extensions.json")); err == nil {
-		_ = json.Unmarshal(data, &built)
-	}
-	if !reflect.DeepEqual(now, built.Packages) {
-		fmt.Fprintln(stdout, "Packages in Pi settings changed since this build: run `pix compile`.")
+	case compiled:
+	case exists(filepath.Join(in.Home, "no-compile")):
+		fmt.Fprintln(stdout, "Compiling:  off (`pix compile` compiles the packages in and turns it on)")
+	case strings.Split(string(failed), "\n")[0] == key:
+		fmt.Fprintf(stdout, "Compiling:  the packages failed to compile, see %s\n", filepath.Join(in.Home, "compile.log"))
+	default:
+		fmt.Fprintln(stdout, "Compiling:  the packages in Pi settings changed; pix compiles them in the background")
 	}
 	return nil
 }

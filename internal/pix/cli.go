@@ -111,6 +111,12 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer) error
 			return err
 		}
 		return in.sync(ctx, stdout, true)
+	case "auto-compile": // started in the background by autoCompile
+		in, err := loadInstallation()
+		if err != nil {
+			return err
+		}
+		return in.compileInBackground(ctx)
 	case "check-update": // started in the background by releaseNotice
 		in, err := loadInstallation()
 		if err != nil {
@@ -164,9 +170,13 @@ func compileCommand(ctx context.Context, args []string, stdout, stderr io.Writer
 			return err
 		}
 		defer unlock()
+		// --none also stops compiling in the background, until the next `pix compile`.
 		if *none {
-			err = in.install(ctx, stdout)
+			if err = os.WriteFile(filepath.Join(in.Home, "no-compile"), nil, 0644); err == nil {
+				err = in.install(ctx, stdout)
+			}
 		} else {
+			_ = os.Remove(filepath.Join(in.Home, "no-compile"))
 			err = in.compile(ctx, opts.Timeout, stdout)
 		}
 		if err != nil {

@@ -85,19 +85,19 @@ if (!command) args = [`)
 		}
 		out.WriteString("...args];\n")
 	}
-	// In the TUI, the footer says that this is pix, and pix's notice of another release (PIX_RELEASE_NOTICE) is shown as
-	// Pi shows a new Pi: the user updates.
+	// In the TUI, the footer says that this is pix, and pix's notices (PIX_NOTICE: another release, a failed compile)
+	// are shown as Pi shows a new Pi.
 	fmt.Fprintf(&out, "const pixVersion = %s;\n", jsString(Version))
-	out.WriteString(`const notice = process.env.PIX_RELEASE_NOTICE;
-delete process.env.PIX_RELEASE_NOTICE;
+	out.WriteString(`const notices = (process.env.PIX_NOTICE ?? '').split('\n').filter(Boolean);
+delete process.env.PIX_NOTICE;
 let shown = false;
 const pixInfo = { name: 'pix', hidden: true, factory: (pi: any) => {
  pi.on('session_start', (_event: unknown, ctx: any) => {
   if (!ctx.hasUI) return;
   ctx.ui.setStatus('pix', 'pix ' + pixVersion);
-  if (!notice || shown) return;
+  if (shown) return;
   shown = true;
-  ctx.ui.notify(notice, 'info');
+  for (const notice of notices) ctx.ui.notify(notice, 'info');
  });
 } };
 setupCli();

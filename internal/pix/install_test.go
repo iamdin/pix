@@ -162,8 +162,9 @@ func TestUpdateTarget(t *testing.T) {
 	}
 }
 
-// After an update, sync compiles the packages into the new Pi; when that fails it uses the new release's Pi.
-func TestSyncAfterUpdate(t *testing.T) {
+// After an update, sync downloads the new Pi; autoCompile then compiles the packages into it in the background, and a
+// failed compile is shown once and not tried again for the same packages.
+func TestSyncAndAutoCompile(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("HOME", root)
 	t.Setenv("XDG_CACHE_HOME", filepath.Join(root, "cache"))
@@ -171,33 +172,52 @@ func TestSyncAfterUpdate(t *testing.T) {
 	writeFile(t, filepath.Join(root, "agent", "settings.json"), `{"packages": ["npm:x"]}`, 0644)
 	fakeRelease(t)
 	in := &installation{Home: filepath.Join(root, "pix")}
-	old := func(extensions []Extension) {
-		dir := filepath.Join(in.Home, "versions", "old")
-		writeFile(t, filepath.Join(dir, "pi"), "#!/bin/sh\n", 0755)
-		if err := writeJSON(filepath.Join(dir, "pix-build.json"), Manifest{Schema: 1, Pix: "0.0.0", Extensions: extensions}); err != nil {
-			t.Fatal(err)
-		}
-		if err := in.switchTo("old"); err != nil {
-			t.Fatal(err)
-		}
+	old := filepath.Join(in.Home, "versions", "old")
+	writeFile(t, filepath.Join(old, "pi"), "#!/bin/sh\n", 0755)
+	if err := writeJSON(filepath.Join(old, "pix-build.json"), Manifest{Schema: 1, Pix: "0.0.0", Extensions: []Extension{{Name: "x"}}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := in.switchTo("old"); err != nil {
+		t.Fatal(err)
+	}
+	if err := in.sync(context.Background(), io.Discard, true); err != nil {
+		t.Fatal(err)
+	}
+	if m, _ := readManifest(filepath.Join(in.Home, "current")); m.Pix != Version || len(m.Extensions) > 0 {
+		t.Fatalf("current after the update: %+v", m)
+	}
+
+	var started []string
+	defer func(f func(string)) { startBackground = f }(startBackground)
+	startBackground = func(command string) { started = append(started, command) }
+	if _, ok := in.autoCompile(); !ok || !slices.Equal(started, []string{"auto-compile"}) {
+		t.Fatalf("started %v", started)
 	}
 	defer func() { buildFunc = Build }()
-	for _, fails := range []bool{false, true} {
-		old([]Extension{{Name: "x"}})
-		buildFunc = func(_ context.Context, opts Options, _ io.Writer) error {
-			if fails {
-				return io.ErrUnexpectedEOF
-			}
-			writeFile(t, filepath.Join(opts.Out, "pi"), "#!/bin/sh\n", 0755)
-			return writeJSON(filepath.Join(opts.Out, "pix-build.json"), Manifest{Schema: 1, Pix: Version, Extensions: []Extension{{Name: "x"}}})
-		}
-		if err := in.sync(context.Background(), io.Discard, true); err != nil {
-			t.Fatal(err)
-		}
-		m, _ := readManifest(filepath.Join(in.Home, "current"))
-		if ids, _ := in.versions(); m.Pix != Version || (len(m.Extensions) > 0) == fails || len(ids) != 1 {
-			t.Fatalf("compile fails %v: current %+v, versions %v", fails, m, ids)
-		}
+	buildFunc = func(context.Context, Options, io.Writer) error { return io.ErrUnexpectedEOF }
+	if err := in.compileInBackground(context.Background()); err == nil {
+		t.Fatal("the compile did not fail")
+	}
+	if notice, ok := in.autoCompile(); ok || !strings.Contains(notice, "could not compile") {
+		t.Fatalf("after a failure: %q %v", notice, ok)
+	}
+	if notice, ok := in.autoCompile(); ok || notice != "" {
+		t.Fatalf("the failure again: %q %v", notice, ok)
+	}
+	buildFunc = func(_ context.Context, opts Options, _ io.Writer) error {
+		writeFile(t, filepath.Join(opts.Out, "pi"), "#!/bin/sh\n", 0755)
+		writeFile(t, filepath.Join(opts.Out, "recipe", "extensions.json"), `{"packages": ["npm:x"]}`, 0644)
+		return writeJSON(filepath.Join(opts.Out, "pix-build.json"), Manifest{Schema: 1, Pix: Version, Extensions: []Extension{{Name: "x"}}})
+	}
+	_ = os.Remove(filepath.Join(in.Home, "compile-failed")) // as when the packages change
+	if err := in.compileInBackground(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if notice, ok := in.autoCompile(); ok || !strings.Contains(notice, "compiled your packages") {
+		t.Fatalf("after compiling: %q %v", notice, ok)
+	}
+	if notice, ok := in.autoCompile(); ok || notice != "" {
+		t.Fatalf("compiled: %q %v", notice, ok)
 	}
 }
 

@@ -1,8 +1,8 @@
 # pix
 
 Pi, built ahead of time with official Bun AOT and performance patches. Anyone who can use Pi can use pix: it reads
-Pi's settings, packages and sessions (`~/.pi`) and loads extensions as Pi does; `pix compile` compiles your extensions
-in for speed. **Currently 0.0.5, for macOS ARM64, Linux x64 and Linux ARM64 (glibc). Still an experimental toolchain.**
+Pi's settings, packages and sessions (`~/.pi`) and loads extensions as Pi does, and compiles your extensions in for speed by
+itself, in the background. **Currently 0.0.5, for macOS ARM64, Linux x64 and Linux ARM64 (glibc). Still an experimental toolchain.**
 
 ## Install
 
@@ -30,25 +30,29 @@ major, X.Y.Z) releases: it sets the version, tags it, and GitHub Actions builds,
 
 ```sh
 pix                    # Pi: every argument and command is Pi's (pix -c, pix -p "...", pix install npm:x)
-pix compile            # compile the packages in ~/.pi/agent/settings.json into pix (again after they change)
-pix self status        # Pi version, compiled-in extensions, whether the settings changed
+pix compile            # compile the packages in ~/.pi/agent/settings.json in now (pix also does it by itself)
+pix compile --none     # the release's Pi, nothing compiled in, and no compiling in the background
+pix self status        # Pi version, compiled-in extensions, the compile in the background, the latest release
 pix self uninstall     # remove ~/.pix and its builds; Pi's settings and sessions stay
 pix self feedback FILE # send a failed compile's feedback (it names FILE) as a GitHub issue, after you confirm
 ```
 
-- Extensions not compiled in load from disk, as in Pi. Without a JIT they run interpreted: light extensions don't
-  notice; compile in the ones that do heavy work. A compiled-in package's extensions are not loaded again from disk.
+- **Your packages are compiled in by themselves.** When the packages in Pi settings are not those compiled into the
+  current build (after `pix install`, `remove` or `update`, after an update of pix, or the first time), pix compiles
+  them into Pi in the background at low priority and says so; a run never waits for it. Until it is done they load
+  from disk, as in Pi (without a JIT they run interpreted), and the next run after it uses the new build and says so.
+  A failed compile is shown once in Pi with its log (`~/.pix/compile.log`) and not tried again until the packages or
+  pix change. A compiled-in package's extensions are not loaded again from disk.
 - `pix compile` compiles the packages as installed (`pix install`) together with Pi, with the Bun inside pix and Pi's
   prepared sources from the release (about 45 MB, downloaded then and removed afterwards); it runs no npm. It links the
   packages' files into the build with hard links, which take no space; the build is about 200 MB. Only the build in use
   is kept.
-- `pix install/remove/update` work as in Pi; with extensions compiled in, pix reminds you to run `pix compile`.
-  `pix update` updates pix and its Pi (`--extensions` updates packages, `--all` both).
+- `pix install/remove/update` work as in Pi. `pix update` updates pix and its Pi (`--extensions` updates packages,
+  `--all` both).
 - **Updates are yours to run, as in Pi.** A run checks for a new pix release in the background at most once an hour,
   and Pi shows `pix X is available: run pix update`, with a link to the release, when one is out (or, when an
   earlier release is the latest again, that `pix update` goes back to it); `pix self status` shows the last check (`PI_SKIP_VERSION_CHECK=1` or `PI_OFFLINE=1` turn
-  the check off, as for Pi). `pix update` installs it and compiles your packages into the new Pi if they were compiled
-  in; if that fails, the new Pi loads them from disk (`pix compile` tries again). To go back to an earlier release
+  the check off, as for Pi). `pix update` installs it, and your packages are compiled into the new Pi in the background. To go back to an earlier release
   (0.0.4 or later): `curl -fsSL https://github.com/iamdin/pix/releases/latest/download/install.sh | PIX_VERSION=0.0.4 sh`.
 - A new build is switched to only after it passes its checks. The previous build is kept for sessions still running it;
   older ones are deleted along with their build directories in the cache.
