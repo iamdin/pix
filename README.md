@@ -8,7 +8,11 @@ in for speed. **Currently alpha.10, for macOS ARM64, Linux x64 and Linux ARM64 (
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/iamdin/pix/main/install.sh | sh
+# or
+npm i -g usepix
 ```
+
+The npm package is a launcher: its first run installs pix with the same script, into `~/.pix/bin`.
 
 Installs `~/.local/bin/pix` (about 65 MB, with Bun inside for `pix compile`; change the directory with
 `PIX_INSTALL_DIR`), then the Pi that the release compiled for your platform (about 55 MB) into `~/.pix`, both checked

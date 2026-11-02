@@ -1,0 +1,25 @@
+{
+  "name": "usepix",
+  "version": "0.0.1",
+  "description": "pix: Pi, built ahead of time with Bun, with performance patches",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iamdin/pix.git",
+    "directory": "npm"
+  },
+  "homepage": "https://github.com/iamdin/pix",
+  "bin": {
+    "pix": "bin/pix.js"
+  },
+  "files": [
+    "bin"
+  ],
+  "os": [
+    "darwin",
+    "linux"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}
