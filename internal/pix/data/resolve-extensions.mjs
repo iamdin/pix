@@ -5,12 +5,12 @@ import { basename, dirname, join, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const request = JSON.parse(readFileSync(process.argv[2], "utf8"));
-const core = join(request.pi, "packages/coding-agent/dist/core");
-const { DefaultPackageManager } = await import(pathToFileURL(join(core, "package-manager.js")));
-const { SettingsManager } = await import(pathToFileURL(join(core, "settings-manager.js")));
-const { SettingsSchema } = await import(pathToFileURL(join(core, "settings-schema.js")));
+const core = join(request.pi, "packages/coding-agent/src/core");
+const { DefaultPackageManager } = await import(pathToFileURL(join(core, "package-manager.ts")));
+const { SettingsManager } = await import(pathToFileURL(join(core, "settings-manager.ts")));
+const { SettingsSchema } = await import(pathToFileURL(join(core, "settings-schema.ts")));
 const { Check } = await import(pathToFileURL(join(request.pi, "node_modules/typebox/build/value/index.mjs")));
-const { resolvePath } = await import(pathToFileURL(join(core, "../utils/paths.js")));
+const { resolvePath } = await import(pathToFileURL(join(core, "../utils/paths.ts")));
 const sha256 = (data) => createHash("sha256").update(data).digest("hex");
 const readJSON = (file) => JSON.parse(readFileSync(file, "utf8").replace(/^\uFEFF/, ""));
 const packages = [];

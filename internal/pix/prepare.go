@@ -156,6 +156,17 @@ func Prepare(ctx context.Context, cache string, pi Source, target, out string, s
 	if err = writeJSON(filepath.Join(source, preparedFile), info); err != nil {
 		return err
 	}
+	// Bun compiles Pi from its TypeScript sources; the JavaScript that npm publishes and the tests are not needed.
+	built, err := filepath.Glob(filepath.Join(source, "packages/*/dist"))
+	if err != nil {
+		return err
+	}
+	tests, _ := filepath.Glob(filepath.Join(source, "packages/*/test"))
+	for _, dir := range append(built, tests...) {
+		if err = os.RemoveAll(dir); err != nil {
+			return err
+		}
+	}
 	if err = r.command("", log, "tar", "-czf", out, "--exclude", "./.git", "-C", source, "."); err != nil {
 		return err
 	}
