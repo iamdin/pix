@@ -68,7 +68,20 @@ for (let i = 0; i < 30 && !id; i++) {
 }
 if (!id) throw new Error(`the release workflow did not start for ${tag}; see https://github.com/iamdin/pix/actions`);
 console.error(`Releasing ${tag}: https://github.com/iamdin/pix/actions/runs/${id}`);
-if (Bun.spawnSync(["gh", "run", "watch", id, "--exit-status", "--interval", "30"], { cwd: root, stdout: "inherit", stderr: "inherit" }).exitCode !== 0) {
+// Polled rather than `gh run watch`, which gives up on the first network error.
+let state = { status: "", conclusion: "", jobs: [] as { name: string; conclusion: string }[] };
+const done = new Set<string>();
+while (state.status !== "completed") {
+	Bun.sleepSync(30_000);
+	const proc = Bun.spawnSync(["gh", "run", "view", id, "--json", "status,conclusion,jobs"], { cwd: root, stderr: "pipe" });
+	if (proc.exitCode !== 0) continue; // a network error: ask again
+	state = JSON.parse(proc.stdout.toString());
+	for (const job of state.jobs.filter((j) => j.conclusion && !done.has(j.name))) {
+		done.add(job.name);
+		console.error(`${job.conclusion === "success" ? "✓" : "✗"} ${job.name}`);
+	}
+}
+if (state.conclusion !== "success") {
 	throw new Error(`the release of ${tag} failed (gh run view ${id} --log-failed); main is not pushed`);
 }
 run(["git", "push", "-q", "origin", "main"]);
