@@ -23,8 +23,9 @@ sum=$( (sha256sum "$tmp/pix" 2>/dev/null || shasum -a 256 "$tmp/pix") | cut -d' 
 mkdir -p "$dir"
 install -m 755 "$tmp/pix" "$dir/pix"
 echo "Installed pix $("$dir/pix" self version) to $dir/pix"
-# The Pi that the release compiled for this platform, about 50 MB; nothing is built here.
-"$dir/pix" self install
+# The Pi that the release compiled for this platform, about 55 MB; nothing is built here. An update keeps the current
+# Pi: its next run switches to the new one, compiling in the packages again if they were.
+[ -e "${PIX_HOME:-$HOME/.pix}/current" ] || "$dir/pix" self install
 
 case ":$PATH:" in
 *":$dir:"*) ;;
