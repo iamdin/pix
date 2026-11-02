@@ -29,7 +29,6 @@ import (
 //	compile.log     the output of the last compile in the background
 //	compile-failed  the packages that failed to compile with this pix, and whether that was shown
 //	compiled        a compile in the background succeeded, not yet shown
-//	no-compile      `pix compile --none`: compile nothing in the background
 //
 // Installing pix downloads the Pi that its release compiled; Pi loads the user's packages from disk, as the original
 // does. `pix compile` builds again with the packages in the Pi settings compiled in.
@@ -332,9 +331,9 @@ func builtPackages(build string) any {
 // autoCompile compiles the packages in Pi settings into Pi without asking: when they are not those of the current
 // build, it starts `pix self auto-compile` in the background, and a later run has them compiled in; until then they
 // load from disk, as in Pi. A failed compile is not tried again until the packages or pix change; autoCompile returns
-// its notice once. `pix compile --none` turns it off, `pix compile` on again.
+// its notice once.
 func (in *installation) autoCompile() (notice string, started bool) {
-	if releaseSums == "" || exists(filepath.Join(in.Home, "no-compile")) {
+	if releaseSums == "" {
 		return "", false // a development build has no release to compile with
 	}
 	key, compiled, err := in.packagesCompiled()
@@ -549,8 +548,6 @@ func status(stdout io.Writer) error {
 	case err != nil:
 		return err
 	case compiled:
-	case exists(filepath.Join(in.Home, "no-compile")):
-		fmt.Fprintln(stdout, "Compiling:  off (`pix compile` compiles the packages in and turns it on)")
 	case strings.Split(string(failed), "\n")[0] == key:
 		fmt.Fprintf(stdout, "Compiling:  the packages failed to compile, see %s\n", filepath.Join(in.Home, "compile.log"))
 	default:

@@ -150,7 +150,6 @@ func compileCommand(ctx context.Context, args []string, stdout, stderr io.Writer
 	f.StringVar(&opts.Settings, "settings", "", "with --out: JSON file with Pi packages declarations; relative sources resolve from this file")
 	f.Var(&opts.Extensions, "extension", "with --out: append a Pi package source (repeatable)")
 	f.DurationVar(&opts.Timeout, "timeout", 30*time.Minute, "stop compiling after this long (0: never)")
-	none := f.Bool("none", false, "compile nothing in: use the release's Pi, which loads every package from disk")
 	if err := f.Parse(args); err != nil {
 		return err
 	}
@@ -170,23 +169,11 @@ func compileCommand(ctx context.Context, args []string, stdout, stderr io.Writer
 			return err
 		}
 		defer unlock()
-		// --none also stops compiling in the background, until the next `pix compile`.
-		if *none {
-			if err = os.WriteFile(filepath.Join(in.Home, "no-compile"), nil, 0644); err == nil {
-				err = in.install(ctx, stdout)
-			}
-		} else {
-			_ = os.Remove(filepath.Join(in.Home, "no-compile"))
-			err = in.compile(ctx, opts.Timeout, stdout)
-		}
-		if err != nil {
+		if err = in.compile(ctx, opts.Timeout, stdout); err != nil {
 			return err
 		}
 		fmt.Fprintln(stdout, "Done: pix runs the new build.")
 		return nil
-	}
-	if *none {
-		return fmt.Errorf("--none does not go with --out")
 	}
 	if err := Build(ctx, opts, stdout); err != nil {
 		return err

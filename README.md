@@ -31,7 +31,6 @@ major, X.Y.Z) releases: it sets the version, tags it, and GitHub Actions builds,
 ```sh
 pix                    # Pi: every argument and command is Pi's (pix -c, pix -p "...", pix install npm:x)
 pix compile            # compile the packages in ~/.pi/agent/settings.json in now (pix also does it by itself)
-pix compile --none     # the release's Pi, nothing compiled in, and no compiling in the background
 pix self status        # Pi version, compiled-in extensions, the compile in the background, the latest release
 pix self uninstall     # remove ~/.pix and its builds; Pi's settings and sessions stay
 pix self feedback FILE # send a failed compile's feedback (it names FILE) as a GitHub issue, after you confirm
@@ -59,7 +58,7 @@ pix self feedback FILE # send a failed compile's feedback (it names FILE) as a G
 - `compile` shows each step and how long it took (the current one counts up in a terminal; elsewhere a long compile adds
   a line every 5 minutes) and stops compiling after 30 minutes (`--timeout`, `0` for no limit). An extension with a very
   large function can compile for a long time; leave one out with `{"source": "...", "extensions": []}` in the settings
-  to find it, or use `pix compile --none` to go back to the release's Pi.
+  to find it.
 - A failed compile writes feedback for a GitHub issue next to its log, with your home directory replaced by `~`, and
   sends nothing. `pix self feedback FILE` shows it and asks before sending it with the GitHub CLI when `gh` is logged
   in; otherwise it prints a prefilled link to submit in the browser. `-y` sends without asking, for an agent that has

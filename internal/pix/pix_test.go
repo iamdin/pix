@@ -39,7 +39,7 @@ func TestCLI(t *testing.T) {
 		code int
 	}{
 		{[]string{"self"}, 0}, {[]string{"self", "version"}, 0}, {[]string{"self", "doctor"}, 1}, {[]string{"compile", "--help"}, 0},
-		{[]string{"compile", "--bun-version", "latest"}, 1}, {[]string{"compile", "extra"}, 1}, {[]string{"compile", "--none", "--out", "x"}, 1}, {[]string{"compile", "--settings", "x"}, 1}, {[]string{"self", "wat"}, 1},
+		{[]string{"compile", "--bun-version", "latest"}, 1}, {[]string{"compile", "extra"}, 1}, {[]string{"compile", "--settings", "x"}, 1}, {[]string{"self", "wat"}, 1},
 	} {
 		var out, errors bytes.Buffer
 		if got := Main(context.Background(), c.args, &out, &errors); got != c.code {
