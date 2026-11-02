@@ -2,10 +2,13 @@ package pix
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"os/exec"
@@ -89,7 +92,11 @@ func (in *installation) compile(ctx context.Context, timeout time.Duration, stdo
 		return err
 	}
 	opts := Options{Out: filepath.Join(in.Home, "versions", time.Now().Format("20060102-150405.000000000")), Cache: filepath.Join(cache, "pix"), Settings: settings, Installed: true, Timeout: timeout}
+	state := installedState(filepath.Dir(settings)) // before the build: a change during it compiles again
 	if err := buildFunc(ctx, opts, stdout); err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(opts.Out, "recipe", "installed"), []byte(state), 0644); err != nil {
 		return err
 	}
 	return in.use(filepath.Base(opts.Out), opts.Cache, stdout)
@@ -312,8 +319,47 @@ func (in *installation) packagesCompiled() (key string, compiled bool, err error
 	if err != nil {
 		return "", false, err
 	}
+	current := filepath.Join(in.Home, "current")
+	state := installedState(filepath.Dir(settings))
+	built, _ := os.ReadFile(filepath.Join(current, "recipe", "installed"))
 	data, _ := json.Marshal(now)
-	return Version + " " + string(data), reflect.DeepEqual(now, builtPackages(filepath.Join(in.Home, "current"))), nil
+	return Version + " " + string(data) + " " + state, reflect.DeepEqual(now, builtPackages(current)) && (now == nil || string(built) == state), nil
+}
+
+// installedState fingerprints the packages that Pi installed, so that `pix update --extensions`, which changes them
+// but not the settings, compiles them in again: npm's lock file and each git package's commit. Local paths are not
+// followed; `pix compile` compiles their changes in.
+func installedState(agent string) string {
+	h := sha256.New()
+	lock, _ := os.ReadFile(filepath.Join(agent, "npm", "package-lock.json"))
+	h.Write(lock)
+	_ = filepath.WalkDir(filepath.Join(agent, "git"), func(dir string, d fs.DirEntry, err error) error {
+		if err != nil || !d.IsDir() || !exists(filepath.Join(dir, ".git")) {
+			return nil
+		}
+		fmt.Fprintf(h, "\n%s %s", dir, gitHead(filepath.Join(dir, ".git")))
+		return filepath.SkipDir
+	})
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+// gitHead returns the commit that a repository has checked out, without running git.
+func gitHead(git string) string {
+	head, _ := os.ReadFile(filepath.Join(git, "HEAD"))
+	ref, ok := strings.CutPrefix(strings.TrimSpace(string(head)), "ref: ")
+	if !ok {
+		return string(head)
+	}
+	if commit, err := os.ReadFile(filepath.Join(git, ref)); err == nil {
+		return string(commit)
+	}
+	packed, _ := os.ReadFile(filepath.Join(git, "packed-refs"))
+	for _, line := range strings.Split(string(packed), "\n") {
+		if commit, ok := strings.CutSuffix(line, " "+ref); ok {
+			return commit
+		}
+	}
+	return ref
 }
 
 // builtPackages returns the packages that a build compiled in, as declared.

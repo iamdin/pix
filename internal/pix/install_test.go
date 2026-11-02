@@ -60,6 +60,7 @@ func TestInstallationLifecycle(t *testing.T) {
 			t.Fatalf("compiles the packages Pi installed: %+v", opts)
 		}
 		writeFile(t, filepath.Join(opts.Out, "pi"), "#!/bin/sh\n", 0755)
+		writeFile(t, filepath.Join(opts.Out, "recipe", "extensions.json"), `{"packages": ["npm:x"]}`, 0644)
 		return writeJSON(filepath.Join(opts.Out, "pix-build.json"), Manifest{Schema: 1, Pix: Version, Extensions: []Extension{{Name: "x"}}})
 	}
 	defer func() { buildFunc = Build }()
@@ -218,6 +219,24 @@ func TestSyncAndAutoCompile(t *testing.T) {
 	}
 	if notice, ok := in.autoCompile(); ok || notice != "" {
 		t.Fatalf("compiled: %q %v", notice, ok)
+	}
+	// `pix update --extensions` changes the installed packages, not the settings.
+	writeFile(t, filepath.Join(root, "agent", "npm", "package-lock.json"), `{"x": "1.1.0"}`, 0644)
+	if _, ok := in.autoCompile(); !ok {
+		t.Fatal("an updated package is not compiled in again")
+	}
+}
+
+func TestGitHead(t *testing.T) {
+	git := filepath.Join(t.TempDir(), ".git")
+	writeFile(t, filepath.Join(git, "HEAD"), "ref: refs/heads/main\n", 0644)
+	writeFile(t, filepath.Join(git, "packed-refs"), "# pack-refs\nabc refs/heads/main\n", 0644)
+	if got := gitHead(git); got != "abc" {
+		t.Fatalf("packed: %q", got)
+	}
+	writeFile(t, filepath.Join(git, "refs", "heads", "main"), "def\n", 0644)
+	if got := gitHead(git); got != "def\n" {
+		t.Fatalf("loose: %q", got)
 	}
 }
 
