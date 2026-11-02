@@ -89,6 +89,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the release notes list the commits since the previous release
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -111,7 +113,9 @@ jobs:
           cp install.sh out/
           ls -l out
           # A draft until every asset is uploaded, so that nobody downloads a partial release.
-          gh release create "$TAG" out/* --draft --title "pix ${TAG#v}" --notes 'Install: `curl -fsSL https://github.com/iamdin/pix/releases/latest/download/install.sh | sh` or `npm i -g usepix`'
+          prev=$(gh release list --exclude-drafts --exclude-pre-releases --limit 1 --json tagName -q '.[0].tagName')
+          sh scripts/release-notes.sh "$TAG" "$prev" > "$RUNNER_TEMP/notes.md"
+          gh release create "$TAG" out/* --draft --title "pix ${TAG#v}" --notes-file "$RUNNER_TEMP/notes.md"
           gh release edit "$TAG" --draft=false --latest
 
   install:

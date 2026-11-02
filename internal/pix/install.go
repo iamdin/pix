@@ -14,6 +14,7 @@ import (
 	"reflect"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -296,10 +297,10 @@ func (in *installation) sync(ctx context.Context, stderr io.Writer, wait bool) e
 // latestURL redirects to the page of pix's latest release; replaced in tests.
 var latestURL = "https://github.com/iamdin/pix/releases/latest"
 
-// newRelease returns the latest release when it is another pix, as last checked, for Pi to show (as Pi shows a new
-// Pi); at most once an hour it starts a check in the background. PI_SKIP_VERSION_CHECK and PI_OFFLINE turn it off, as
-// they do Pi's check.
-func (in *installation) newRelease() string {
+// releaseNotice returns what Pi shows (as it shows a new Pi) when the latest release, as last checked, is another pix;
+// at most once an hour it starts a check in the background. PI_SKIP_VERSION_CHECK and PI_OFFLINE turn it off, as they
+// do Pi's check.
+func (in *installation) releaseNotice() string {
 	if os.Getenv("PI_SKIP_VERSION_CHECK") != "" || os.Getenv("PI_OFFLINE") != "" || releaseSums == "" {
 		return "" // releaseSums: a development build has no release
 	}
@@ -313,13 +314,33 @@ func (in *installation) newRelease() string {
 			_ = cmd.Start()
 		}
 	}
-	if len(latest) > 0 && string(latest) != Version {
-		return string(latest)
+	if len(latest) == 0 || string(latest) == Version {
+		return ""
 	}
-	return ""
+	link := "https://github.com/iamdin/pix/releases/tag/v" + string(latest)
+	if newerVersion(Version, string(latest)) { // the maintainers went back to an earlier release
+		return fmt.Sprintf("pix %s is the latest release again (this is %s): run pix update to go back · %s", latest, Version, link)
+	}
+	return fmt.Sprintf("pix %s is available: run pix update · %s", latest, link)
 }
 
-// checkLatest records the version of pix's latest release for newRelease.
+// newerVersion reports whether version a is newer than b; pix versions are dotted numbers.
+func newerVersion(a, b string) bool {
+	x, y := strings.Split(a, "."), strings.Split(b, ".")
+	for i := 0; i < len(x) && i < len(y); i++ {
+		m, errM := strconv.Atoi(x[i])
+		n, errN := strconv.Atoi(y[i])
+		if errM != nil || errN != nil {
+			return x[i] > y[i]
+		}
+		if m != n {
+			return m > n
+		}
+	}
+	return len(x) > len(y)
+}
+
+// checkLatest records the version of pix's latest release for releaseNotice.
 func (in *installation) checkLatest(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
@@ -365,8 +386,8 @@ func runPi(ctx context.Context, args []string, stderr io.Writer) error {
 		fmt.Fprintf(stderr, "pix: %v\npix: running the previous Pi\n", err)
 	}
 	env := os.Environ()
-	if release := in.newRelease(); release != "" {
-		env = append(env, "PIX_NEW_RELEASE="+release) // the entry has Pi show it
+	if notice := in.releaseNotice(); notice != "" {
+		env = append(env, "PIX_RELEASE_NOTICE="+notice) // the entry has Pi show it
 	}
 	// The version's own path, so that prune can tell it is running.
 	exe := filepath.Join(in.Home, "versions", in.current(), "pi")
@@ -393,6 +414,13 @@ func status(stdout io.Writer) error {
 		return err
 	}
 	fmt.Fprintf(stdout, "pix %s\n", Version)
+	if info, err := os.Stat(filepath.Join(in.Home, "latest")); err == nil {
+		latest, _ := os.ReadFile(filepath.Join(in.Home, "latest"))
+		if len(latest) == 0 {
+			latest = []byte("unknown")
+		}
+		fmt.Fprintf(stdout, "Latest:     pix %s (last checked %s)\n", latest, info.ModTime().Format("2006-01-02 15:04"))
+	}
 	if in.current() == "" {
 		fmt.Fprintln(stdout, "Build:      none yet; the first `pix` downloads it")
 		return nil

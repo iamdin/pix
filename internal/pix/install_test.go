@@ -240,3 +240,25 @@ func TestCheckLatest(t *testing.T) {
 		t.Fatalf("latest %q", data)
 	}
 }
+
+func TestReleaseNotice(t *testing.T) {
+	for _, c := range []struct {
+		a, b  string
+		newer bool
+	}{{"0.0.10", "0.0.9", true}, {"0.1.0", "0.0.9", true}, {"0.0.4", "0.0.4", false}, {"0.0.3", "0.0.4", false}, {"1.0.0.1", "1.0.0", true}} {
+		if newerVersion(c.a, c.b) != c.newer {
+			t.Errorf("newerVersion(%s, %s) != %v", c.a, c.b, c.newer)
+		}
+	}
+	t.Setenv("PI_SKIP_VERSION_CHECK", "")
+	t.Setenv("PI_OFFLINE", "")
+	defer func(s string) { releaseSums = s }(releaseSums)
+	releaseSums = "x=y"
+	in := &installation{Home: t.TempDir()}
+	for latest, want := range map[string]string{Version: "", "99.0.0": "pix 99.0.0 is available", "0.0.0": "latest release again"} {
+		writeFile(t, filepath.Join(in.Home, "latest"), latest, 0644) // fresh: no check starts
+		if got := in.releaseNotice(); !strings.Contains(got, want) || (want == "") != (got == "") {
+			t.Errorf("latest %s: %q", latest, got)
+		}
+	}
+}

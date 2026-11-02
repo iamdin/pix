@@ -111,7 +111,7 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer) error
 			return err
 		}
 		return in.sync(ctx, stdout, true)
-	case "check-update": // started in the background by newRelease
+	case "check-update": // started in the background by releaseNotice
 		in, err := loadInstallation()
 		if err != nil {
 			return err
