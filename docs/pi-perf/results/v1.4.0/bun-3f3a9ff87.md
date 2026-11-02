@@ -78,3 +78,16 @@ md:60000     all          cpu_s             4.290            4.050–4.390     -
 md:60000     base         rss_mb          171.200        140.100–173.400             3
 md:60000     all          rss_mb          128.100        125.900–129.600     -25.2%  3
 ```
+
+## native-image-resize on the new PNG codec
+
+Between the two canaries Bun replaced libspng with its own PNG codec (oven-sh/bun#47070), which `Bun.Image` and so
+`native-image-resize` use. On Apple M4: the patch's `bun test ./test/image-resize-bun.bun.ts` passes on both (6/6).
+`resizeImageWithBun()` from the fork on photo-like 3000×2000 inputs (gradients plus noise; the PNG encoded with
+node:zlib, the JPEG from it at quality 90), median of 5:
+
+| input | old (+da867c60b) | new (+3f3a9ff87) | output |
+|---|---|---|---|
+| PNG 15 MB → 2000×1333 PNG | 285 ms | 177 ms | byte-identical |
+| JPEG 2.7 MB → 2000×1333 JPEG | 337 ms | 235 ms | byte-identical |
+| PNG decode, resize, encode alone | 349 ms | 113 ms | |
