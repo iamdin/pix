@@ -13,19 +13,19 @@
     "revision": "1.4.4-canary.1+3f3a9ff87",
     "platforms": {
       "darwin/arm64": {
-        "url": "https://api.github.com/repos/oven-sh/bun/releases/assets/697873698",
+        "url": "https://github.com/iamdin/pix/releases/download/bun-1.4.4-canary.1-3f3a9ff87/bun-darwin-arm64.zip",
         "sha256": "9878f8609a02b7b23dcbb9a1b592aa8ab820ed8652975814c5646b36957e1680",
         "binary_sha256": "cbecab3f05a0c8bc11ea0164e5868db0b5da12067fdb13dfcacfc9bf87b68b6a",
         "member": "bun-darwin-aarch64/bun"
       },
       "linux/amd64": {
-        "url": "https://api.github.com/repos/oven-sh/bun/releases/assets/697873851",
+        "url": "https://github.com/iamdin/pix/releases/download/bun-1.4.4-canary.1-3f3a9ff87/bun-linux-amd64.zip",
         "sha256": "43e54d1d6ff2924454ee523a40a6d862ba5ec4e5a8796329e61d22fea67f25c2",
         "binary_sha256": "f5b1f97281cc4e74154e8962c91a0ef493e7c78e5c84e8bff83cb456acd731d4",
         "member": "bun-linux-x64/bun"
       },
       "linux/arm64": {
-        "url": "https://api.github.com/repos/oven-sh/bun/releases/assets/697873691",
+        "url": "https://github.com/iamdin/pix/releases/download/bun-1.4.4-canary.1-3f3a9ff87/bun-linux-arm64.zip",
         "sha256": "d05f60ba50dfb733974b4acd6135acf0a628cac9a966af6324c1a12f99883340",
         "binary_sha256": "828dce0d925713baf968cbf862b39b96aaa574dd36f0b5a8303c8224fd3c4bec",
         "member": "bun-linux-aarch64/bun"
