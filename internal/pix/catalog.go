@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const Version = "0.0.3"
+const Version = "0.0.5"
 
 //go:embed data
 var assets embed.FS
