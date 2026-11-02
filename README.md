@@ -132,8 +132,9 @@ upgrading Pi must run the resolution regression tests.
 
 There is no choice of Pi or Bun version. Pi follows upstream release tags only, and pix's patches are commits on a
 fork (see [PATCHES.md](PATCHES.md)). Bun AOT exists only in canary builds, so Bun is pinned to one official canary build
-and moves when the maintainers upgrade it. Each platform's release embeds that platform's pinned Bun archive and the
-prepared Pi (about 110 MiB) and checks the archive and binary hashes and the revision, and on macOS the code signature.
+and moves when the maintainers upgrade it. Each platform's pix embeds that platform's pinned Bun archive and the SHA-256
+sums of the release's compiled Pi and prepared sources, and checks the archive and binary hashes and the revision, and on
+macOS the code signature.
 Nothing depends on upstream downloads that may be deleted, and nothing upgrades silently. Cold fetches of Git, npm and
 the model catalog still need the network. The Bun is the official prebuilt one, not a custom-optimized Bun/JSC.
 
