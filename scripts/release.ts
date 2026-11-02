@@ -26,10 +26,18 @@ function output(cmd: string[]): string {
 	return proc.stdout.toString().trim();
 }
 
+Bun.spawnSync(["git", "fetch", "-q", "--tags", "origin"], { cwd: root });
 const bump = process.argv[2];
 const current = /const Version = "(\d+)\.(\d+)\.(\d+)"/.exec(fs.readFileSync(catalog, "utf8"));
 if (!current) throw new Error("no Version in catalog.go");
-const [major, minor, patch] = current.slice(1).map(Number);
+// From the newest of the version in catalog.go and the released tags (a tag may have been pushed by hand).
+const newer = (a: number[], b: number[]) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
+const versions = [current.slice(1).map(Number)];
+for (const t of output(["git", "tag", "-l", "v*"]).split("\n")) {
+	const m = /^v(\d+)\.(\d+)\.(\d+)$/.exec(t);
+	if (m) versions.push(m.slice(1).map(Number));
+}
+const [major, minor, patch] = versions.sort(newer).at(-1)!;
 const version =
 	bump === "patch" ? `${major}.${minor}.${patch + 1}`
 	: bump === "minor" ? `${major}.${minor + 1}.0`
