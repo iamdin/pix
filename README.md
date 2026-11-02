@@ -2,7 +2,7 @@
 
 Pi, built ahead of time with official Bun AOT and performance patches. Anyone who can use Pi can use pix: it reads
 Pi's settings, packages and sessions (`~/.pi`) and loads extensions as Pi does; `pix compile` compiles your extensions
-in for speed. **Currently alpha.10, for macOS ARM64, Linux x64 and Linux ARM64 (glibc). Still an experimental toolchain.**
+in for speed. **Currently 0.0.1, for macOS ARM64, Linux x64 and Linux ARM64 (glibc). Still an experimental toolchain.**
 
 ## Install
 
