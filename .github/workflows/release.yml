@@ -8,7 +8,7 @@
 #   install.sh                        what users and `pix update` run
 #
 # The release is published once everything is built and checked; then, on each platform, its install.sh installs it and
-# the previous release updates to it. Never delete a release: an installed pix downloads its own release's assets for
+# the previous release updates to it as pix does by itself in the background. Never delete a release: an installed pix downloads its own release's assets for
 # `pix compile`, and PIX_VERSION goes back to one.
 name: release
 on:
@@ -136,7 +136,11 @@ jobs:
           git fetch -q --depth 1 origin "refs/tags/$prev:refs/tags/$prev"
           git show "$prev:install.sh" | PIX_DOWNLOAD="https://github.com/iamdin/pix/releases/download/$prev" sh
           "$PIX_INSTALL_DIR/pix" --version
-          "$PIX_INSTALL_DIR/pix" update
+          # What a run starts in the background (0.0.4 and later), here in the foreground; older ones have only `pix update`.
+          case "$prev" in
+          v0.0.[0-3] | v0.1.*) "$PIX_INSTALL_DIR/pix" update ;;
+          *) "$PIX_INSTALL_DIR/pix" self check-update; cat "$PIX_HOME/update.log" ;;
+          esac
           "$PIX_INSTALL_DIR/pix" --version
           test "$("$PIX_INSTALL_DIR/pix" self version)" = "${TAG#v}"
           test "$(jq -r .pix "$PIX_HOME/current/pix-build.json")" = "${TAG#v}"

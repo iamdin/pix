@@ -191,7 +191,7 @@ func TestSyncAfterUpdate(t *testing.T) {
 			writeFile(t, filepath.Join(opts.Out, "pi"), "#!/bin/sh\n", 0755)
 			return writeJSON(filepath.Join(opts.Out, "pix-build.json"), Manifest{Schema: 1, Pix: Version, Extensions: []Extension{{Name: "x"}}})
 		}
-		if err := in.sync(context.Background(), io.Discard); err != nil {
+		if err := in.sync(context.Background(), io.Discard, true); err != nil {
 			t.Fatal(err)
 		}
 		m, _ := readManifest(filepath.Join(in.Home, "current"))
@@ -203,18 +203,21 @@ func TestSyncAfterUpdate(t *testing.T) {
 
 func TestLockSerializes(t *testing.T) {
 	in := &installation{Home: t.TempDir()}
-	unlock, err := in.lock(io.Discard)
+	unlock, err := in.lock(io.Discard, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 	got := make(chan struct{})
 	go func() {
-		second, err := in.lock(io.Discard)
+		second, err := in.lock(io.Discard, true)
 		if err == nil {
 			second()
 		}
 		close(got)
 	}()
+	if _, err := in.lock(io.Discard, false); err != errBusy {
+		t.Fatalf("without waiting: %v, want errBusy", err)
+	}
 	select {
 	case <-got:
 		t.Fatal("two holders of the lock")
@@ -235,5 +238,16 @@ func TestCheckLatest(t *testing.T) {
 	}
 	if data, _ := os.ReadFile(filepath.Join(in.Home, "latest")); string(data) != "9.9.9" {
 		t.Fatalf("latest %q", data)
+	}
+	defer func(i string) { installer = i }(installer)
+	installer = "echo INSTALLED $PIX_INSTALL_DIR"
+	if err := in.checkUpdate(context.Background(), false); err != nil || exists(filepath.Join(in.Home, "update.log")) {
+		t.Fatalf("only checking installed: %v", err)
+	}
+	if err := in.checkUpdate(context.Background(), true); err != nil {
+		t.Fatal(err)
+	}
+	if log, _ := os.ReadFile(filepath.Join(in.Home, "update.log")); !strings.Contains(string(log), "-> 9.9.9") || !strings.Contains(string(log), "INSTALLED /") {
+		t.Fatalf("update.log: %s", log)
 	}
 }

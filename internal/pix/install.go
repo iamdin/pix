@@ -3,6 +3,7 @@ package pix
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -23,7 +24,8 @@ import (
 //	versions/<id>/  builds: the current one, and older ones while a session still runs them
 //	current         symlink to the version in use
 //	lock            held while installing, compiling or pruning
-//	latest          the version of pix's latest release, checked once a day
+//	latest          the version of pix's latest release, checked at most once an hour
+//	update.log      the output of the last update in the background
 //
 // Installing pix downloads the Pi that its release compiled; Pi loads the user's packages from disk, as the original
 // does. `pix compile` builds again with the packages in the Pi settings compiled in.
@@ -235,9 +237,12 @@ func readManifest(dir string) (Manifest, error) {
 	return manifest, err
 }
 
+// errBusy: another pix holds the lock.
+var errBusy = errors.New("another pix is installing or compiling")
+
 // lock serializes the changes to PIX_HOME across pix processes, so that none prunes a build that another is still
-// compiling or downloading; the lock goes with the process.
-func (in *installation) lock(stderr io.Writer) (unlock func(), err error) {
+// compiling or downloading; the lock goes with the process. Without wait it returns errBusy instead of waiting.
+func (in *installation) lock(stderr io.Writer, wait bool) (unlock func(), err error) {
 	if err := os.MkdirAll(in.Home, 0755); err != nil {
 		return nil, err
 	}
@@ -246,6 +251,10 @@ func (in *installation) lock(stderr io.Writer) (unlock func(), err error) {
 		return nil, err
 	}
 	if syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB) != nil {
+		if !wait {
+			f.Close()
+			return nil, errBusy
+		}
 		fmt.Fprintln(stderr, "pix: waiting for another pix to finish installing or compiling")
 		if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
 			f.Close()
@@ -257,9 +266,10 @@ func (in *installation) lock(stderr io.Writer) (unlock func(), err error) {
 
 // sync makes PIX_HOME run this pix's Pi. The first time it downloads it. After an update it compiles the packages into
 // the new Pi if they were compiled into the old one, and when that fails it downloads the new Pi, which loads them from
-// disk, rather than retry on every run. It removes the builds no longer in use.
-func (in *installation) sync(ctx context.Context, stderr io.Writer) error {
-	unlock, err := in.lock(stderr)
+// disk, rather than retry on every run. It removes the builds no longer in use. Without wait it returns errBusy while
+// another pix installs or compiles.
+func (in *installation) sync(ctx context.Context, stderr io.Writer, wait bool) error {
+	unlock, err := in.lock(stderr, wait)
 	if err != nil {
 		return err
 	}
@@ -287,23 +297,55 @@ func (in *installation) sync(ctx context.Context, stderr io.Writer) error {
 // latestURL redirects to the page of pix's latest release; replaced in tests.
 var latestURL = "https://github.com/iamdin/pix/releases/latest"
 
-// notice says in a terminal when the latest release is another pix, as the last check found; it starts a check in the
-// background at most once a day.
-func (in *installation) notice(stderr io.Writer) {
+// autoUpdate keeps pix up to date without asking: at most once an hour it starts `pix self check-update` in the
+// background, at low priority, which installs the latest release when it is another pix, as `pix update` does; the
+// next run uses it. Until then, in a terminal, it says so. PIX_DISABLE_AUTOUPDATE=1 only checks and says so.
+func (in *installation) autoUpdate(stderr io.Writer) {
 	file := filepath.Join(in.Home, "latest")
 	latest, _ := os.ReadFile(file)
+	off := os.Getenv("PIX_DISABLE_AUTOUPDATE") != "" || releaseSums == "" // a development build has no release
 	if len(latest) > 0 && string(latest) != Version && isTerminal(os.Stderr) {
-		fmt.Fprintf(stderr, "pix: pix %s is out (this is %s): run `pix update`\n", latest, Version)
+		if off {
+			fmt.Fprintf(stderr, "pix: pix %s is out (this is %s): run `pix update`\n", latest, Version)
+		} else {
+			fmt.Fprintf(stderr, "pix: updating to pix %s in the background, for the next run (%s)\n", latest, filepath.Join(in.Home, "update.log"))
+		}
 	}
-	if info, err := os.Stat(file); err == nil && time.Since(info.ModTime()) < 24*time.Hour {
+	if info, err := os.Stat(file); err == nil && time.Since(info.ModTime()) < time.Hour {
 		return
 	}
 	_ = os.WriteFile(file, latest, 0644) // the time of this check, also when it fails
-	if self, err := os.Executable(); err == nil {
-		cmd := exec.Command(self, "self", "check-update")
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
-		_ = cmd.Start()
+	self, err := os.Executable()
+	if err != nil {
+		return
 	}
+	args := []string{"self", "check-update"}
+	if off {
+		args = append(args, "--no-install")
+	}
+	cmd := exec.Command(self, args...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	if cmd.Start() == nil {
+		_ = syscall.Setpriority(syscall.PRIO_PROCESS, cmd.Process.Pid, 10) // compiling must not slow Pi down
+	}
+}
+
+// checkUpdate records the latest release and, unless only checking, installs it when it is another pix.
+func (in *installation) checkUpdate(ctx context.Context, install bool) error {
+	if err := in.checkLatest(ctx); err != nil {
+		return err
+	}
+	latest, err := os.ReadFile(filepath.Join(in.Home, "latest"))
+	if err != nil || !install || string(latest) == Version {
+		return err
+	}
+	log, err := os.Create(filepath.Join(in.Home, "update.log"))
+	if err != nil {
+		return err
+	}
+	defer log.Close()
+	fmt.Fprintf(log, "%s: pix %s -> %s\n", time.Now().Format(time.RFC3339), Version, latest)
+	return updateSelf(log)
 }
 
 // checkLatest records the version of pix's latest release for notice.
@@ -344,13 +386,14 @@ func runPi(ctx context.Context, args []string, stderr io.Writer) error {
 			}
 		}
 	}
-	if err := in.sync(ctx, stderr); err != nil {
+	// While another pix installs or compiles (an update in the background), run the current Pi rather than wait.
+	if err := in.sync(ctx, stderr, in.current() == ""); err != nil && !errors.Is(err, errBusy) {
 		if in.current() == "" {
 			return err
 		}
 		fmt.Fprintf(stderr, "pix: %v\npix: running the previous Pi\n", err)
 	}
-	in.notice(stderr)
+	in.autoUpdate(stderr)
 	// The version's own path, so that prune can tell it is running.
 	exe := filepath.Join(in.Home, "versions", in.current(), "pi")
 	manifest, _ := readManifest(filepath.Join(in.Home, "current"))
