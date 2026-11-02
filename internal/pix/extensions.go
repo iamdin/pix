@@ -85,19 +85,23 @@ if (!command) args = [`)
 		}
 		out.WriteString("...args];\n")
 	}
-	// pix's new release, which pix found (PIX_NEW_RELEASE), is shown in Pi as Pi shows its own: the user updates.
+	// In the TUI, the footer says that this is pix, and a new pix release, which pix found (PIX_NEW_RELEASE), is shown
+	// as Pi shows its own: the user updates.
+	fmt.Fprintf(&out, "const pixVersion = %s;\n", jsString(Version))
 	out.WriteString(`const release = process.env.PIX_NEW_RELEASE;
 delete process.env.PIX_NEW_RELEASE;
 let shown = false;
-const pixRelease = { name: 'pix-release', hidden: true, factory: (pi: any) => {
- if (release) pi.on('session_start', (_event: unknown, ctx: any) => {
-  if (!ctx.hasUI || shown) return;
+const pixInfo = { name: 'pix', hidden: true, factory: (pi: any) => {
+ pi.on('session_start', (_event: unknown, ctx: any) => {
+  if (!ctx.hasUI) return;
+  ctx.ui.setStatus('pix', 'pix ' + pixVersion);
+  if (!release || shown) return;
   shown = true;
   ctx.ui.notify('pix ' + release + ' is available. Run pix update', 'info');
  });
 } };
 setupCli();
-await main(args, { extensionFactories: [pixRelease] });
+await main(args, { extensionFactories: [pixInfo] });
 `)
 	return out.String()
 }
