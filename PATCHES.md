@@ -20,7 +20,7 @@ performance gates and when to give it up. The spec is the authority; the commit 
 Pi releases a new version, rebase the previous branch into `pix-<new tag>` and check each patch against its spec,
 tests and performance gates; see `.agents/skills/pi-perf-upgrade/SKILL.md`.
 
-A release (`bun scripts/release.ts`) prepares Pi once, on the maintainer's machine: it fetches the pinned commit, runs
+A release (`.github/workflows/release.yml`) prepares Pi once: it fetches the pinned commit, runs
 `npm ci`, builds, runs every patch's tests and embeds the result in pix. On users' machines pix only compiles.
 
 ## Provenance

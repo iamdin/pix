@@ -63,8 +63,8 @@ measurably slower. Code may overlap, but each commit must revert cleanly from th
 5. Against the previous Pi version's final build: the full set may be at most 5% worse in any scenario.
 6. `bin/pix self prepare /abs/pi.tar.gz` (every patch's tests), `bin/pix compile --pi /abs/pi.tar.gz --out /abs/dir` (smoke,
    the artifact hash check); `bun bench/e2e/run.ts /abs/dir/pi`. Record everything under `docs/pi-perf/results/TAG/` and update the specs
-   ("Verified on" with the new commits, numbers, what changed) and the README's numbers. `scripts/release.ts` prepares
-   the Pi a release embeds.
+   ("Verified on" with the new commits, numbers, what changed) and the README's numbers. The release workflow prepares
+   the Pi a release ships; `bun scripts/release.ts patch` releases.
 
 ## Notes from v1.4.0
 

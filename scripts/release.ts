@@ -1,168 +1,67 @@
 /**
- * Build pix's release v<Version> into dist-release, for each platform:
+ * Releases pix, like `npm version` and `npm publish` in one:
  *
- *   pi-source-<goos>-<goarch>.tar.gz  Pi from the pinned fork, patched, built and tested, with its runtime dependencies
- *                                     (`pix self prepare`, here: needs git, Node 24+ and npm 11+); `pix compile` uses it
- *   pi-<goos>-<goarch>.tar.gz         that Pi compiled with Bun (`pix compile --out`), where it runs; it passes bench/e2e
- *                                     there. install.sh and `pix update` download it: users' machines compile nothing.
- *   pix-<goos>-<goarch>               pix, with Bun inside (canary downloads expire) and the sums of the two above
+ *   bun scripts/release.ts patch        # 0.0.4 -> 0.0.5 (also minor, major, or a version such as 0.1.0)
  *
- * Pi is compiled on this machine for its own platform, over ssh for the others, or on GitHub Actions
- * (.github/workflows/check-release.yml) with --host PLATFORM=gh. --publish creates the release as a draft, compiles there
- * for the gh platforms, uploads everything, publishes it and installs it back with install.sh.
- *
- *   bun scripts/release.ts --host linux/amd64=root@100.88.65.47 --host linux/arm64=gh [--publish]
- *
- * The Bun canary archives (internal/pix/runtime-data/<goos>-<goarch>/bun.zip) are not in git. --publish needs a clean
- * main that is pushed and a version not released yet. The pinned Pi commit must be the head of its fork branch.
+ * It sets the version (internal/pix/catalog.go and the README), runs the Go tests, commits "Version X", tags vX and
+ * pushes the tag: GitHub Actions builds, checks and publishes the release (.github/workflows/release.yml). It watches
+ * that run, and once it succeeded pushes main. main goes last because pix before 0.0.4 updates with main's
+ * install.sh, which must not run ahead of the release. If the run fails, nothing is published from it and main stays
+ * local: fix, commit, and release the next version.
  */
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
-import util from "node:util";
 
 const root = path.resolve(import.meta.dir, "..");
-const { values: args } = util.parseArgs({
-	options: {
-		publish: { type: "boolean" },
-		host: { type: "string", multiple: true, default: [] },
-	},
-});
-const version = /const Version = "(.+)"/.exec(fs.readFileSync(path.join(root, "internal/pix/catalog.go"), "utf8"))![1];
-const tag = `v${version}`;
-const pins = JSON.parse(fs.readFileSync(path.join(root, "internal/pix/data/sources.lock.json"), "utf8"));
-const platforms = Object.keys(pins.bun.platforms);
-const local = `${process.platform}/${process.arch === "x64" ? "amd64" : process.arch}`;
-const hosts = new Map(args.host!.map((h) => h.split("=") as [string, string]));
-const dist = path.join(root, "dist-release");
-const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "pix-release-"));
-const dataDir = (platform: string) => path.join(root, "internal/pix/runtime-data", platform.replace("/", "-"));
-const name = (prefix: string, platform: string, suffix = "") => `${prefix}-${platform.replace("/", "-")}${suffix}`;
-const asset = (prefix: string, platform: string, suffix = "") => path.join(dist, name(prefix, platform, suffix));
+const catalog = path.join(root, "internal/pix/catalog.go");
+const readme = path.join(root, "README.md");
 
-function run(cmd: string[], env: Record<string, string> = {}) {
+function run(cmd: string[]) {
 	console.error(`$ ${cmd.join(" ")}`);
-	const proc = Bun.spawnSync(cmd, { cwd: root, env: { ...process.env, ...env }, stdout: "inherit", stderr: "inherit" });
-	if (proc.exitCode !== 0) throw new Error(`${cmd[0]} failed`);
+	if (Bun.spawnSync(cmd, { cwd: root, stdout: "inherit", stderr: "inherit" }).exitCode !== 0) throw new Error(`${cmd.join(" ")} failed`);
 }
 function output(cmd: string[]): string {
 	const proc = Bun.spawnSync(cmd, { cwd: root, stderr: "pipe" });
 	if (proc.exitCode !== 0) throw new Error(`${cmd.join(" ")}: ${proc.stderr}`);
 	return proc.stdout.toString().trim();
 }
-function fail(message: string): never {
-	throw new Error(`release: ${message}`);
-}
-const sha256 = (file: string) => new Bun.CryptoHasher("sha256").update(fs.readFileSync(file)).digest("hex");
-function goBuild(platform: string, out: string, sums: string[]) {
-	const [GOOS, GOARCH] = platform.split("/");
-	const ldflags = sums.length ? ["-ldflags", `-X github.com/iamdin/pix/internal/pix.releaseSums=${sums.join(",")}`] : [];
-	run(["go", "build", "-trimpath", ...ldflags, "-o", out, "./cmd/pix"], { GOOS, GOARCH });
-}
 
-// Guards, before anything is built.
-for (const platform of platforms) {
-	if (!hosts.has(platform) && platform !== local) fail(`nothing compiles Pi for ${platform}: give --host ${platform}=SSH-TARGET or =gh`);
-	const zip = path.join(dataDir(platform), "bun.zip");
-	if (!fs.existsSync(zip) || sha256(zip) !== pins.bun.platforms[platform].sha256) fail(`${zip} is missing or not the pinned Bun`);
-}
-const onGitHub = platforms.filter((p) => hosts.get(p) === "gh");
-if (onGitHub.length > 0 && !args.publish) fail(`${onGitHub.join(", ")}: GitHub compiles on the draft release, with --publish`);
-if (args.publish) {
-	if (output(["git", "status", "--porcelain"])) fail("the work tree is not clean");
-	if (output(["git", "branch", "--show-current"]) !== "main") fail("not on main");
-	run(["git", "fetch", "-q", "origin", "main"]);
-	if (output(["git", "rev-parse", "HEAD"]) !== output(["git", "rev-parse", "origin/main"])) fail("main is not pushed");
-	if (Bun.spawnSync(["gh", "release", "view", tag], { cwd: root }).exitCode === 0) fail(`${tag} is already released`);
-}
-const head = output(["git", "ls-remote", pins.pi.repository, `refs/heads/${pins.pi.branch}`]).split(/\s/)[0];
-if (head !== pins.pi.commit) fail(`${pins.pi.repository} ${pins.pi.branch} is at ${head}, not the pinned ${pins.pi.commit}`);
+const bump = process.argv[2];
+const current = /const Version = "(\d+)\.(\d+)\.(\d+)"/.exec(fs.readFileSync(catalog, "utf8"));
+if (!current) throw new Error("no Version in catalog.go");
+const [major, minor, patch] = current.slice(1).map(Number);
+const version =
+	bump === "patch" ? `${major}.${minor}.${patch + 1}`
+	: bump === "minor" ? `${major}.${minor + 1}.0`
+	: bump === "major" ? `${major + 1}.0.0`
+	: /^\d+\.\d+\.\d+$/.test(bump ?? "") ? bump!
+	: (() => { throw new Error("usage: bun scripts/release.ts patch|minor|major|X.Y.Z"); })();
+const tag = `v${version}`;
+
+if (output(["git", "branch", "--show-current"]) !== "main") throw new Error("not on main");
+if (output(["git", "status", "--porcelain", "--untracked-files=no"])) throw new Error("commit or stash the changes first");
+run(["git", "fetch", "-q", "--tags", "origin", "main"]);
+if (output(["git", "rev-list", "--count", "HEAD..origin/main"]) !== "0") throw new Error("origin/main has commits that main has not: pull first");
+if (output(["git", "tag", "-l", tag])) throw new Error(`${tag} exists already`);
+
+fs.writeFileSync(catalog, fs.readFileSync(catalog, "utf8").replace(current[0], `const Version = "${version}"`));
+fs.writeFileSync(readme, fs.readFileSync(readme, "utf8").replace(/\*\*Currently [^,]+, for/, `**Currently ${version}, for`));
 run(["go", "vet", "./..."]);
 run(["go", "test", "-count=1", "./..."]);
+run(["git", "commit", "-q", "-m", `Version ${version}`, catalog, readme]);
+run(["git", "tag", tag]);
+run(["git", "push", "-q", "origin", tag]);
 
-// Prepare Pi for every platform here; compile it where it runs, with a pix that has Bun for that platform.
-fs.rmSync(dist, { recursive: true, force: true });
-fs.mkdirSync(dist, { recursive: true });
-const builder = path.join(scratch, "pix");
-run(["go", "build", "-o", builder, "./cmd/pix"]);
-for (const platform of platforms) run([builder, "self", "prepare", "--platform", platform, asset("pi-source", platform, ".tar.gz")]);
-for (const platform of platforms) goBuild(platform, path.join(scratch, name("builder", platform)), []);
-if (args.publish) {
-	// A draft first, so that nobody downloads assets that differ from the checked ones.
-	const sources = platforms.map((p) => asset("pi-source", p, ".tar.gz"));
-	const builders = onGitHub.map((p) => path.join(scratch, name("builder", p)));
-	run(["gh", "release", "create", tag, ...sources, ...builders, "--draft", "--title", `pix ${version}`, "--notes", "Install: `curl -fsSL https://github.com/iamdin/pix/releases/latest/download/install.sh | sh`"]);
+// The run the tag started.
+let id = "";
+for (let i = 0; i < 30 && !id; i++) {
+	Bun.sleepSync(2000);
+	id = output(["gh", "run", "list", "--workflow", "release.yml", "--branch", tag, "-L", "1", "--json", "databaseId", "-q", ".[0].databaseId"]);
 }
-
-const e2e = path.join(scratch, "e2e.tar.gz");
-run(["tar", "-czf", e2e, "-C", path.join(root, "bench"), "e2e"]);
-for (const platform of platforms) {
-	const prebuilt = asset("pi", platform, ".tar.gz");
-	const source = asset("pi-source", platform, ".tar.gz");
-	const pix = path.join(scratch, name("builder", platform));
-	if (platform === local) {
-		const build = path.join(scratch, "build");
-		run([pix, "compile", "--pi", source, "--out", build]);
-		run(["bun", path.join(root, "bench/e2e/run.ts"), path.join(build, "pi")]);
-		run(["tar", "-czf", prebuilt, "-C", build, "."]);
-	} else if (hosts.get(platform) === "gh") {
-		continue; // below, together
-	} else {
-		const target = hosts.get(platform)!;
-		const dir = output(["ssh", target, "mktemp -d"]);
-		run(["scp", "-q", pix, source, e2e, `${target}:${dir}/`]);
-		// bench/e2e runs with the Bun that `pix compile` unpacked into its cache.
-		const script = `set -e; cd ${dir}; chmod +x ${path.basename(pix)}; tar -xzf e2e.tar.gz; ./${path.basename(pix)} compile --pi ${path.basename(source)} --out build; bun=$(ls -t ~/.cache/pix/runtime/*/bun | head -1); $bun e2e/run.ts ${dir}/build/pi; tar -czf pi.tar.gz -C build .`;
-		run(["ssh", target, script]);
-		run(["scp", "-q", `${target}:${dir}/pi.tar.gz`, prebuilt]);
-		run(["ssh", target, `rm -rf ${dir}`]);
-	}
+if (!id) throw new Error(`the release workflow did not start for ${tag}; see https://github.com/iamdin/pix/actions`);
+console.error(`Releasing ${tag}: https://github.com/iamdin/pix/actions/runs/${id}`);
+if (Bun.spawnSync(["gh", "run", "watch", id, "--exit-status", "--interval", "30"], { cwd: root, stdout: "inherit", stderr: "inherit" }).exitCode !== 0) {
+	throw new Error(`the release of ${tag} failed (gh run view ${id} --log-failed); main is not pushed`);
 }
-if (onGitHub.length > 0) {
-	const since = new Date(Date.now() - 60_000).toISOString(); // allow for clock skew
-	run(["gh", "workflow", "run", "check-release.yml", "-f", `tag=${tag}`, "-f", `platforms=${JSON.stringify(onGitHub)}`]);
-	let id = "";
-	for (let i = 0; i < 30 && !id; i++) {
-		Bun.sleepSync(2000);
-		id = output(["gh", "run", "list", "--workflow", "check-release.yml", "--event", "workflow_dispatch", "-L", "1", "--json", "databaseId,createdAt", "--jq", `.[] | select(.createdAt >= "${since.slice(0, 19)}") | .databaseId`]);
-	}
-	if (!id) fail("the check-release workflow did not start");
-	if (Bun.spawnSync(["gh", "run", "watch", id, "--exit-status"], { cwd: root, stdout: "inherit", stderr: "inherit" }).exitCode !== 0)
-		fail(`compiling on GitHub failed (gh run view ${id} --log-failed); ${tag} stays a draft`);
-	for (const platform of onGitHub) {
-		run(["gh", "release", "download", tag, "--pattern", name("pi", platform, ".tar.gz"), "--dir", dist]);
-		run(["gh", "release", "delete-asset", tag, name("builder", platform), "--yes"]);
-	}
-}
-
-// pix itself, with the sums of the assets it downloads.
-const assets: string[] = [];
-for (const platform of platforms) {
-	const prebuilt = asset("pi", platform, ".tar.gz");
-	const source = asset("pi-source", platform, ".tar.gz");
-	const pix = asset("pix", platform);
-	goBuild(platform, pix, [`${path.basename(prebuilt)}=${sha256(prebuilt)}`, `${path.basename(source)}=${sha256(source)}`]);
-	fs.writeFileSync(`${pix}.sha256`, `${sha256(pix)}  ${path.basename(pix)}\n`);
-	assets.push(pix, `${pix}.sha256`, prebuilt);
-	console.log(`pix ${version} ${platform}: ${sha256(pix)}`);
-}
-
-if (args.publish) {
-	assets.push(path.join(root, "install.sh")); // what users and `pix update` run
-	run(["gh", "release", "upload", tag, "--clobber", ...assets]);
-	const download = path.join(scratch, "download");
-	run(["gh", "release", "download", tag, "--dir", download]);
-	for (const file of [...assets, ...platforms.map((p) => asset("pi-source", p, ".tar.gz"))]) {
-		if (sha256(path.join(download, path.basename(file))) !== sha256(file)) fail(`the uploaded ${path.basename(file)} differs; ${tag} stays a draft`);
-	}
-	if (fs.readdirSync(download).length !== assets.length + platforms.length) fail(`${tag} has unexpected assets; it stays a draft`);
-	run(["gh", "release", "edit", tag, "--draft=false", "--latest"]);
-	// install.sh downloads pix and its Pi, checked against the sums; Pi then runs.
-	const bin = path.join(scratch, "installed");
-	const env = { PIX_INSTALL_DIR: bin, PIX_HOME: path.join(scratch, "pix-home") };
-	run(["sh", path.join(root, "install.sh")], env);
-	if (output([path.join(bin, "pix"), "self", "version"]) !== version) fail("install.sh did not install this version");
-	run([path.join(bin, "pix"), "--version"], env);
-	console.log(`released ${tag}`);
-}
-fs.rmSync(scratch, { recursive: true, force: true });
+run(["git", "push", "-q", "origin", "main"]);
+console.log(`Released ${tag}: https://github.com/iamdin/pix/releases/tag/${tag}`);

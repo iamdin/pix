@@ -70,7 +70,7 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer) error
 	case "version", "--version":
 		fmt.Fprintln(stdout, Version)
 		return nil
-	case "prepare": // for scripts/release.ts and bench/build-variants.ts
+	case "prepare": // for the release workflow and bench/build-variants.ts
 		pins, err := sourcePins()
 		if err != nil {
 			return err

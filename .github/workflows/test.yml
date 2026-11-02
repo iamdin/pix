@@ -1,5 +1,5 @@
 # Go tests on every platform pix ships. The Bun and Pi archives are not in git, so tests that need them skip here;
-# scripts/release.ts runs every test with them before a release.
+# the release workflow runs every test with them.
 name: test
 on:
   push:

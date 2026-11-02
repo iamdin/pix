@@ -11,7 +11,7 @@ import (
 )
 
 // Assets on pix's GitHub release, for the platform pix runs on: the Pi that the release compiled, and the prepared Pi
-// that `pix compile` compiles with the user's packages. Bun is inside pix. scripts/release.ts sets their SHA-256 sums:
+// that `pix compile` compiles with the user's packages. Bun is inside pix. .github/workflows/release.yml sets their SHA-256 sums:
 // -ldflags "-X github.com/iamdin/pix/internal/pix.releaseSums=NAME=SUM,NAME=SUM"; development builds have none.
 var releaseSums string
 

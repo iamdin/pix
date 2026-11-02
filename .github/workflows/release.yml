@@ -1,4 +1,4 @@
-# Releases v<Version> (internal/pix/catalog.go) when its tag is pushed: `git tag vX && git push origin vX`.
+# Releases v<Version> (internal/pix/catalog.go) when its tag is pushed, by `bun scripts/release.ts patch`.
 #
 #   pi-source-<goos>-<goarch>.tar.gz  Pi from the pinned fork, patched, built and tested, with its runtime dependencies
 #                                     (`pix self prepare`, once, on macOS); `pix compile` uses it

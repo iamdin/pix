@@ -2,7 +2,7 @@
 
 Pi, built ahead of time with official Bun AOT and performance patches. Anyone who can use Pi can use pix: it reads
 Pi's settings, packages and sessions (`~/.pi`) and loads extensions as Pi does; `pix compile` compiles your extensions
-in for speed. **Currently 0.0.4, for macOS ARM64, Linux x64 and Linux ARM64 (glibc). Still an experimental toolchain.**
+in for speed. **Currently 0.0.3, for macOS ARM64, Linux x64 and Linux ARM64 (glibc). Still an experimental toolchain.**
 
 ## Install
 
@@ -22,9 +22,9 @@ packages uses npm or git, as with Pi.
 From source: `go build -trimpath -o bin/pix ./cmd/pix` (Go 1.24+, and the Bun archive for your platform in
 `internal/pix/runtime-data/<goos>-<goarch>/bun.zip`, which is not in git). Such a development build has no release
 to download from: run `pix self prepare /abs/pi.tar.gz` first (needs Git, Node 24+ and npm 11+), then `pix compile --pi
-/abs/pi.tar.gz --out DIR`. `sh scripts/fetch-bun.sh` downloads the Bun archives. Pushing the tag
-`v<Version>` releases it on GitHub Actions (`.github/workflows/release.yml`); `bun scripts/release.ts` does it from this
-machine.
+/abs/pi.tar.gz --out DIR`. `sh scripts/fetch-bun.sh` downloads the Bun archives. `bun scripts/release.ts patch` (or minor,
+major, X.Y.Z) releases: it sets the version, tags it, and GitHub Actions builds, checks and publishes the release
+(`.github/workflows/release.yml`).
 
 ## Use
 
