@@ -33,9 +33,9 @@ measurably slower. Code may overlap, but each commit must revert cleanly from th
   exists only in canary builds, so pix follows official Bun canaries. When only the Bun pin changes, the patches are
   unchanged: run step 5 (all patches vs the previous build), `base` vs `all` from step 4, and step 6. Only when one of
   them is worse or a gain is gone, run the combos of step 4 to find which patch.
-  To pin a canary: download `bun-darwin-aarch64.zip`, `bun-linux-x64.zip` and `bun-linux-aarch64.zip` of one canary
+  To pin a canary (also when its downloads are gone, which `scripts/fetch-bun.sh` needs for a release): download `bun-darwin-aarch64.zip`, `bun-linux-x64.zip` and `bun-linux-aarch64.zip` of one canary
   (all three `bun --revision` equal) into `internal/pix/runtime-data/<goos>-<goarch>/bun.zip`, and record each
-  zip's and binary's SHA-256 under `bun.platforms` in `sources.lock.json`; WebKit is `WEBKIT_VERSION` in Bun's
+  zip's asset URL (`https://api.github.com/repos/oven-sh/bun/releases/assets/ID`) and its and the binary's SHA-256 under `bun.platforms` in `sources.lock.json`; WebKit is `WEBKIT_VERSION` in Bun's
   `scripts/build/deps/webkit.ts` at that commit.
 
 ## Steps

@@ -1,0 +1,126 @@
+# Releases v<Version> (internal/pix/catalog.go) when its tag is pushed: `git tag vX && git push origin vX`.
+#
+#   pi-source-<goos>-<goarch>.tar.gz  Pi from the pinned fork, patched, built and tested, with its runtime dependencies
+#                                     (`pix self prepare`, once, on macOS); `pix compile` uses it
+#   pi-<goos>-<goarch>.tar.gz         that Pi compiled with Bun (`pix compile --out`) on the platform it is for, where it
+#                                     passes bench/e2e. install.sh and `pix update` download it: users compile nothing.
+#   pix-<goos>-<goarch>               pix, with Bun inside (scripts/fetch-bun.sh) and the sums of the two above
+#
+# The release is published once everything is built and checked; then install.sh installs it on each platform.
+name: release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+concurrency: release
+env:
+  GH_TOKEN: ${{ github.token }}
+  TAG: ${{ github.ref_name }}
+jobs:
+  prepare:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: sh scripts/fetch-bun.sh
+      - name: checks
+        run: |
+          test "$TAG" = "v$(sed -n 's/^const Version = "\(.*\)"/\1/p' internal/pix/catalog.go)" || { echo "$TAG is not v<Version>"; exit 1; }
+          lock=internal/pix/data/sources.lock.json
+          head=$(git ls-remote "$(jq -r .pi.repository $lock)" "refs/heads/$(jq -r .pi.branch $lock)" | cut -f1)
+          test "$head" = "$(jq -r .pi.commit $lock)" || { echo "the Pi fork branch is at $head, not the pinned commit"; exit 1; }
+          go vet ./...
+          go test -count=1 ./...
+      - name: prepare Pi, build the builders
+        run: |
+          go build -o "$RUNNER_TEMP/pix" ./cmd/pix
+          mkdir out
+          for p in $(jq -r '.bun.platforms | keys[]' internal/pix/data/sources.lock.json); do
+            n=$(echo "$p" | tr / -)
+            "$RUNNER_TEMP/pix" self prepare --platform "$p" "$PWD/out/pi-source-$n.tar.gz"
+            GOOS=${p%/*} GOARCH=${p#*/} go build -trimpath -o "out/builder-$n" ./cmd/pix
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prepared
+          path: out
+
+  compile:
+    needs: prepare
+    strategy:
+      matrix:
+        include:
+          - { platform: darwin-arm64, os: macos-latest }
+          - { platform: linux-amd64, os: ubuntu-latest }
+          - { platform: linux-arm64, os: ubuntu-24.04-arm }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: prepared
+          path: dl
+      - name: pix compile, bench/e2e
+        run: |
+          p=${{ matrix.platform }}
+          chmod +x "dl/builder-$p"
+          "dl/builder-$p" compile --pi "$PWD/dl/pi-source-$p.tar.gz" --out "$RUNNER_TEMP/build"
+          # bench/e2e runs with the Bun that `pix compile` unpacked into its cache.
+          bun=$(ls -t ~/.cache/pix/runtime/*/bun ~/Library/Caches/pix/runtime/*/bun 2>/dev/null | head -1)
+          "$bun" bench/e2e/run.ts "$RUNNER_TEMP/build/pi"
+          mkdir out
+          tar -czf "out/pi-$p.tar.gz" -C "$RUNNER_TEMP/build" .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pi-${{ matrix.platform }}
+          path: out
+
+  publish:
+    needs: compile
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: sh scripts/fetch-bun.sh
+      - uses: actions/download-artifact@v4
+        with:
+          path: dl
+          merge-multiple: true
+      - name: build pix with the sums, publish
+        run: |
+          sum() { shasum -a 256 "$1" | cut -d' ' -f1; }
+          mkdir out
+          for p in $(jq -r '.bun.platforms | keys[]' internal/pix/data/sources.lock.json); do
+            n=$(echo "$p" | tr / -)
+            cp "dl/pi-$n.tar.gz" "dl/pi-source-$n.tar.gz" out/
+            sums="pi-$n.tar.gz=$(sum out/pi-$n.tar.gz),pi-source-$n.tar.gz=$(sum out/pi-source-$n.tar.gz)"
+            GOOS=${p%/*} GOARCH=${p#*/} go build -trimpath -ldflags "-X github.com/iamdin/pix/internal/pix.releaseSums=$sums" -o "out/pix-$n" ./cmd/pix
+            (cd out && shasum -a 256 "pix-$n" > "pix-$n.sha256")
+          done
+          ls -l out
+          # A draft until every asset is uploaded, so that nobody downloads a partial release.
+          gh release create "$TAG" out/* --draft --title "pix ${TAG#v}" --notes 'Install: `curl -fsSL https://raw.githubusercontent.com/iamdin/pix/main/install.sh | sh` or `npm i -g usepix`'
+          gh release edit "$TAG" --draft=false --latest
+
+  install:
+    needs: publish
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: install.sh
+        run: |
+          export PIX_INSTALL_DIR="$RUNNER_TEMP/bin" PIX_HOME="$RUNNER_TEMP/pix-home"
+          sh install.sh
+          test "$("$PIX_INSTALL_DIR/pix" self version)" = "${TAG#v}"
+          "$PIX_INSTALL_DIR/pix" --version

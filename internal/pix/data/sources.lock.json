@@ -8,26 +8,26 @@
   },
   "bun": {
     "repository": "https://github.com/oven-sh/bun.git",
-    "commit": "da867c60bf0bcbf9d6d36994f8ca0efa42075115",
-    "webkit_commit": "8c6c963e3c49fe39942d9625d1fc924128fad26e",
-    "revision": "1.4.4-canary.1+da867c60b",
+    "commit": "3f3a9ff87cdccf3d32d7ec6b648c664eddaae840",
+    "webkit_commit": "4d45755fed4aeef19e95beb90d3d0c884a2812bd",
+    "revision": "1.4.4-canary.1+3f3a9ff87",
     "platforms": {
       "darwin/arm64": {
-        "url": "https://api.github.com/repos/oven-sh/bun/releases/assets/687869686",
-        "sha256": "67ede5394a7da4a8b1a1eb0788b72325f480bc956cb1155b6be962919c9aa581",
-        "binary_sha256": "256c4f08d81ae8d5c0e445c637b424ba780e0514374b5328dd3db7a953e1aac5",
+        "url": "https://api.github.com/repos/oven-sh/bun/releases/assets/697873698",
+        "sha256": "9878f8609a02b7b23dcbb9a1b592aa8ab820ed8652975814c5646b36957e1680",
+        "binary_sha256": "cbecab3f05a0c8bc11ea0164e5868db0b5da12067fdb13dfcacfc9bf87b68b6a",
         "member": "bun-darwin-aarch64/bun"
       },
       "linux/amd64": {
-        "url": "https://api.github.com/repos/oven-sh/bun/releases/assets/687869747",
-        "sha256": "e8f27b24f74186e87fc0f0f603bdb6b79264dc86a1680da41e2025a3cb3efee0",
-        "binary_sha256": "fe406996b9915f388e3fad9e6e29ece9c7cb81e06257bbcb4c50f91691b46810",
+        "url": "https://api.github.com/repos/oven-sh/bun/releases/assets/697873851",
+        "sha256": "43e54d1d6ff2924454ee523a40a6d862ba5ec4e5a8796329e61d22fea67f25c2",
+        "binary_sha256": "f5b1f97281cc4e74154e8962c91a0ef493e7c78e5c84e8bff83cb456acd731d4",
         "member": "bun-linux-x64/bun"
       },
       "linux/arm64": {
-        "url": "https://api.github.com/repos/oven-sh/bun/releases/assets/687869647",
-        "sha256": "a6e36924c8c6dc63459660e27a48cdd7189a7e888e590272d029de98d169d1e6",
-        "binary_sha256": "83fa5c7812696de87a743caa4a915d5a17fa5be2a00ada0a2f5e6233108d6781",
+        "url": "https://api.github.com/repos/oven-sh/bun/releases/assets/697873691",
+        "sha256": "d05f60ba50dfb733974b4acd6135acf0a628cac9a966af6324c1a12f99883340",
+        "binary_sha256": "828dce0d925713baf968cbf862b39b96aaa574dd36f0b5a8303c8224fd3c4bec",
         "member": "bun-linux-aarch64/bun"
       }
     }

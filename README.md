@@ -22,7 +22,9 @@ packages uses npm or git, as with Pi.
 From source: `go build -trimpath -o bin/pix ./cmd/pix` (Go 1.24+, and the Bun archive for your platform in
 `internal/pix/runtime-data/<goos>-<goarch>/bun.zip`, which is not in git). Such a development build has no release
 to download from: run `pix self prepare /abs/pi.tar.gz` first (needs Git, Node 24+ and npm 11+), then `pix compile --pi
-/abs/pi.tar.gz --out DIR`. `bun scripts/release.ts` builds a release.
+/abs/pi.tar.gz --out DIR`. `sh scripts/fetch-bun.sh` downloads the Bun archives. Pushing the tag
+`v<Version>` releases it on GitHub Actions (`.github/workflows/release.yml`); `bun scripts/release.ts` does it from this
+machine.
 
 ## Use
 
@@ -127,8 +129,8 @@ upgrading Pi must run the resolution regression tests.
 | Component | Pinned |
 |---|---|
 | Pi | v1.4.0 with pix's patches: [getpie-dev/pi](https://github.com/getpie-dev/pi) `pix-v1.4.0`, f9731d41a29da59e2893622d7189ce85840cf137 |
-| Bun | 1.4.4-canary.1, da867c60bf0bcbf9d6d36994f8ca0efa42075115 |
-| WebKit/JSC | 8c6c963e3c49fe39942d9625d1fc924128fad26e |
+| Bun | 1.4.4-canary.1, 3f3a9ff87cdccf3d32d7ec6b648c664eddaae840 |
+| WebKit/JSC | 4d45755fed4aeef19e95beb90d3d0c884a2812bd |
 
 There is no choice of Pi or Bun version. Pi follows upstream release tags only, and pix's patches are commits on a
 fork (see [PATCHES.md](PATCHES.md)). Bun AOT exists only in canary builds, so Bun is pinned to one official canary build
@@ -151,7 +153,7 @@ commit on the fork, and its tests run at every release. Method, invariants and m
 | `native-image-resize` | Large images are resized natively with Bun.Image, not Photon (without a JIT, its WebAssembly is tens of times slower) |
 
 Pi v1.4.0 with official AOT, stock → pix (Apple M4, CPU time / RSS): a 60,000-character streamed Markdown reply
-24.2 s → 4.8 s; a 200 KB write (`pi -p`) 9.7 s → 0.1 s; memory for a 200 KB write in the TUI 316 MB → 105 MB; startup
+22.9 s → 4.3 s; a 200 KB write (`pi -p`) 9.6 s → 0.1 s; memory for a 200 KB write in the TUI 320 MB → 115 MB; startup
 unchanged; reading one 3000 px image 25 s → 0.3 s.
 
 **`streaming-tool-arguments` changes behavior**: intermediate parsed snapshots of large tool arguments are updated less
