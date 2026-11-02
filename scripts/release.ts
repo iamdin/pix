@@ -1,7 +1,7 @@
 /**
  * Releases pix, like `npm version` and `npm publish` in one:
  *
- *   bun scripts/release.ts patch        # 0.0.4 -> 0.0.5 (also minor, major, or a version such as 0.1.0)
+ *   bun run release patch               # 0.0.4 -> 0.0.5 (also minor, major, or a version such as 0.1.0)
  *
  * It sets the version (internal/pix/catalog.go and the README), runs the Go tests, commits "Version X", tags vX and
  * pushes the tag: GitHub Actions builds, checks and publishes the release (.github/workflows/release.yml). It watches
@@ -43,7 +43,7 @@ const version =
 	: bump === "minor" ? `${major}.${minor + 1}.0`
 	: bump === "major" ? `${major + 1}.0.0`
 	: /^\d+\.\d+\.\d+$/.test(bump ?? "") ? bump!
-	: (() => { throw new Error("usage: bun scripts/release.ts patch|minor|major|X.Y.Z"); })();
+	: (() => { throw new Error("usage: bun run release patch|minor|major|X.Y.Z"); })();
 const tag = `v${version}`;
 
 if (output(["git", "branch", "--show-current"]) !== "main") throw new Error("not on main");

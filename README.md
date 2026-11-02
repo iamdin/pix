@@ -22,7 +22,7 @@ packages uses npm or git, as with Pi.
 From source: `go build -trimpath -o bin/pix ./cmd/pix` (Go 1.24+, and the Bun archive for your platform in
 `internal/pix/runtime-data/<goos>-<goarch>/bun.zip`, which is not in git). Such a development build has no release
 to download from: run `pix self prepare /abs/pi.tar.gz` first (needs Git, Node 24+ and npm 11+), then `pix compile --pi
-/abs/pi.tar.gz --out DIR`. `sh scripts/fetch-bun.sh` downloads the Bun archives. `bun scripts/release.ts patch` (or minor,
+/abs/pi.tar.gz --out DIR`. `sh scripts/fetch-bun.sh` downloads the Bun archives. `bun run release patch` (or minor,
 major, X.Y.Z) releases: it sets the version, tags it, and GitHub Actions builds, checks and publishes the release
 (`.github/workflows/release.yml`).
 
