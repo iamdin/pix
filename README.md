@@ -2,12 +2,12 @@
 
 Pi, built ahead of time with official Bun AOT and performance patches. Anyone who can use Pi can use pix: it reads
 Pi's settings, packages and sessions (`~/.pi`) and loads extensions as Pi does; `pix compile` compiles your extensions
-in for speed. **Currently 0.0.3, for macOS ARM64, Linux x64 and Linux ARM64 (glibc). Still an experimental toolchain.**
+in for speed. **Currently 0.0.4, for macOS ARM64, Linux x64 and Linux ARM64 (glibc). Still an experimental toolchain.**
 
 ## Install
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/iamdin/pix/main/install.sh | sh
+curl -fsSL https://github.com/iamdin/pix/releases/latest/download/install.sh | sh
 # or
 npm i -g usepix
 ```
@@ -43,8 +43,10 @@ pix self feedback FILE # send a failed compile's feedback (it names FILE) as a G
   packages' files into the build with hard links, which take no space; the build is about 200 MB. Only the build in use
   is kept.
 - `pix install/remove/update` work as in Pi; with extensions compiled in, pix reminds you to run `pix compile`.
-  `pix update` updates pix and its Pi (`--extensions` updates packages, `--all` both); if extensions were compiled
-  in, the next run compiles them into the new Pi.
+  `pix update` updates pix and its Pi (`--extensions` updates packages, `--all` both), and compiles the packages into
+  the new Pi if they were compiled in; if that fails, it uses the new Pi with the packages loaded from disk. pix checks
+  for a new release once a day in the background and says so when it starts in a terminal. To go back to an earlier
+  release (0.0.4 or later): `curl -fsSL https://github.com/iamdin/pix/releases/latest/download/install.sh | PIX_VERSION=0.0.4 sh`.
 - A new build is switched to only after it passes its checks. The previous build is kept for sessions still running it;
   older ones are deleted along with their build directories in the cache.
 - `compile` shows each step and how long it took (the current one counts up in a terminal; elsewhere a long compile adds

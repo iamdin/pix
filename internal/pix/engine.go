@@ -160,7 +160,7 @@ func download(ctx context.Context, url, target, expected string) error {
 		return err
 	}
 	req.Header.Set("Accept", "application/octet-stream")
-	client := http.Client{Timeout: 5 * time.Minute}
+	client := http.Client{Timeout: 30 * time.Minute} // about 70 MB on a slow connection
 	response, err := client.Do(req)
 	if err != nil {
 		return err

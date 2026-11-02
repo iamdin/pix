@@ -91,7 +91,7 @@ if (args.publish) {
 	// A draft first, so that nobody downloads assets that differ from the checked ones.
 	const sources = platforms.map((p) => asset("pi-source", p, ".tar.gz"));
 	const builders = onGitHub.map((p) => path.join(scratch, name("builder", p)));
-	run(["gh", "release", "create", tag, ...sources, ...builders, "--draft", "--title", `pix ${version}`, "--notes", "Install: `curl -fsSL https://raw.githubusercontent.com/iamdin/pix/main/install.sh | sh`"]);
+	run(["gh", "release", "create", tag, ...sources, ...builders, "--draft", "--title", `pix ${version}`, "--notes", "Install: `curl -fsSL https://github.com/iamdin/pix/releases/latest/download/install.sh | sh`"]);
 }
 
 const e2e = path.join(scratch, "e2e.tar.gz");
@@ -148,6 +148,7 @@ for (const platform of platforms) {
 }
 
 if (args.publish) {
+	assets.push(path.join(root, "install.sh")); // what users and `pix update` run
 	run(["gh", "release", "upload", tag, "--clobber", ...assets]);
 	const download = path.join(scratch, "download");
 	run(["gh", "release", "download", tag, "--dir", download]);

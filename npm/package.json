@@ -1,6 +1,6 @@
 {
   "name": "usepix",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "pix: Pi, built ahead of time with Bun, with performance patches",
   "license": "MIT",
   "repository": {

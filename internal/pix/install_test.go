@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 )
 
 // fakeRelease serves a prebuilt Pi for this pix as its release asset.
@@ -39,6 +40,9 @@ func fakeRelease(t *testing.T) {
 	base, sums := releaseBase, releaseSums
 	releaseBase, releaseSums = server.URL, prebuiltAsset()+"="+sum
 	t.Cleanup(func() { releaseBase, releaseSums = base, sums })
+	delay := retryDelay
+	retryDelay = 0
+	t.Cleanup(func() { retryDelay = delay })
 }
 
 func TestInstallationLifecycle(t *testing.T) {
@@ -155,5 +159,81 @@ func TestUpdateTarget(t *testing.T) {
 		if self, rest := updateTarget(c.args); self != c.self || !slices.Equal(rest, c.rest) {
 			t.Errorf("%v: %v %q, want %v %q", c.args, self, rest, c.self, c.rest)
 		}
+	}
+}
+
+// After an update, sync compiles the packages into the new Pi; when that fails it uses the new release's Pi.
+func TestSyncAfterUpdate(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("HOME", root)
+	t.Setenv("XDG_CACHE_HOME", filepath.Join(root, "cache"))
+	t.Setenv("PI_CODING_AGENT_DIR", filepath.Join(root, "agent"))
+	writeFile(t, filepath.Join(root, "agent", "settings.json"), `{"packages": ["npm:x"]}`, 0644)
+	fakeRelease(t)
+	in := &installation{Home: filepath.Join(root, "pix")}
+	old := func(extensions []Extension) {
+		dir := filepath.Join(in.Home, "versions", "old")
+		writeFile(t, filepath.Join(dir, "pi"), "#!/bin/sh\n", 0755)
+		if err := writeJSON(filepath.Join(dir, "pix-build.json"), Manifest{Schema: 1, Pix: "0.0.0", Extensions: extensions}); err != nil {
+			t.Fatal(err)
+		}
+		if err := in.switchTo("old"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	defer func() { buildFunc = Build }()
+	for _, fails := range []bool{false, true} {
+		old([]Extension{{Name: "x"}})
+		buildFunc = func(_ context.Context, opts Options, _ io.Writer) error {
+			if fails {
+				return io.ErrUnexpectedEOF
+			}
+			writeFile(t, filepath.Join(opts.Out, "pi"), "#!/bin/sh\n", 0755)
+			return writeJSON(filepath.Join(opts.Out, "pix-build.json"), Manifest{Schema: 1, Pix: Version, Extensions: []Extension{{Name: "x"}}})
+		}
+		if err := in.sync(context.Background(), io.Discard); err != nil {
+			t.Fatal(err)
+		}
+		m, _ := readManifest(filepath.Join(in.Home, "current"))
+		if ids, _ := in.versions(); m.Pix != Version || (len(m.Extensions) > 0) == fails || len(ids) != 1 {
+			t.Fatalf("compile fails %v: current %+v, versions %v", fails, m, ids)
+		}
+	}
+}
+
+func TestLockSerializes(t *testing.T) {
+	in := &installation{Home: t.TempDir()}
+	unlock, err := in.lock(io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := make(chan struct{})
+	go func() {
+		second, err := in.lock(io.Discard)
+		if err == nil {
+			second()
+		}
+		close(got)
+	}()
+	select {
+	case <-got:
+		t.Fatal("two holders of the lock")
+	case <-time.After(200 * time.Millisecond):
+	}
+	unlock()
+	<-got
+}
+
+func TestCheckLatest(t *testing.T) {
+	server := httptest.NewServer(http.RedirectHandler("/iamdin/pix/releases/tag/v9.9.9", http.StatusFound))
+	defer server.Close()
+	defer func(u string) { latestURL = u }(latestURL)
+	latestURL = server.URL
+	in := &installation{Home: t.TempDir()}
+	if err := in.checkLatest(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if data, _ := os.ReadFile(filepath.Join(in.Home, "latest")); string(data) != "9.9.9" {
+		t.Fatalf("latest %q", data)
 	}
 }

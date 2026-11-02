@@ -8,7 +8,7 @@ const path = require("node:path");
 const dir = path.join(process.env.PIX_HOME || path.join(os.homedir(), ".pix"), "bin");
 const pix = path.join(dir, "pix");
 if (!fs.existsSync(pix)) {
-	const install = "curl -fsSL https://raw.githubusercontent.com/iamdin/pix/main/install.sh | sh";
+	const install = "curl -fsSL https://github.com/iamdin/pix/releases/latest/download/install.sh | sh";
 	// With dir on PATH, install.sh does not ask to add it.
 	const env = { ...process.env, PIX_INSTALL_DIR: dir, PATH: `${dir}:${process.env.PATH}` };
 	const result = childProcess.spawnSync("sh", ["-c", install], { stdio: ["ignore", "inherit", "inherit"], env });

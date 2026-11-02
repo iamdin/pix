@@ -105,12 +105,18 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer) error
 			return fmt.Errorf("usage: pix self feedback [-y] FEEDBACK.md (a failed compile names its file)")
 		}
 		return feedback(f.Arg(0), *yes, os.Stdin, stdout)
-	case "install": // for install.sh
+	case "install": // for install.sh: download this pix's Pi, or after an update switch to it
 		in, err := loadInstallation()
 		if err != nil {
 			return err
 		}
-		return in.install(ctx, stdout)
+		return in.sync(ctx, stdout)
+	case "check-update": // started by notice
+		in, err := loadInstallation()
+		if err != nil {
+			return err
+		}
+		return in.checkLatest(ctx)
 	case "status", "uninstall":
 		if len(args) != 1 {
 			return fmt.Errorf("usage: pix self %s", args[0])
@@ -153,6 +159,11 @@ func compileCommand(ctx context.Context, args []string, stdout, stderr io.Writer
 		if err != nil {
 			return err
 		}
+		unlock, err := in.lock(stderr)
+		if err != nil {
+			return err
+		}
+		defer unlock()
 		if *none {
 			err = in.install(ctx, stdout)
 		} else {

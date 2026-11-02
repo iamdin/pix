@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -20,6 +22,8 @@ import (
 //
 //	versions/<id>/  builds: the current one, and older ones while a session still runs them
 //	current         symlink to the version in use
+//	lock            held while installing, compiling or pruning
+//	latest          the version of pix's latest release, checked once a day
 //
 // Installing pix downloads the Pi that its release compiled; Pi loads the user's packages from disk, as the original
 // does. `pix compile` builds again with the packages in the Pi settings compiled in.
@@ -231,6 +235,98 @@ func readManifest(dir string) (Manifest, error) {
 	return manifest, err
 }
 
+// lock serializes the changes to PIX_HOME across pix processes, so that none prunes a build that another is still
+// compiling or downloading; the lock goes with the process.
+func (in *installation) lock(stderr io.Writer) (unlock func(), err error) {
+	if err := os.MkdirAll(in.Home, 0755); err != nil {
+		return nil, err
+	}
+	f, err := os.OpenFile(filepath.Join(in.Home, "lock"), os.O_CREATE|os.O_RDWR, 0644)
+	if err != nil {
+		return nil, err
+	}
+	if syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB) != nil {
+		fmt.Fprintln(stderr, "pix: waiting for another pix to finish installing or compiling")
+		if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+			f.Close()
+			return nil, err
+		}
+	}
+	return func() { f.Close() }, nil
+}
+
+// sync makes PIX_HOME run this pix's Pi. The first time it downloads it. After an update it compiles the packages into
+// the new Pi if they were compiled into the old one, and when that fails it downloads the new Pi, which loads them from
+// disk, rather than retry on every run. It removes the builds no longer in use.
+func (in *installation) sync(ctx context.Context, stderr io.Writer) error {
+	unlock, err := in.lock(stderr)
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	if in.current() == "" {
+		return in.install(ctx, stderr)
+	}
+	if built, _ := readManifest(filepath.Join(in.Home, "current")); built.Pix != Version {
+		if len(built.Extensions) > 0 {
+			fmt.Fprintf(stderr, "pix: compiling your packages into the Pi of pix %s (about a minute)\n", Version)
+			err := in.compile(ctx, 30*time.Minute, stderr)
+			if err == nil {
+				return nil
+			}
+			fmt.Fprintf(stderr, "pix: %v\npix: using the new Pi with the packages loaded from disk; `pix compile` tries again\n", err)
+		}
+		return in.install(ctx, stderr)
+	}
+	if ids, _ := in.versions(); len(ids) > 1 {
+		return in.prune(nil) // a build left for sessions that have since ended
+	}
+	return nil
+}
+
+// latestURL redirects to the page of pix's latest release; replaced in tests.
+var latestURL = "https://github.com/iamdin/pix/releases/latest"
+
+// notice says in a terminal when the latest release is another pix, as the last check found; it starts a check in the
+// background at most once a day.
+func (in *installation) notice(stderr io.Writer) {
+	file := filepath.Join(in.Home, "latest")
+	latest, _ := os.ReadFile(file)
+	if len(latest) > 0 && string(latest) != Version && isTerminal(os.Stderr) {
+		fmt.Fprintf(stderr, "pix: pix %s is out (this is %s): run `pix update`\n", latest, Version)
+	}
+	if info, err := os.Stat(file); err == nil && time.Since(info.ModTime()) < 24*time.Hour {
+		return
+	}
+	_ = os.WriteFile(file, latest, 0644) // the time of this check, also when it fails
+	if self, err := os.Executable(); err == nil {
+		cmd := exec.Command(self, "self", "check-update")
+		cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+		_ = cmd.Start()
+	}
+}
+
+// checkLatest records the version of pix's latest release for notice.
+func (in *installation) checkLatest(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, latestURL, nil)
+	if err != nil {
+		return err
+	}
+	client := http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+	tag := path.Base(resp.Header.Get("Location")) // .../releases/tag/v1.2.3
+	if !strings.HasPrefix(tag, "v") {
+		return fmt.Errorf("%s: no latest release (%s)", latestURL, resp.Status)
+	}
+	return os.WriteFile(filepath.Join(in.Home, "latest"), []byte(strings.TrimPrefix(tag, "v")), 0644)
+}
+
 // runPi runs Pi with args, downloading it first on the first run.
 func runPi(ctx context.Context, args []string, stderr io.Writer) error {
 	in, err := loadInstallation()
@@ -248,26 +344,13 @@ func runPi(ctx context.Context, args []string, stderr io.Writer) error {
 			}
 		}
 	}
-	if in.current() == "" {
-		if err := in.install(ctx, stderr); err != nil {
+	if err := in.sync(ctx, stderr); err != nil {
+		if in.current() == "" {
 			return err
 		}
-	} else if built, _ := readManifest(filepath.Join(in.Home, "current")); built.Pix != Version {
-		// A new pix comes with a new Pi; compile the packages into it again if they were.
-		var err error
-		if len(built.Extensions) > 0 {
-			fmt.Fprintf(stderr, "pix: compiling your packages into the Pi of pix %s (about a minute)\n", Version)
-			err = in.compile(ctx, 30*time.Minute, stderr)
-		} else {
-			err = in.install(ctx, stderr)
-		}
-		if err != nil {
-			fmt.Fprintf(stderr, "pix: %v\npix: running the previous Pi\n", err)
-		}
+		fmt.Fprintf(stderr, "pix: %v\npix: running the previous Pi\n", err)
 	}
-	if ids, _ := in.versions(); len(ids) > 1 {
-		_ = in.prune(nil) // a build left for sessions that have since ended
-	}
+	in.notice(stderr)
 	// The version's own path, so that prune can tell it is running.
 	exe := filepath.Join(in.Home, "versions", in.current(), "pi")
 	manifest, _ := readManifest(filepath.Join(in.Home, "current"))
@@ -383,10 +466,10 @@ func updateTarget(args []string) (bool, []string) {
 	return self, rest
 }
 
-// installer updates pix in place; replaced in tests.
-var installer = "curl -fsSL https://raw.githubusercontent.com/iamdin/pix/main/install.sh | sh"
+// installer updates pix in place with the latest release's own install.sh; replaced in tests.
+var installer = "curl -fsSL https://github.com/iamdin/pix/releases/latest/download/install.sh | sh"
 
-// updateSelf installs the latest pix over this one, with its Pi.
+// updateSelf installs the latest pix over this one and switches to its Pi (install.sh runs `pix self install`).
 func updateSelf(stderr io.Writer) error {
 	self, err := os.Executable()
 	if err != nil {

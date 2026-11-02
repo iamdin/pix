@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 )
 
 // Assets on pix's GitHub release, for the platform pix runs on: the Pi that the release compiled, and the prepared Pi
@@ -29,6 +30,9 @@ func releaseSum(name string) string {
 	return ""
 }
 
+// retryDelay grows by itself between download attempts; replaced in tests.
+var retryDelay = 2 * time.Second
+
 // fetchAsset downloads a release asset into dir, checked against its sum, and returns its path.
 func fetchAsset(ctx context.Context, dir, name string) (string, error) {
 	sum := releaseSum(name)
@@ -36,8 +40,15 @@ func fetchAsset(ctx context.Context, dir, name string) (string, error) {
 		return "", fmt.Errorf("this pix is a development build without release assets: use `pix compile --out DIR --pi PI.tar.gz`")
 	}
 	path := filepath.Join(dir, name)
-	if err := download(ctx, releaseBase+"/"+name, path, sum); err != nil {
+	var err error
+	for attempt := 1; ; attempt++ { // a large download over a flaky network or proxy may break off
+		if err = download(ctx, releaseBase+"/"+name, path, sum); err == nil || ctx.Err() != nil || attempt == 3 {
+			break
+		}
 		_ = os.Remove(path)
+		time.Sleep(time.Duration(attempt) * retryDelay)
+	}
+	if err != nil {
 		return "", fmt.Errorf("download %s: %w", name, err)
 	}
 	return path, nil
