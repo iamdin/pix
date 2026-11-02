@@ -449,14 +449,11 @@ func (in *installation) releaseNotice() string {
 		_ = os.WriteFile(file, latest, 0644) // the time of this check, also when it fails
 		startBackground("check-update")
 	}
-	if len(latest) == 0 || string(latest) == Version {
+	// Only a newer release: an older one is a check from before this pix was installed.
+	if !newerVersion(string(latest), Version) {
 		return ""
 	}
-	link := "https://github.com/iamdin/pix/releases/tag/v" + string(latest)
-	if newerVersion(Version, string(latest)) { // the maintainers went back to an earlier release
-		return fmt.Sprintf("pix %s is the latest release again (this is %s): run pix update to go back · %s", latest, Version, link)
-	}
-	return fmt.Sprintf("pix %s is available: run pix update · %s", latest, link)
+	return fmt.Sprintf("pix %s is available: run pix update · https://github.com/iamdin/pix/releases/tag/v%s", latest, latest)
 }
 
 // newerVersion reports whether version a is newer than b; pix versions are dotted numbers.

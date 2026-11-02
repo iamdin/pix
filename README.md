@@ -51,8 +51,7 @@ pix self feedback FILE # send a failed compile's feedback (it names FILE) as a G
 - `pix install/remove/update` work as in Pi. `pix update` updates pix and its Pi (`--extensions` updates packages,
   `--all` both).
 - **Updates are yours to run, as in Pi.** A run checks for a new pix release in the background at most once an hour,
-  and Pi shows `pix X is available: run pix update`, with a link to the release, when one is out (or, when an
-  earlier release is the latest again, that `pix update` goes back to it); `pix self status` shows the last check (`PI_SKIP_VERSION_CHECK=1` or `PI_OFFLINE=1` turn
+  and Pi shows `pix X is available: run pix update`, with a link to the release, when one is out; `pix self status` shows the last check (`PI_SKIP_VERSION_CHECK=1` or `PI_OFFLINE=1` turn
   the check off, as for Pi). `pix update` installs it, and your packages are compiled into the new Pi in the background. To go back to an earlier release
   (0.0.4 or later): `curl -fsSL https://github.com/iamdin/pix/releases/latest/download/install.sh | PIX_VERSION=0.0.4 sh`.
 - A new build is switched to only after it passes its checks. The previous build is kept for sessions still running it;

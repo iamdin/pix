@@ -28,7 +28,7 @@ if [ -x "$dir/pix" ] && [ "$(sha "$dir/pix")" = "$want" ]; then
 	echo "pix $("$dir/pix" self version) in $dir is up to date"
 else
 	echo "Downloading pix (about 70 MB, with Bun for \`pix compile\`)..."
-	curl -fL --progress-bar "$base/$asset" -o "$tmp/pix"
+	curl -fsSL "$base/$asset" -o "$tmp/pix" # no progress bar: it breaks in a terminal narrower than curl assumes
 	[ "$(sha "$tmp/pix")" = "$want" ] || { echo "pix: checksum mismatch" >&2; exit 1; }
 	mkdir -p "$dir"
 	install -m 755 "$tmp/pix" "$dir/pix"

@@ -296,7 +296,7 @@ func TestReleaseNotice(t *testing.T) {
 	defer func(v string) { Version = v }(Version)
 	Version = "0.0.5"
 	in := &installation{Home: t.TempDir()}
-	for latest, want := range map[string]string{Version: "", "99.0.0": "pix 99.0.0 is available", "0.0.0": "latest release again"} {
+	for latest, want := range map[string]string{Version: "", "99.0.0": "pix 99.0.0 is available", "0.0.0": ""} {
 		writeFile(t, filepath.Join(in.Home, "latest"), latest, 0644) // fresh: no check starts
 		if got := in.releaseNotice(); !strings.Contains(got, want) || (want == "") != (got == "") {
 			t.Errorf("latest %s: %q", latest, got)
