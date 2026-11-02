@@ -293,6 +293,8 @@ func TestReleaseNotice(t *testing.T) {
 	t.Setenv("PI_OFFLINE", "")
 	defer func(s string) { releaseSums = s }(releaseSums)
 	releaseSums = "x=y"
+	defer func(v string) { Version = v }(Version)
+	Version = "0.0.5"
 	in := &installation{Home: t.TempDir()}
 	for latest, want := range map[string]string{Version: "", "99.0.0": "pix 99.0.0 is available", "0.0.0": "latest release again"} {
 		writeFile(t, filepath.Join(in.Home, "latest"), latest, 0644) // fresh: no check starts

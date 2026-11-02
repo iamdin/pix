@@ -11,7 +11,8 @@ import (
 	"strings"
 )
 
-const Version = "0.0.5"
+// Version is set by the release workflow (-ldflags -X), from the previous release's tag.
+var Version = "dev"
 
 //go:embed data
 var assets embed.FS

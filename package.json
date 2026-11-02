@@ -1,6 +1,0 @@
-{
-  "private": true,
-  "scripts": {
-    "release": "bun scripts/release.ts"
-  }
-}

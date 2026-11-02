@@ -1,4 +1,5 @@
-# Releases v<Version> (internal/pix/catalog.go) when its tag is pushed, by `bun run release patch`.
+# Releases the next version when a push to main changes pix: the patch after the latest release, or by hand
+# (`gh workflow run release -f bump=minor`). The version goes into pix with -ldflags; the release creates its tag.
 #
 #   pi-source-<goos>-<goarch>.tar.gz  Pi from the pinned fork, patched, built and tested, with its runtime dependencies
 #                                     (`pix self prepare`, once, on macOS); `pix compile` uses it
@@ -13,18 +14,41 @@
 name: release
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+    paths: [cmd/**, internal/**, install.sh, go.mod, go.sum, scripts/fetch-bun.sh, .github/workflows/release.yml]
+  workflow_dispatch:
+    inputs:
+      bump:
+        type: choice
+        options: [patch, minor, major]
+        default: patch
 permissions:
   contents: write
+# One release at a time; of the pushes made meanwhile, only the latest is released next.
 concurrency: release
 env:
   GH_TOKEN: ${{ github.token }}
-  TAG: ${{ github.ref_name }}
 jobs:
   prepare:
     runs-on: macos-latest
+    outputs:
+      tag: v${{ steps.version.outputs.version }}
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+      - id: version
+        name: the next version
+        run: |
+          prev=$(gh release list --exclude-drafts --exclude-pre-releases --limit 1 --json tagName -q '.[0].tagName')
+          IFS=. read -r major minor patch <<< "${prev#v}"
+          case "${{ inputs.bump || 'patch' }}" in
+          major) v=$((major + 1)).0.0 ;;
+          minor) v=$major.$((minor + 1)).0 ;;
+          *) v=$major.$minor.$((patch + 1)) ;;
+          esac
+          echo "$prev -> $v"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "LDFLAGS=-X github.com/iamdin/pix/internal/pix.Version=$v" >> "$GITHUB_ENV"
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -34,7 +58,6 @@ jobs:
       - run: sh scripts/fetch-bun.sh
       - name: checks
         run: |
-          test "$TAG" = "v$(sed -n 's/^const Version = "\(.*\)"/\1/p' internal/pix/catalog.go)" || { echo "$TAG is not v<Version>"; exit 1; }
           lock=internal/pix/data/sources.lock.json
           head=$(git ls-remote "$(jq -r .pi.repository $lock)" "refs/heads/$(jq -r .pi.branch $lock)" | cut -f1)
           test "$head" = "$(jq -r .pi.commit $lock)" || { echo "the Pi fork branch is at $head, not the pinned commit"; exit 1; }
@@ -42,12 +65,12 @@ jobs:
           go test -count=1 ./...
       - name: prepare Pi, build the builders
         run: |
-          go build -o "$RUNNER_TEMP/pix" ./cmd/pix
+          go build -ldflags "$LDFLAGS" -o "$RUNNER_TEMP/pix" ./cmd/pix
           mkdir out
           for p in $(jq -r '.bun.platforms | keys[]' internal/pix/data/sources.lock.json); do
             n=$(echo "$p" | tr / -)
             "$RUNNER_TEMP/pix" self prepare --platform "$p" "$PWD/out/pi-source-$n.tar.gz"
-            GOOS=${p%/*} GOARCH=${p#*/} go build -trimpath -o "out/builder-$n" ./cmd/pix
+            GOOS=${p%/*} GOARCH=${p#*/} go build -trimpath -ldflags "$LDFLAGS" -o "out/builder-$n" ./cmd/pix
           done
       - uses: actions/upload-artifact@v4
         with:
@@ -85,8 +108,11 @@ jobs:
           path: out
 
   publish:
-    needs: compile
+    needs: [prepare, compile]
     runs-on: macos-latest
+    env:
+      TAG: ${{ needs.prepare.outputs.tag }}
+      LDFLAGS: -X github.com/iamdin/pix/internal/pix.Version=${{ needs.prepare.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -107,19 +133,22 @@ jobs:
             n=$(echo "$p" | tr / -)
             cp "dl/pi-$n.tar.gz" "dl/pi-source-$n.tar.gz" out/
             sums="pi-$n.tar.gz=$(sum out/pi-$n.tar.gz),pi-source-$n.tar.gz=$(sum out/pi-source-$n.tar.gz)"
-            GOOS=${p%/*} GOARCH=${p#*/} go build -trimpath -ldflags "-X github.com/iamdin/pix/internal/pix.releaseSums=$sums" -o "out/pix-$n" ./cmd/pix
+            GOOS=${p%/*} GOARCH=${p#*/} go build -trimpath -ldflags "$LDFLAGS -X github.com/iamdin/pix/internal/pix.releaseSums=$sums" -o "out/pix-$n" ./cmd/pix
             (cd out && shasum -a 256 "pix-$n" > "pix-$n.sha256")
           done
           cp install.sh out/
           ls -l out
           # A draft until every asset is uploaded, so that nobody downloads a partial release.
           prev=$(gh release list --exclude-drafts --exclude-pre-releases --limit 1 --json tagName -q '.[0].tagName')
+          git tag "$TAG" # locally, for the notes; the release creates it on GitHub
           sh scripts/release-notes.sh "$TAG" "$prev" > "$RUNNER_TEMP/notes.md"
-          gh release create "$TAG" out/* --draft --title "pix ${TAG#v}" --notes-file "$RUNNER_TEMP/notes.md"
+          gh release create "$TAG" out/* --draft --target "$GITHUB_SHA" --title "pix ${TAG#v}" --notes-file "$RUNNER_TEMP/notes.md"
           gh release edit "$TAG" --draft=false --latest
 
   install:
-    needs: publish
+    needs: [prepare, publish]
+    env:
+      TAG: ${{ needs.prepare.outputs.tag }}
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, ubuntu-24.04-arm]
