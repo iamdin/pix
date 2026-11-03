@@ -1,0 +1,317 @@
+{"build":"pix140","scenario":"startup","round":-1,"ok":true,"wall_s":0.124,"cpu_s":0.0535,"peak_rss_mb":47.1}
+{"build":"all","scenario":"startup","round":-1,"ok":true,"wall_s":0.1258,"cpu_s":0.0459,"peak_rss_mb":46.3}
+{"build":"img+mm","scenario":"startup","round":-1,"ok":true,"wall_s":0.1061,"cpu_s":0.0448,"peak_rss_mb":46.2}
+{"build":"md+mm","scenario":"startup","round":-1,"ok":true,"wall_s":0.0974,"cpu_s":0.0442,"peak_rss_mb":46.4}
+{"build":"md+img","scenario":"startup","round":-1,"ok":true,"wall_s":0.1076,"cpu_s":0.0456,"peak_rss_mb":46.3}
+{"build":"mm","scenario":"startup","round":-1,"ok":true,"wall_s":0.0987,"cpu_s":0.0444,"peak_rss_mb":46.2}
+{"build":"img","scenario":"startup","round":-1,"ok":true,"wall_s":0.0235,"cpu_s":0.0201,"peak_rss_mb":46.2}
+{"build":"md","scenario":"startup","round":-1,"ok":true,"wall_s":0.1072,"cpu_s":0.0455,"peak_rss_mb":46.5}
+{"build":"base","scenario":"startup","round":-1,"ok":true,"wall_s":0.1069,"cpu_s":0.0456,"peak_rss_mb":46.2}
+{"build":"pix140","scenario":"write:200","round":-1,"ok":true,"wall_s":0.1388,"cpu_s":0.1136,"peak_rss_mb":85.8}
+{"build":"all","scenario":"write:200","round":-1,"ok":true,"wall_s":0.1242,"cpu_s":0.1034,"peak_rss_mb":81.6}
+{"build":"img+mm","scenario":"write:200","round":-1,"ok":true,"wall_s":0.1344,"cpu_s":0.1076,"peak_rss_mb":82.2}
+{"build":"md+mm","scenario":"write:200","round":-1,"ok":true,"wall_s":0.1274,"cpu_s":0.11,"peak_rss_mb":82.4}
+{"build":"md+img","scenario":"write:200","round":-1,"ok":true,"wall_s":0.1712,"cpu_s":0.113,"peak_rss_mb":82.2}
+{"build":"mm","scenario":"write:200","round":-1,"ok":true,"wall_s":0.1233,"cpu_s":0.1042,"peak_rss_mb":83.5}
+{"build":"img","scenario":"write:200","round":-1,"ok":true,"wall_s":0.1197,"cpu_s":0.0987,"peak_rss_mb":82.4}
+{"build":"md","scenario":"write:200","round":-1,"ok":true,"wall_s":0.1268,"cpu_s":0.1054,"peak_rss_mb":81.5}
+{"build":"base","scenario":"write:200","round":-1,"ok":true,"wall_s":0.1297,"cpu_s":0.1095,"peak_rss_mb":81}
+{"build":"pix140","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":0.269,"cpu_s":0.16,"rss_mb":117.8}
+{"build":"all","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":0.228,"cpu_s":0.11,"rss_mb":115.1}
+{"build":"img+mm","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":0.224,"cpu_s":0.11,"rss_mb":113.9}
+{"build":"md+mm","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":0.226,"cpu_s":0.11,"rss_mb":113.5}
+{"build":"md+img","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":0.238,"cpu_s":0.12,"rss_mb":114.4}
+{"build":"mm","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":0.237,"cpu_s":0.12,"rss_mb":114.8}
+{"build":"img","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":0.226,"cpu_s":0.11,"rss_mb":113.6}
+{"build":"md","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":0.236,"cpu_s":0.12,"rss_mb":117.9}
+{"build":"base","scenario":"tuiwrite:200","round":-1,"ok":true,"wall_s":0.251,"cpu_s":0.12,"rss_mb":114}
+{"build":"pix140","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.604,"cpu_s":1.06,"rss_mb":98.5}
+{"build":"all","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.617,"cpu_s":1.34,"rss_mb":99.1}
+{"build":"img+mm","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.569,"cpu_s":3.48,"rss_mb":142.8}
+{"build":"md+mm","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.578,"cpu_s":1.52,"rss_mb":99.8}
+{"build":"md+img","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.558,"cpu_s":3,"rss_mb":128.1}
+{"build":"mm","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.527,"cpu_s":3.85,"rss_mb":140.5}
+{"build":"img","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.552,"cpu_s":4.18,"rss_mb":145.1}
+{"build":"md","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.58,"cpu_s":3.12,"rss_mb":113.9}
+{"build":"base","scenario":"md:20000","round":-1,"ok":true,"wall_s":17.569,"cpu_s":4.42,"rss_mb":149.9}
+{"build":"pix140","scenario":"md:60000","round":-1,"ok":true,"wall_s":52.975,"cpu_s":4.02,"rss_mb":130.1}
+{"build":"all","scenario":"md:60000","round":-1,"ok":true,"wall_s":52.955,"cpu_s":4.35,"rss_mb":132}
+{"build":"img+mm","scenario":"md:60000","round":-1,"ok":true,"wall_s":52.45,"cpu_s":16.75,"rss_mb":152.3}
+{"build":"md+mm","scenario":"md:60000","round":-1,"ok":true,"wall_s":53.295,"cpu_s":3.22,"rss_mb":108.9}
+{"build":"md+img","scenario":"md:60000","round":-1,"ok":true,"wall_s":52.507,"cpu_s":9.96,"rss_mb":169.5}
+{"build":"mm","scenario":"md:60000","round":-1,"ok":true,"wall_s":53.411,"cpu_s":13.85,"rss_mb":133.9}
+{"build":"img","scenario":"md:60000","round":-1,"ok":true,"wall_s":53.613,"cpu_s":15.75,"rss_mb":140.6}
+{"build":"md","scenario":"md:60000","round":-1,"ok":true,"wall_s":56.571,"cpu_s":7.96,"rss_mb":123.9}
+{"build":"base","scenario":"md:60000","round":-1,"ok":true,"wall_s":54.249,"cpu_s":13.19,"rss_mb":165.6}
+{"build":"base","scenario":"startup","round":0,"ok":true,"wall_s":0.0311,"cpu_s":0.0266,"peak_rss_mb":46.2}
+{"build":"md","scenario":"startup","round":0,"ok":true,"wall_s":0.1051,"cpu_s":0.0504,"peak_rss_mb":46.5}
+{"build":"img","scenario":"startup","round":0,"ok":true,"wall_s":0.1098,"cpu_s":0.0489,"peak_rss_mb":46.2}
+{"build":"mm","scenario":"startup","round":0,"ok":true,"wall_s":0.1061,"cpu_s":0.0464,"peak_rss_mb":46.2}
+{"build":"md+img","scenario":"startup","round":0,"ok":true,"wall_s":0.1019,"cpu_s":0.0467,"peak_rss_mb":46.4}
+{"build":"md+mm","scenario":"startup","round":0,"ok":true,"wall_s":0.1025,"cpu_s":0.0474,"peak_rss_mb":46.5}
+{"build":"img+mm","scenario":"startup","round":0,"ok":true,"wall_s":0.1007,"cpu_s":0.0461,"peak_rss_mb":46.2}
+{"build":"all","scenario":"startup","round":0,"ok":true,"wall_s":0.1025,"cpu_s":0.0474,"peak_rss_mb":46.3}
+{"build":"pix140","scenario":"startup","round":0,"ok":true,"wall_s":0.1144,"cpu_s":0.0483,"peak_rss_mb":47.1}
+{"build":"base","scenario":"write:200","round":0,"ok":true,"wall_s":0.1106,"cpu_s":0.1001,"peak_rss_mb":81.1}
+{"build":"md","scenario":"write:200","round":0,"ok":true,"wall_s":0.1267,"cpu_s":0.1074,"peak_rss_mb":83.1}
+{"build":"img","scenario":"write:200","round":0,"ok":true,"wall_s":0.1271,"cpu_s":0.1057,"peak_rss_mb":82.1}
+{"build":"mm","scenario":"write:200","round":0,"ok":true,"wall_s":0.1301,"cpu_s":0.1096,"peak_rss_mb":81.9}
+{"build":"md+img","scenario":"write:200","round":0,"ok":true,"wall_s":0.1252,"cpu_s":0.1065,"peak_rss_mb":82}
+{"build":"md+mm","scenario":"write:200","round":0,"ok":true,"wall_s":0.1264,"cpu_s":0.1068,"peak_rss_mb":81.8}
+{"build":"img+mm","scenario":"write:200","round":0,"ok":true,"wall_s":0.1275,"cpu_s":0.1084,"peak_rss_mb":82}
+{"build":"all","scenario":"write:200","round":0,"ok":true,"wall_s":0.1595,"cpu_s":0.1102,"peak_rss_mb":81.3}
+{"build":"pix140","scenario":"write:200","round":0,"ok":true,"wall_s":0.1442,"cpu_s":0.1215,"peak_rss_mb":85.6}
+{"build":"base","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":0.226,"cpu_s":0.1,"rss_mb":114.3}
+{"build":"md","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":0.247,"cpu_s":0.13,"rss_mb":117.3}
+{"build":"img","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":0.261,"cpu_s":0.15,"rss_mb":114.3}
+{"build":"mm","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":0.292,"cpu_s":0.18,"rss_mb":116.9}
+{"build":"md+img","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":0.223,"cpu_s":0.1,"rss_mb":113.8}
+{"build":"md+mm","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":0.223,"cpu_s":0.11,"rss_mb":117}
+{"build":"img+mm","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":0.262,"cpu_s":0.13,"rss_mb":114.2}
+{"build":"all","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":0.267,"cpu_s":0.14,"rss_mb":116.7}
+{"build":"pix140","scenario":"tuiwrite:200","round":0,"ok":true,"wall_s":0.303,"cpu_s":0.17,"rss_mb":117.6}
+{"build":"base","scenario":"md:20000","round":0,"ok":true,"wall_s":18.099,"cpu_s":2.38,"rss_mb":131.7}
+{"build":"md","scenario":"md:20000","round":0,"ok":true,"wall_s":17.763,"cpu_s":1.71,"rss_mb":116.9}
+{"build":"img","scenario":"md:20000","round":0,"ok":true,"wall_s":17.622,"cpu_s":3.52,"rss_mb":151}
+{"build":"mm","scenario":"md:20000","round":0,"ok":true,"wall_s":17.581,"cpu_s":3.13,"rss_mb":140.2}
+{"build":"md+img","scenario":"md:20000","round":0,"ok":true,"wall_s":17.608,"cpu_s":2.64,"rss_mb":112.3}
+{"build":"md+mm","scenario":"md:20000","round":0,"ok":true,"wall_s":17.656,"cpu_s":1.06,"rss_mb":96.9}
+{"build":"img+mm","scenario":"md:20000","round":0,"ok":true,"wall_s":17.598,"cpu_s":2.83,"rss_mb":136.3}
+{"build":"all","scenario":"md:20000","round":0,"ok":true,"wall_s":17.618,"cpu_s":1.43,"rss_mb":100}
+{"build":"pix140","scenario":"md:20000","round":0,"ok":true,"wall_s":17.676,"cpu_s":1.21,"rss_mb":80}
+{"build":"base","scenario":"md:60000","round":0,"ok":true,"wall_s":52.938,"cpu_s":17.32,"rss_mb":154.4}
+{"build":"md","scenario":"md:60000","round":0,"ok":true,"wall_s":53.355,"cpu_s":8.94,"rss_mb":131}
+{"build":"img","scenario":"md:60000","round":0,"ok":true,"wall_s":52.459,"cpu_s":19.13,"rss_mb":144.7}
+{"build":"mm","scenario":"md:60000","round":0,"ok":true,"wall_s":52.419,"cpu_s":15.05,"rss_mb":158.3}
+{"build":"md+img","scenario":"md:60000","round":0,"ok":true,"wall_s":52.621,"cpu_s":10.79,"rss_mb":141.9}
+{"build":"md+mm","scenario":"md:60000","round":0,"ok":true,"wall_s":52.903,"cpu_s":4.23,"rss_mb":108.8}
+{"build":"img+mm","scenario":"md:60000","round":0,"ok":true,"wall_s":52.448,"cpu_s":16.48,"rss_mb":146.9}
+{"build":"all","scenario":"md:60000","round":0,"ok":true,"wall_s":52.905,"cpu_s":4.47,"rss_mb":127.3}
+{"build":"pix140","scenario":"md:60000","round":0,"ok":true,"wall_s":52.881,"cpu_s":3.8,"rss_mb":138.5}
+{"build":"pix140","scenario":"startup","round":1,"ok":true,"wall_s":0.0274,"cpu_s":0.0228,"peak_rss_mb":47.1}
+{"build":"all","scenario":"startup","round":1,"ok":true,"wall_s":0.0998,"cpu_s":0.045,"peak_rss_mb":46.3}
+{"build":"img+mm","scenario":"startup","round":1,"ok":true,"wall_s":0.0956,"cpu_s":0.0417,"peak_rss_mb":46.2}
+{"build":"md+mm","scenario":"startup","round":1,"ok":true,"wall_s":0.1016,"cpu_s":0.0416,"peak_rss_mb":46.4}
+{"build":"md+img","scenario":"startup","round":1,"ok":true,"wall_s":0.0974,"cpu_s":0.0432,"peak_rss_mb":46.4}
+{"build":"mm","scenario":"startup","round":1,"ok":true,"wall_s":0.1047,"cpu_s":0.042,"peak_rss_mb":46.2}
+{"build":"img","scenario":"startup","round":1,"ok":true,"wall_s":0.1029,"cpu_s":0.0426,"peak_rss_mb":46.2}
+{"build":"md","scenario":"startup","round":1,"ok":true,"wall_s":0.0958,"cpu_s":0.0418,"peak_rss_mb":46.5}
+{"build":"base","scenario":"startup","round":1,"ok":true,"wall_s":0.0955,"cpu_s":0.0417,"peak_rss_mb":46.2}
+{"build":"pix140","scenario":"write:200","round":1,"ok":true,"wall_s":0.1134,"cpu_s":0.103,"peak_rss_mb":88.5}
+{"build":"all","scenario":"write:200","round":1,"ok":true,"wall_s":0.1191,"cpu_s":0.1005,"peak_rss_mb":83}
+{"build":"img+mm","scenario":"write:200","round":1,"ok":true,"wall_s":0.1185,"cpu_s":0.0992,"peak_rss_mb":81.9}
+{"build":"md+mm","scenario":"write:200","round":1,"ok":true,"wall_s":0.1203,"cpu_s":0.0992,"peak_rss_mb":82.5}
+{"build":"md+img","scenario":"write:200","round":1,"ok":true,"wall_s":0.1204,"cpu_s":0.1014,"peak_rss_mb":82}
+{"build":"mm","scenario":"write:200","round":1,"ok":true,"wall_s":0.1228,"cpu_s":0.1002,"peak_rss_mb":83}
+{"build":"img","scenario":"write:200","round":1,"ok":true,"wall_s":0.121,"cpu_s":0.1,"peak_rss_mb":81.9}
+{"build":"md","scenario":"write:200","round":1,"ok":true,"wall_s":0.1211,"cpu_s":0.1023,"peak_rss_mb":81.8}
+{"build":"base","scenario":"write:200","round":1,"ok":true,"wall_s":0.118,"cpu_s":0.0995,"peak_rss_mb":81.9}
+{"build":"pix140","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":0.31,"cpu_s":0.19,"rss_mb":118.1}
+{"build":"all","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":0.267,"cpu_s":0.15,"rss_mb":114.3}
+{"build":"img+mm","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":0.227,"cpu_s":0.11,"rss_mb":116.2}
+{"build":"md+mm","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":0.254,"cpu_s":0.14,"rss_mb":117}
+{"build":"md+img","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":0.262,"cpu_s":0.14,"rss_mb":113.9}
+{"build":"mm","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":0.214,"cpu_s":0.1,"rss_mb":113}
+{"build":"img","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":0.262,"cpu_s":0.13,"rss_mb":113.3}
+{"build":"md","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":0.231,"cpu_s":0.11,"rss_mb":115.2}
+{"build":"base","scenario":"tuiwrite:200","round":1,"ok":true,"wall_s":0.231,"cpu_s":0.1,"rss_mb":114.9}
+{"build":"pix140","scenario":"md:20000","round":1,"ok":true,"wall_s":17.612,"cpu_s":1.31,"rss_mb":96.1}
+{"build":"all","scenario":"md:20000","round":1,"ok":true,"wall_s":17.594,"cpu_s":1.34,"rss_mb":97.7}
+{"build":"img+mm","scenario":"md:20000","round":1,"ok":true,"wall_s":17.563,"cpu_s":3.19,"rss_mb":139.6}
+{"build":"md+mm","scenario":"md:20000","round":1,"ok":true,"wall_s":17.669,"cpu_s":1.02,"rss_mb":98.4}
+{"build":"md+img","scenario":"md:20000","round":1,"ok":true,"wall_s":17.594,"cpu_s":3.35,"rss_mb":123.5}
+{"build":"mm","scenario":"md:20000","round":1,"ok":true,"wall_s":17.568,"cpu_s":4.14,"rss_mb":138.5}
+{"build":"img","scenario":"md:20000","round":1,"ok":true,"wall_s":17.486,"cpu_s":3.3,"rss_mb":152.7}
+{"build":"md","scenario":"md:20000","round":1,"ok":true,"wall_s":17.619,"cpu_s":3.25,"rss_mb":116.8}
+{"build":"base","scenario":"md:20000","round":1,"ok":true,"wall_s":17.596,"cpu_s":4.93,"rss_mb":151}
+{"build":"pix140","scenario":"md:60000","round":1,"ok":true,"wall_s":53.017,"cpu_s":4.42,"rss_mb":142}
+{"build":"all","scenario":"md:60000","round":1,"ok":true,"wall_s":52.83,"cpu_s":4.08,"rss_mb":126.7}
+{"build":"img+mm","scenario":"md:60000","round":1,"ok":true,"wall_s":53.096,"cpu_s":16.3,"rss_mb":151.4}
+{"build":"md+mm","scenario":"md:60000","round":1,"ok":true,"wall_s":53.08,"cpu_s":3.91,"rss_mb":129.9}
+{"build":"md+img","scenario":"md:60000","round":1,"ok":true,"wall_s":52.593,"cpu_s":13.76,"rss_mb":170.9}
+{"build":"mm","scenario":"md:60000","round":1,"ok":true,"wall_s":53.634,"cpu_s":15.12,"rss_mb":160.6}
+{"build":"img","scenario":"md:60000","round":1,"ok":true,"wall_s":52.504,"cpu_s":18.14,"rss_mb":183.8}
+{"build":"md","scenario":"md:60000","round":1,"ok":true,"wall_s":52.586,"cpu_s":13.76,"rss_mb":169.4}
+{"build":"base","scenario":"md:60000","round":1,"ok":true,"wall_s":52.409,"cpu_s":20.78,"rss_mb":179.1}
+{"build":"base","scenario":"startup","round":2,"ok":true,"wall_s":0.0296,"cpu_s":0.0261,"peak_rss_mb":46.2}
+{"build":"md","scenario":"startup","round":2,"ok":true,"wall_s":0.0276,"cpu_s":0.0232,"peak_rss_mb":46.5}
+{"build":"img","scenario":"startup","round":2,"ok":true,"wall_s":0.0283,"cpu_s":0.0238,"peak_rss_mb":46.2}
+{"build":"mm","scenario":"startup","round":2,"ok":true,"wall_s":0.0561,"cpu_s":0.0311,"peak_rss_mb":46.2}
+{"build":"md+img","scenario":"startup","round":2,"ok":true,"wall_s":0.0986,"cpu_s":0.0446,"peak_rss_mb":46.4}
+{"build":"md+mm","scenario":"startup","round":2,"ok":true,"wall_s":0.1053,"cpu_s":0.0444,"peak_rss_mb":46.5}
+{"build":"img+mm","scenario":"startup","round":2,"ok":true,"wall_s":0.0966,"cpu_s":0.0421,"peak_rss_mb":46.2}
+{"build":"all","scenario":"startup","round":2,"ok":true,"wall_s":0.0977,"cpu_s":0.0431,"peak_rss_mb":46.3}
+{"build":"pix140","scenario":"startup","round":2,"ok":true,"wall_s":0.1108,"cpu_s":0.044,"peak_rss_mb":47.1}
+{"build":"base","scenario":"write:200","round":2,"ok":true,"wall_s":0.0968,"cpu_s":0.0927,"peak_rss_mb":82.4}
+{"build":"md","scenario":"write:200","round":2,"ok":true,"wall_s":0.1045,"cpu_s":0.1004,"peak_rss_mb":83.3}
+{"build":"img","scenario":"write:200","round":2,"ok":true,"wall_s":0.1035,"cpu_s":0.0983,"peak_rss_mb":81.8}
+{"build":"mm","scenario":"write:200","round":2,"ok":true,"wall_s":0.1418,"cpu_s":0.1116,"peak_rss_mb":82.7}
+{"build":"md+img","scenario":"write:200","round":2,"ok":true,"wall_s":0.1281,"cpu_s":0.1091,"peak_rss_mb":82}
+{"build":"md+mm","scenario":"write:200","round":2,"ok":true,"wall_s":0.1278,"cpu_s":0.1038,"peak_rss_mb":82.4}
+{"build":"img+mm","scenario":"write:200","round":2,"ok":true,"wall_s":0.1208,"cpu_s":0.101,"peak_rss_mb":81.2}
+{"build":"all","scenario":"write:200","round":2,"ok":true,"wall_s":0.1188,"cpu_s":0.1001,"peak_rss_mb":82.1}
+{"build":"pix140","scenario":"write:200","round":2,"ok":true,"wall_s":0.1462,"cpu_s":0.1238,"peak_rss_mb":86.6}
+{"build":"base","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":0.226,"cpu_s":0.1,"rss_mb":114.2}
+{"build":"md","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":0.268,"cpu_s":0.14,"rss_mb":116.8}
+{"build":"img","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":0.249,"cpu_s":0.13,"rss_mb":114.6}
+{"build":"mm","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":0.255,"cpu_s":0.13,"rss_mb":116.2}
+{"build":"md+img","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":0.253,"cpu_s":0.14,"rss_mb":114.4}
+{"build":"md+mm","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":0.255,"cpu_s":0.14,"rss_mb":113.8}
+{"build":"img+mm","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":0.256,"cpu_s":0.13,"rss_mb":113.8}
+{"build":"all","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":0.266,"cpu_s":0.14,"rss_mb":116.8}
+{"build":"pix140","scenario":"tuiwrite:200","round":2,"ok":true,"wall_s":0.313,"cpu_s":0.2,"rss_mb":117.6}
+{"build":"base","scenario":"md:20000","round":2,"ok":true,"wall_s":17.546,"cpu_s":5.26,"rss_mb":150.4}
+{"build":"md","scenario":"md:20000","round":2,"ok":true,"wall_s":17.574,"cpu_s":3.48,"rss_mb":121.3}
+{"build":"img","scenario":"md:20000","round":2,"ok":true,"wall_s":17.543,"cpu_s":4.77,"rss_mb":143}
+{"build":"mm","scenario":"md:20000","round":2,"ok":true,"wall_s":17.553,"cpu_s":4.01,"rss_mb":139.1}
+{"build":"md+img","scenario":"md:20000","round":2,"ok":true,"wall_s":17.544,"cpu_s":3.64,"rss_mb":120.3}
+{"build":"md+mm","scenario":"md:20000","round":2,"ok":true,"wall_s":17.583,"cpu_s":1.59,"rss_mb":100.4}
+{"build":"img+mm","scenario":"md:20000","round":2,"ok":true,"wall_s":17.596,"cpu_s":3.15,"rss_mb":138.8}
+{"build":"all","scenario":"md:20000","round":2,"ok":true,"wall_s":17.629,"cpu_s":1.52,"rss_mb":97.1}
+{"build":"pix140","scenario":"md:20000","round":2,"ok":true,"wall_s":17.604,"cpu_s":1.52,"rss_mb":97.6}
+{"build":"base","scenario":"md:60000","round":2,"ok":true,"wall_s":52.436,"cpu_s":19.99,"rss_mb":170.5}
+{"build":"md","scenario":"md:60000","round":2,"ok":true,"wall_s":52.525,"cpu_s":13.61,"rss_mb":164.7}
+{"build":"img","scenario":"md:60000","round":2,"ok":true,"wall_s":53.785,"cpu_s":18.19,"rss_mb":161.1}
+{"build":"mm","scenario":"md:60000","round":2,"ok":true,"wall_s":52.439,"cpu_s":16.41,"rss_mb":172.1}
+{"build":"md+img","scenario":"md:60000","round":2,"ok":true,"wall_s":52.65,"cpu_s":12.64,"rss_mb":167.3}
+{"build":"md+mm","scenario":"md:60000","round":2,"ok":true,"wall_s":52.72,"cpu_s":3.12,"rss_mb":114.8}
+{"build":"img+mm","scenario":"md:60000","round":2,"ok":true,"wall_s":52.501,"cpu_s":13.62,"rss_mb":146.7}
+{"build":"all","scenario":"md:60000","round":2,"ok":true,"wall_s":52.986,"cpu_s":4.73,"rss_mb":109.3}
+{"build":"pix140","scenario":"md:60000","round":2,"ok":true,"wall_s":53.667,"cpu_s":2.67,"rss_mb":112}
+
+scenario     build        metric           median                min–max    vs base  n
+startup      base         wall_s            0.031            0.030–0.096             3
+startup      md           wall_s            0.096            0.028–0.105     208.0%  3
+startup      img          wall_s            0.103            0.028–0.110     230.9%  3
+startup      mm           wall_s            0.105            0.056–0.106     236.7%  3
+startup      md+img       wall_s            0.099            0.097–0.102     217.0%  3
+startup      md+mm        wall_s            0.102            0.102–0.105     229.6%  3
+startup      img+mm       wall_s            0.097            0.096–0.101     210.6%  3
+startup      all          wall_s            0.100            0.098–0.102     220.9%  3
+startup      pix140       wall_s            0.111            0.027–0.114     256.3%  3
+startup      base         cpu_s             0.027            0.026–0.042             3
+startup      md           cpu_s             0.042            0.023–0.050      57.1%  3
+startup      img          cpu_s             0.043            0.024–0.049      60.2%  3
+startup      mm           cpu_s             0.042            0.031–0.046      57.9%  3
+startup      md+img       cpu_s             0.045            0.043–0.047      67.7%  3
+startup      md+mm        cpu_s             0.044            0.042–0.047      66.9%  3
+startup      img+mm       cpu_s             0.042            0.042–0.046      58.3%  3
+startup      all          cpu_s             0.045            0.043–0.047      69.2%  3
+startup      pix140       cpu_s             0.044            0.023–0.048      65.4%  3
+startup      base         peak_rss_mb      46.200          46.200–46.200             3
+startup      md           peak_rss_mb      46.500          46.500–46.500       0.6%  3
+startup      img          peak_rss_mb      46.200          46.200–46.200       0.0%  3
+startup      mm           peak_rss_mb      46.200          46.200–46.200       0.0%  3
+startup      md+img       peak_rss_mb      46.400          46.400–46.400       0.4%  3
+startup      md+mm        peak_rss_mb      46.500          46.400–46.500       0.6%  3
+startup      img+mm       peak_rss_mb      46.200          46.200–46.200       0.0%  3
+startup      all          peak_rss_mb      46.300          46.300–46.300       0.2%  3
+startup      pix140       peak_rss_mb      47.100          47.100–47.100       1.9%  3
+write:200    base         wall_s            0.111            0.097–0.118             3
+write:200    md           wall_s            0.121            0.104–0.127       9.5%  3
+write:200    img          wall_s            0.121            0.103–0.127       9.4%  3
+write:200    mm           wall_s            0.130            0.123–0.142      17.6%  3
+write:200    md+img       wall_s            0.125            0.120–0.128      13.2%  3
+write:200    md+mm        wall_s            0.126            0.120–0.128      14.3%  3
+write:200    img+mm       wall_s            0.121            0.118–0.128       9.2%  3
+write:200    all          wall_s            0.119            0.119–0.160       7.7%  3
+write:200    pix140       wall_s            0.144            0.113–0.146      30.4%  3
+write:200    base         cpu_s             0.100            0.093–0.100             3
+write:200    md           cpu_s             0.102            0.100–0.107       2.8%  3
+write:200    img          cpu_s             0.100            0.098–0.106       0.5%  3
+write:200    mm           cpu_s             0.110            0.100–0.112      10.2%  3
+write:200    md+img       cpu_s             0.106            0.101–0.109       7.0%  3
+write:200    md+mm        cpu_s             0.104            0.099–0.107       4.3%  3
+write:200    img+mm       cpu_s             0.101            0.099–0.108       1.5%  3
+write:200    all          cpu_s             0.101            0.100–0.110       1.0%  3
+write:200    pix140       cpu_s             0.121            0.103–0.124      22.1%  3
+write:200    base         peak_rss_mb      81.900          81.100–82.400             3
+write:200    md           peak_rss_mb      83.100          81.800–83.300       1.5%  3
+write:200    img          peak_rss_mb      81.900          81.800–82.100       0.0%  3
+write:200    mm           peak_rss_mb      82.700          81.900–83.000       1.0%  3
+write:200    md+img       peak_rss_mb      82.000          82.000–82.000       0.1%  3
+write:200    md+mm        peak_rss_mb      82.400          81.800–82.500       0.6%  3
+write:200    img+mm       peak_rss_mb      81.900          81.200–82.000       0.0%  3
+write:200    all          peak_rss_mb      82.100          81.300–83.000       0.2%  3
+write:200    pix140       peak_rss_mb      86.600          85.600–88.500       5.7%  3
+tuiwrite:200 base         wall_s            0.226            0.226–0.231             3
+tuiwrite:200 md           wall_s            0.247            0.231–0.268       9.3%  3
+tuiwrite:200 img          wall_s            0.261            0.249–0.262      15.5%  3
+tuiwrite:200 mm           wall_s            0.255            0.214–0.292      12.8%  3
+tuiwrite:200 md+img       wall_s            0.253            0.223–0.262      11.9%  3
+tuiwrite:200 md+mm        wall_s            0.254            0.223–0.255      12.4%  3
+tuiwrite:200 img+mm       wall_s            0.256            0.227–0.262      13.3%  3
+tuiwrite:200 all          wall_s            0.267            0.266–0.267      18.1%  3
+tuiwrite:200 pix140       wall_s            0.310            0.303–0.313      37.2%  3
+tuiwrite:200 base         cpu_s             0.100            0.100–0.100             3
+tuiwrite:200 md           cpu_s             0.130            0.110–0.140      30.0%  3
+tuiwrite:200 img          cpu_s             0.130            0.130–0.150      30.0%  3
+tuiwrite:200 mm           cpu_s             0.130            0.100–0.180      30.0%  3
+tuiwrite:200 md+img       cpu_s             0.140            0.100–0.140      40.0%  3
+tuiwrite:200 md+mm        cpu_s             0.140            0.110–0.140      40.0%  3
+tuiwrite:200 img+mm       cpu_s             0.130            0.110–0.130      30.0%  3
+tuiwrite:200 all          cpu_s             0.140            0.140–0.150      40.0%  3
+tuiwrite:200 pix140       cpu_s             0.190            0.170–0.200      90.0%  3
+tuiwrite:200 base         rss_mb          114.300        114.200–114.900             3
+tuiwrite:200 md           rss_mb          116.800        115.200–117.300       2.2%  3
+tuiwrite:200 img          rss_mb          114.300        113.300–114.600       0.0%  3
+tuiwrite:200 mm           rss_mb          116.200        113.000–116.900       1.7%  3
+tuiwrite:200 md+img       rss_mb          113.900        113.800–114.400      -0.3%  3
+tuiwrite:200 md+mm        rss_mb          117.000        113.800–117.000       2.4%  3
+tuiwrite:200 img+mm       rss_mb          114.200        113.800–116.200      -0.1%  3
+tuiwrite:200 all          rss_mb          116.700        114.300–116.800       2.1%  3
+tuiwrite:200 pix140       rss_mb          117.600        117.600–118.100       2.9%  3
+md:20000     base         wall_s           17.596          17.546–18.099             3
+md:20000     md           wall_s           17.619          17.574–17.763       0.1%  3
+md:20000     img          wall_s           17.543          17.486–17.622      -0.3%  3
+md:20000     mm           wall_s           17.568          17.553–17.581      -0.2%  3
+md:20000     md+img       wall_s           17.594          17.544–17.608      -0.0%  3
+md:20000     md+mm        wall_s           17.656          17.583–17.669       0.3%  3
+md:20000     img+mm       wall_s           17.596          17.563–17.598       0.0%  3
+md:20000     all          wall_s           17.618          17.594–17.629       0.1%  3
+md:20000     pix140       wall_s           17.612          17.604–17.676       0.1%  3
+md:20000     base         cpu_s             4.930            2.380–5.260             3
+md:20000     md           cpu_s             3.250            1.710–3.480     -34.1%  3
+md:20000     img          cpu_s             3.520            3.300–4.770     -28.6%  3
+md:20000     mm           cpu_s             4.010            3.130–4.140     -18.7%  3
+md:20000     md+img       cpu_s             3.350            2.640–3.640     -32.0%  3
+md:20000     md+mm        cpu_s             1.060            1.020–1.590     -78.5%  3
+md:20000     img+mm       cpu_s             3.150            2.830–3.190     -36.1%  3
+md:20000     all          cpu_s             1.430            1.340–1.520     -71.0%  3
+md:20000     pix140       cpu_s             1.310            1.210–1.520     -73.4%  3
+md:20000     base         rss_mb          150.400        131.700–151.000             3
+md:20000     md           rss_mb          116.900        116.800–121.300     -22.3%  3
+md:20000     img          rss_mb          151.000        143.000–152.700       0.4%  3
+md:20000     mm           rss_mb          139.100        138.500–140.200      -7.5%  3
+md:20000     md+img       rss_mb          120.300        112.300–123.500     -20.0%  3
+md:20000     md+mm        rss_mb           98.400         96.900–100.400     -34.6%  3
+md:20000     img+mm       rss_mb          138.800        136.300–139.600      -7.7%  3
+md:20000     all          rss_mb           97.700         97.100–100.000     -35.0%  3
+md:20000     pix140       rss_mb           96.100          80.000–97.600     -36.1%  3
+md:60000     base         wall_s           52.436          52.409–52.938             3
+md:60000     md           wall_s           52.586          52.525–53.355       0.3%  3
+md:60000     img          wall_s           52.504          52.459–53.785       0.1%  3
+md:60000     mm           wall_s           52.439          52.419–53.634       0.0%  3
+md:60000     md+img       wall_s           52.621          52.593–52.650       0.4%  3
+md:60000     md+mm        wall_s           52.903          52.720–53.080       0.9%  3
+md:60000     img+mm       wall_s           52.501          52.448–53.096       0.1%  3
+md:60000     all          wall_s           52.905          52.830–52.986       0.9%  3
+md:60000     pix140       wall_s           53.017          52.881–53.667       1.1%  3
+md:60000     base         cpu_s            19.990          17.320–20.780             3
+md:60000     md           cpu_s            13.610           8.940–13.760     -31.9%  3
+md:60000     img          cpu_s            18.190          18.140–19.130      -9.0%  3
+md:60000     mm           cpu_s            15.120          15.050–16.410     -24.4%  3
+md:60000     md+img       cpu_s            12.640          10.790–13.760     -36.8%  3
+md:60000     md+mm        cpu_s             3.910            3.120–4.230     -80.4%  3
+md:60000     img+mm       cpu_s            16.300          13.620–16.480     -18.5%  3
+md:60000     all          cpu_s             4.470            4.080–4.730     -77.6%  3
+md:60000     pix140       cpu_s             3.800            2.670–4.420     -81.0%  3
+md:60000     base         rss_mb          170.500        154.400–179.100             3
+md:60000     md           rss_mb          164.700        131.000–169.400      -3.4%  3
+md:60000     img          rss_mb          161.100        144.700–183.800      -5.5%  3
+md:60000     mm           rss_mb          160.600        158.300–172.100      -5.8%  3
+md:60000     md+img       rss_mb          167.300        141.900–170.900      -1.9%  3
+md:60000     md+mm        rss_mb          114.800        108.800–129.900     -32.7%  3
+md:60000     img+mm       rss_mb          146.900        146.700–151.400     -13.8%  3
+md:60000     all          rss_mb          126.700        109.300–127.300     -25.7%  3
+md:60000     pix140       rss_mb          138.500        112.000–142.000     -18.8%  3

@@ -1,0 +1,10 @@
+ok    print mode: inputs and built-in tools (26111 ms)
+ok    subcommands and info flags (184 ms)
+ok    codemode (only mode, with MCP) (1717 ms)
+ok    MCP: direct, resources, deferred with tool_search (63 ms)
+ok    skill, prompt template and an extension from disk (51 ms)
+ok    sessions: save, continue, fork, export (120 ms)
+ok    rpc: commands, extension dialogs, compaction, fork, abort, steer, follow_up (4716 ms)
+ok    tui: prompt, !bash, /model, /export, /copy, escape, /quit (5600 ms)
+
+all passed

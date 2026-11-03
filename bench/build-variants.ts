@@ -1,10 +1,10 @@
 /**
  * Build AOT variants of Pi with pix with some patches taken out, to compare which patches are worth keeping.
  *
- *   bun bench/build-variants.ts --repo /abs/pi --out /abs/dir base= md=streaming-markdown no-hl=all-highlight-cache
+ *   bun bench/build-variants.ts --repo /abs/pi --out /abs/dir base= md=streaming-markdown no-img=all-native-image-resize
  *   bun bench/build-variants.ts --repo /abs/pi --out /abs/dir --combos
  *
- * A patch is a commit `perf(<name>): ...` (and its `fix(<name>)` commits) between --tag and --branch on the fork (defaults v1.4.0 and pix-v1.4.0).
+ * A patch is a commit `perf(<name>): ...` (and its `fix(<name>)` commits) between --tag and --branch on the fork (defaults v1.5.0 and pix-v1.5.0).
  * A variant keeps some patches: the branch with every other patch reverted, as a commit of its own (in a scratch worktree,
  * on no branch), which `pix self prepare --repo --commit` builds and `pix compile --pi` compiles. Each argument is
  * variant=patches: a comma list of patch names, `all`, or `all-name,...` (every patch but those). Empty = no patches.
@@ -19,8 +19,8 @@ const root = path.resolve(import.meta.dir, "..");
 const { values: args, positionals } = util.parseArgs({
 	options: {
 		repo: { type: "string" },
-		tag: { type: "string", default: "v1.4.0" },
-		branch: { type: "string", default: "pix-v1.4.0" },
+		tag: { type: "string", default: "v1.5.0" },
+		branch: { type: "string", default: "pix-v1.5.0" },
 		out: { type: "string" },
 		combos: { type: "boolean" },
 	},

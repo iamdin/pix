@@ -2,7 +2,7 @@
 
 - Method: a streaming Markdown reply is lexed, rendered, wrapped and joined incrementally, so the cost of a chunk does not
   grow with the length of the reply.
-- Verified on: Pi v1.4.0, `getpie-dev/pi` branch `pix-v1.4.0` commit 40b48953a
+- Verified on: Pi v1.5.0, `getpie-dev/pi` branch `pix-v1.5.0` commit 3b1e07642 (v1.4.0: 40b48953a)
 - Independent: applies alone on the tag and with the other patches in any order.
 - Implement the parts below in order: each builds on the one before.
 
@@ -51,9 +51,16 @@ All in `packages/tui/src/components/markdown.ts` unless named.
    `invalidate()`; it only clears the component's own cached text/width/lines.
 4. **A finished message is lexed in full**: `MarkdownOptions.complete`; when set, `lexMarkdown(source, true)` never pieces
    tokens together from a shorter source, and does not return an entry that was pieced. `AssistantMessageComponent` passes
-   `complete: !this.isStreaming` for both text and thinking Markdown.
+   `complete: !this.isStreaming` for both text and thinking Markdown. Since v1.5.0 it keeps its `Markdown` components
+   while the message streams (`markdownBlock()`), so it calls `Markdown.setComplete(!this.isStreaming)` on each update;
+   `setComplete()` drops the component's tokens and lines when the value changes.
 5. Test hooks: `setMarkdownCachingForTest(enabled)` (off = lex everything, keep nothing) and `lexMarkdownForTest(source,
    complete)`.
+6. **v1.5.0 and later: upstream's block reuse is replaced.** v1.5.0 keeps the last render's blocks per component in a map
+   keyed by the block's source (`blocks`) and lexes the whole text on every change. This patch's token-keyed blocks
+   (step 2) replace that map. Upstream's reuse of highlighted code across a resize or new spacing stays, as a
+   per-component memo of the last render's highlighted code blocks (`highlights`/`nextHighlights`, keyed by language and
+   code, held weakly as upstream's blocks were; cleared by `invalidate()`).
 
 #### Invariants
 

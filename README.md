@@ -138,7 +138,7 @@ upgrading Pi must run the resolution regression tests.
 
 | Component | Pinned |
 |---|---|
-| Pi | v1.4.0 with pix's patches: [getpie-dev/pi](https://github.com/getpie-dev/pi) `pix-v1.4.0`, f9731d41a29da59e2893622d7189ce85840cf137 |
+| Pi | v1.5.0 with pix's patches: [getpie-dev/pi](https://github.com/getpie-dev/pi) `pix-v1.5.0`, b4d502d801cf0e5a8b67dfaaea19a55e8aa05247 |
 | Bun | 1.4.4-canary.1, 271b65ec608a50eca96a894c6bbff1e65849d920 |
 | WebKit/JSC | 4d45755fed4aeef19e95beb90d3d0c884a2812bd |
 
@@ -150,25 +150,21 @@ macOS the code signature.
 Nothing depends on upstream downloads that may be deleted, and nothing upgrades silently. Cold fetches of Git, npm and
 the model catalog still need the network. The Bun is the official prebuilt one, not a custom-optimized Bun/JSC.
 
-**Pi comes with 5 optimization patches that passed AOT performance gates.** Each is one optimization method and one
+**Pi comes with 3 optimization patches that passed AOT performance gates.** Each is one optimization method and one
 commit on the fork, and its tests run at every release. Method, invariants and measurements are in
-`docs/pi-perf/<name>/SPEC.md`, results in `docs/pi-perf/results/v1.4.0/log.md`.
+`docs/pi-perf/<name>/SPEC.md`, results in `docs/pi-perf/results/v1.5.0/log.md`. Pi 1.5.0 made three earlier
+patches unnecessary (streamed tool arguments are parsed incrementally, highlighting is reused); they are kept in
+`docs/pi-perf/retired/`.
 
 | Patch | Method |
 |---|---|
 | `streaming-markdown` | A streamed reply re-lexes and re-renders only the blocks that changed |
-| `highlight-cache` | Highlighted code blocks are kept instead of highlighted again each frame |
-| `streaming-tool-arguments` | Streamed tool arguments are re-parsed at geometrically spaced sizes |
-| `write-call-highlight` | A collapsed write call highlights only the lines it shows |
+| `mermaid-lex` | A message without the word mermaid is not lexed again to look for Mermaid diagrams |
 | `native-image-resize` | Large images are resized natively with Bun.Image, not Photon (without a JIT, its WebAssembly is tens of times slower) |
 
-Pi v1.4.0 with official AOT, stock → pix (Apple M4, CPU time / RSS): a 60,000-character streamed Markdown reply
-22.9 s → 4.3 s; a 200 KB write (`pi -p`) 9.6 s → 0.1 s; memory for a 200 KB write in the TUI 320 MB → 115 MB; startup
-unchanged; reading one 3000 px image 25 s → 0.3 s.
-
-**`streaming-tool-arguments` changes behavior**: intermediate parsed snapshots of large tool arguments are updated less
-often; raw deltas and final arguments stay complete. For an extension that needs a fresh parsed snapshot on every delta,
-use the original Pi.
+Pi v1.5.0 with official AOT, stock → pix (Apple M4): a 60,000-character streamed Markdown reply 20.0 s → 4.5 s CPU,
+171 MB → 127 MB; a 20,000-character one 4.9 s → 1.4 s; reading one 3000 px image 26 s → 0.7 s; startup and writes
+unchanged (Pi 1.5.0 does those well itself).
 
 How the patches are maintained and changed: [PATCHES.md](PATCHES.md).
 

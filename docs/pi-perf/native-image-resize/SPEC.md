@@ -1,7 +1,7 @@
 # Large images are resized with Bun.Image, not Photon
 
 - Method: under Bun, image resizing uses Bun's native pipeline (`Bun.Image`) instead of Photon (WebAssembly).
-- Verified on: Pi v1.4.0, `getpie-dev/pi` branch `pix-v1.4.0` commit d95a12ee1
+- Verified on: Pi v1.5.0, `getpie-dev/pi` branch `pix-v1.5.0` commit a7682b874 (v1.4.0: d95a12ee1)
 - Independent: applies alone on the tag and with the other patches in any order (it touches only the image resize files).
 - Reference: none; pix's own.
 
@@ -16,8 +16,9 @@ under JIT; `bench/e2e/run.ts` "print mode" (one 3000 px image read) took 25 s on
 
 - New `packages/coding-agent/src/utils/image-resize-bun.ts`: `getBunImage()` finds `Bun.Image`, and
   `resizeImageWithBun()` follows `resizeImageInProcess()` step by step: return the input unchanged when it is within
-  the limits; otherwise the same target size, then PNG and the same JPEG quality steps in the same order (taking the
-  first under `maxBytes`), then shrink by 0.75. Width and height come from `metadata()`, which reports them after
+  the limits; otherwise the same target size, then the same candidates in the same order (since v1.5.0: the smaller
+  of PNG and JPEG at the configured quality, the other one, then the lower JPEG qualities; the first under `maxBytes`
+  is taken), then shrink by 0.75. Width and height come from `metadata()`, which reports them after
   the EXIF orientation, as Photon does after `applyExifOrientation()`; `Bun.Image` applies the orientation itself.
 - `resizeImage()` in `image-resize.ts` uses it whenever `Bun.Image` exists, with no Photon fallback: the images
   that reach it are PNG, JPEG, GIF or WebP (`normalizeImage()` in `image-process.ts`), all of which Bun decodes. An
@@ -39,7 +40,8 @@ small, so they are left alone.
 
 - Added `packages/coding-agent/test/image-resize-bun.bun.ts` (run with Bun: `bun test ./test/image-resize-bun.bun.ts`):
   unchanged small image equals Photon's result; 3000×1000 resizes to Photon's size and format; EXIF orientation 6
-  gives Photon's dimensions; a tiny `maxBytes` is met; undecodable input gives `null` from `resizeImage()`, as from Photon.
+  gives Photon's dimensions; a photo resizes to JPEG, as with Photon (v1.5.0); a tiny `maxBytes` is met; undecodable input
+  gives `null` from `resizeImage()`, as from Photon.
 - Must pass: `npx vitest run test/image-processing.test.ts test/image-resize-callers.test.ts`, root `npx tsc --noEmit`.
 - End to end: `bun bench/e2e/run.ts <pix build>/pi` ("print mode" reads a 3000 px image).
 

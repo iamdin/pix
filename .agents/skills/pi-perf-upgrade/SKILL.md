@@ -67,6 +67,17 @@ measurably slower. Code may overlap, but each commit must revert cleanly from th
    ("Verified on" with the new commits, numbers, what changed) and the README's numbers. The release workflow prepares
    the Pi a release ships; pushing the commit to main releases it.
 
+## Notes from v1.5.0
+
+- Start with stock TAG vs the previous release's build (both AOT, same Bun): it shows what upstream already fixed and
+  where the gap is. v1.5.0 made three patches unnecessary and exposed a cost one dropped patch had removed (the Mermaid
+  lex): check a spec's skip condition step by step, not as a whole.
+- `bin/pix` prepares only the Pi whose model catalog its `sources.lock.json` pins: build the previous version's variants
+  before switching the pin (or keep a second binary built with the old lock).
+- md scenarios are noisy on a loaded machine; rerun a gate that is near its threshold with 5 rounds, and the short
+  scenarios (startup, write, tuiwrite) with 15.
+- `docs/pi-perf/results/v1.5.0/log.md` records the decisions.
+
 ## Notes from v1.4.0
 
 - `docs/pi-perf/results/v1.4.0/log.md`: how the patches were found and measured (it uses the old working numbers),

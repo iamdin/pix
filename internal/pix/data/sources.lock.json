@@ -2,9 +2,9 @@
   "schema": 1,
   "pi": {
     "repository": "https://github.com/getpie-dev/pi.git",
-    "branch": "pix-v1.4.0",
-    "tag": "v1.4.0",
-    "commit": "f9731d41a29da59e2893622d7189ce85840cf137"
+    "branch": "pix-v1.5.0",
+    "tag": "v1.5.0",
+    "commit": "b4d502d801cf0e5a8b67dfaaea19a55e8aa05247"
   },
   "bun": {
     "repository": "https://github.com/oven-sh/bun.git",
@@ -32,5 +32,5 @@
       }
     }
   },
-  "model_catalog": "sha256-7fe1b41feaf43a7aad4bc832e6b306c7ced56e6d41bbc724b74e91eeacff6edf"
+  "model_catalog": "sha256-f4dbabe79cda4b38aee4a761b23fd5eaf526ac2e28fed3c9ee86e37ca0e5d71e"
 }

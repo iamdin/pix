@@ -76,12 +76,8 @@ var piTests = []Test{
 	// streaming-markdown
 	{"packages/tui", []string{"node", "--test", "test/markdown-incremental-lex.test.ts", "test/markdown-render-memo.test.ts", "test/render-memo.test.ts", "test/markdown.test.ts"}},
 	vitest("packages/coding-agent", "test/streaming-markdown-render.test.ts", "test/assistant-message.test.ts"),
-	// highlight-cache
-	vitest("packages/coding-agent", "test/highlight-code-cache.test.ts", "test/syntax-highlight.test.ts"),
-	// streaming-tool-arguments
-	vitest("packages/ai", "test/streaming-json-budget.test.ts", "test/streaming-json-providers.test.ts"),
-	// write-call-highlight
-	vitest("packages/coding-agent", "test/write-call-collapsed-highlight.test.ts"),
+	// mermaid-lex
+	vitest("packages/coding-agent", "test/mermaid.test.ts"),
 	// native-image-resize
 	{"packages/coding-agent", []string{"bun", "test", "./test/image-resize-bun.bun.ts"}},
 	vitest("packages/coding-agent", "test/image-processing.test.ts", "test/image-resize-callers.test.ts"),
