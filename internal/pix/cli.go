@@ -44,6 +44,7 @@ const usage = `pix — Pi, built ahead of time with Bun, with performance patche
   pix compile                 compile the packages in your Pi settings into pix, for speed (again after they change)
   pix self status             what pix runs: Pi version, compiled-in extensions
   pix self feedback FILE      send a failed compile's feedback as a GitHub issue, after you confirm
+  pix self link               make the pi command run pix (a link named pi next to pix); unlink: undo
   pix self uninstall          remove ~/.pix and its builds
   pix self version            pix's version
 
@@ -123,12 +124,17 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer) error
 			return err
 		}
 		return in.checkLatest(ctx)
-	case "status", "uninstall":
+	case "status", "uninstall", "link", "unlink":
 		if len(args) != 1 {
 			return fmt.Errorf("usage: pix self %s", args[0])
 		}
-		if args[0] == "status" {
+		switch args[0] {
+		case "status":
 			return status(stdout)
+		case "link":
+			return linkPi(stdout)
+		case "unlink":
+			return unlinkPi(stdout)
 		}
 		return uninstall(stdout)
 	default:

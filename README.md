@@ -34,6 +34,7 @@ run the workflow by hand (`gh workflow run release -f bump=minor`).
 pix                    # Pi: every argument and command is Pi's (pix -c, pix -p "...", pix install npm:x)
 pix compile            # compile the packages in ~/.pi/agent/settings.json in now (pix also does it by itself)
 pix self status        # Pi version, compiled-in extensions, the compile in the background, the latest release
+pix self link          # make the pi command run pix (a link named pi next to pix); pix self unlink undoes it
 pix self uninstall     # remove ~/.pix and its builds; Pi's settings and sessions stay
 pix self feedback FILE # send a failed compile's feedback (it names FILE) as a GitHub issue, after you confirm
 ```

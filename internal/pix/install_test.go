@@ -303,3 +303,30 @@ func TestReleaseNotice(t *testing.T) {
 		}
 	}
 }
+
+func TestLinkPi(t *testing.T) {
+	self, link, ours := piLink()
+	if self == "" || ours {
+		t.Fatalf("before: %q %q %v", self, link, ours)
+	}
+	defer os.Remove(link) // next to the test binary
+	if err := linkPi(io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, ours := piLink(); !ours {
+		t.Fatal("not linked")
+	}
+	if err := linkPi(io.Discard); err != nil { // again: nothing to do
+		t.Fatal(err)
+	}
+	if err := unlinkPi(io.Discard); err != nil || exists(link) {
+		t.Fatalf("unlink: %v", err)
+	}
+	writeFile(t, link, "", 0755) // someone else's pi is kept
+	if err := linkPi(io.Discard); err == nil {
+		t.Fatal("replaced another pi")
+	}
+	if err := unlinkPi(io.Discard); err == nil || !exists(link) {
+		t.Fatal("removed another pi")
+	}
+}

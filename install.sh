@@ -28,7 +28,13 @@ if [ -x "$dir/pix" ] && [ "$(sha "$dir/pix")" = "$want" ]; then
 	echo "pix $("$dir/pix" self version) in $dir is up to date"
 else
 	echo "Downloading pix (about 70 MB, with Bun for \`pix compile\`)..."
-	curl -fsSL "$base/$asset" -o "$tmp/pix" # no progress bar: it breaks in a terminal narrower than curl assumes
+	# curl sizes its progress bar from COLUMNS or its stdin, which is this script under `curl | sh`: without the
+	# terminal's width it draws 80 columns, and a narrower terminal gets a new line per update.
+	if [ -t 2 ] && cols=$(stty size </dev/tty 2>/dev/null); then
+		COLUMNS=${cols#* } curl -fL --progress-bar "$base/$asset" -o "$tmp/pix"
+	else
+		curl -fsSL "$base/$asset" -o "$tmp/pix"
+	fi
 	[ "$(sha "$tmp/pix")" = "$want" ] || { echo "pix: checksum mismatch" >&2; exit 1; }
 	mkdir -p "$dir"
 	install -m 755 "$tmp/pix" "$dir/pix"

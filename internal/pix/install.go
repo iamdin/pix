@@ -619,8 +619,63 @@ func uninstall(stdout io.Writer) error {
 	if err := os.RemoveAll(in.Home); err != nil {
 		return err
 	}
+	if _, link, ours := piLink(); ours {
+		_ = os.Remove(link)
+	}
 	self, _ := os.Executable()
 	fmt.Fprintf(stdout, "Removed %s and its builds. Pi's settings and sessions are kept. To remove pix itself: rm %s\n", in.Home, self)
+	return nil
+}
+
+// piLink returns pix's executable, where `pix self link` puts pi (next to it), and whether a link there runs it.
+func piLink() (self, link string, ours bool) {
+	self, err := os.Executable()
+	if err == nil {
+		self, err = filepath.EvalSymlinks(self)
+	}
+	if err != nil {
+		return "", "", false
+	}
+	link = filepath.Join(filepath.Dir(self), "pi")
+	target, err := filepath.EvalSymlinks(link)
+	info, lerr := os.Lstat(link)
+	return self, link, err == nil && lerr == nil && info.Mode()&os.ModeSymlink != 0 && target == self
+}
+
+// linkPi makes the pi command run pix: a link named pi next to pix, which is on PATH. Pi itself stays installed.
+func linkPi(stdout io.Writer) error {
+	self, link, ours := piLink()
+	if self == "" {
+		return fmt.Errorf("cannot find pix's own executable")
+	}
+	if !ours {
+		if _, err := os.Lstat(link); err == nil {
+			return fmt.Errorf("%s exists and is not pix; remove it first", link)
+		}
+		if err := os.Symlink(filepath.Base(self), link); err != nil {
+			return err
+		}
+	}
+	fmt.Fprintf(stdout, "pi runs pix: %s. `pix self unlink` undoes it.\n", link)
+	// Another pi earlier on PATH, such as npm's, would still win.
+	found, err := exec.LookPath("pi")
+	if err != nil {
+		fmt.Fprintf(stdout, "But %s is not on PATH: add it\n", filepath.Dir(link))
+	} else if resolved, _ := filepath.EvalSymlinks(found); resolved != self {
+		fmt.Fprintf(stdout, "But %s comes first on PATH: put %s before its directory\n", found, filepath.Dir(link))
+	}
+	return nil
+}
+
+func unlinkPi(stdout io.Writer) error {
+	_, link, ours := piLink()
+	if !ours {
+		return fmt.Errorf("pi does not run pix here (%s)", link)
+	}
+	if err := os.Remove(link); err != nil {
+		return err
+	}
+	fmt.Fprintf(stdout, "Removed %s: pi is Pi again\n", link)
 	return nil
 }
 
