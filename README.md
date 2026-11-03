@@ -139,7 +139,7 @@ upgrading Pi must run the resolution regression tests.
 | Component | Pinned |
 |---|---|
 | Pi | v1.4.0 with pix's patches: [getpie-dev/pi](https://github.com/getpie-dev/pi) `pix-v1.4.0`, f9731d41a29da59e2893622d7189ce85840cf137 |
-| Bun | 1.4.4-canary.1, 3f3a9ff87cdccf3d32d7ec6b648c664eddaae840 |
+| Bun | 1.4.4-canary.1, 271b65ec608a50eca96a894c6bbff1e65849d920 |
 | WebKit/JSC | 4d45755fed4aeef19e95beb90d3d0c884a2812bd |
 
 There is no choice of Pi or Bun version. Pi follows upstream release tags only, and pix's patches are commits on a
