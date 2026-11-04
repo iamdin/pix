@@ -59,7 +59,8 @@ measurably slower. Code may overlap, but each commit must revert cleanly from th
    --rounds 3 --warmup 1`. For each patch, both must hold (exit status 2 of a narrower `--expect`/`--max-regress` run means
    stop and find out why):
    - alone vs `base`: no scenario more than 5% worse in CPU, wall or RSS, and the gain its spec expects;
-   - all vs all without it: the gain its spec expects. No gain: propose dropping it (to the user), do not just keep it.
+   - all vs all without it: the gain its spec expects, and more than 3% in the scenario it targets. 3% or less: drop it
+     (move its spec to `docs/pi-perf/retired/`), a patch that small is not worth carrying.
    Look for interactions in the other subsets too: a pair that is worse than either alone is a bug in one of them.
 5. Against the previous Pi version's final build: the full set may be at most 5% worse in any scenario.
 6. `bin/pix self prepare /abs/pi.tar.gz` (every patch's tests), `bin/pix compile --pi /abs/pi.tar.gz --out /abs/dir` (smoke,
